@@ -34,10 +34,10 @@ fun ZramScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var selectedSize by remember { mutableStateOf(ZramController.Size.OFF) }
+    var selectedSize by remember { mutableStateOf(ZramController.Size.GB3) }
     var availableAlgorithms by remember { mutableStateOf(listOf(ZramController.DEFAULT_ALGORITHM)) }
     var selectedAlgorithm by remember { mutableStateOf(ZramController.DEFAULT_ALGORITHM) }
-    var selectedSwappiness by remember { mutableStateOf(60) }
+    var selectedSwappiness by remember { mutableStateOf(40) }
     var liveSizeBytes by remember { mutableStateOf<Long?>(null) }
     var liveAlgorithm by remember { mutableStateOf<String?>(null) }
     var liveSwappiness by remember { mutableStateOf<Int?>(null) }
@@ -47,14 +47,14 @@ fun ZramScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            selectedSize = ZramController.persistedSize() ?: ZramController.Size.OFF
+            selectedSize = ZramController.persistedSize() ?: ZramController.Size.GB3
             availableAlgorithms = ZramController.availableAlgorithms()
             selectedAlgorithm = ZramController.persistedAlgorithm()
                 ?: ZramController.currentAlgorithm()
                 ?: ZramController.DEFAULT_ALGORITHM
             selectedSwappiness = ZramController.persistedSwappiness()
                 ?: ZramController.currentLiveSwappiness()
-                ?: 60
+                ?: 40
             liveSizeBytes = ZramController.currentLiveSizeBytes()
             liveAlgorithm = ZramController.currentAlgorithm()
             liveSwappiness = ZramController.currentLiveSwappiness()

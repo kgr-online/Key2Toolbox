@@ -20,7 +20,7 @@ object ZramController {
     private const val TARGET = "/data/adb/service.d/$SCRIPT_NAME"
     private const val TEMPLATE_ASSET = "zram_template.sh"
 
-    const val DEFAULT_ALGORITHM = "zstd"
+    const val DEFAULT_ALGORITHM = "lz4"
 
     enum class Size(val mb: Int, val label: String) {
         OFF(0, "Off"),
