@@ -113,12 +113,20 @@ object ZramController {
                         "echo ${size.mb}m > /sys/block/zram0/disksize && " +
                         "mkswap /dev/block/zram0 && " +
                         "swapon /dev/block/zram0 && " +
-                        "echo $swappiness > /proc/sys/vm/swappiness"
+                        "echo $swappiness > /proc/sys/vm/swappiness && " +
+                        "echo 50 > /proc/sys/vm/vfs_cache_pressure && " +
+                        "echo 0 > /proc/sys/vm/page-cluster && " +
+                        "echo 15000 > /proc/sys/vm/min_free_kbytes"
                 )
             }
         } else if (size != Size.OFF) {
-            // Apply swappiness live anyway as it's safe (unlike resetting ZRAM).
-            RootShell.run("echo $swappiness > /proc/sys/vm/swappiness")
+            // Apply VM tuning live anyway as it's safe (unlike resetting ZRAM).
+            RootShell.run(
+                "echo $swappiness > /proc/sys/vm/swappiness; " +
+                    "echo 50 > /proc/sys/vm/vfs_cache_pressure; " +
+                    "echo 0 > /proc/sys/vm/page-cluster; " +
+                    "echo 15000 > /proc/sys/vm/min_free_kbytes"
+            )
         }
 
         return persistResult

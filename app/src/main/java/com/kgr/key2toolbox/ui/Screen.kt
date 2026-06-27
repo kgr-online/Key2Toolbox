@@ -10,6 +10,10 @@ sealed class Screen(val title: String, val subtitle: String = "") {
     data object PinKeyboard : Screen("Lockscreen PIN on Keyboard", "Type your PIN on hardware keys")
     data object ImeBlock : Screen("Per-App Keyboard Block", "Send keys straight to chosen apps")
     data object Wifi5g : Screen("5GHz Hotspot Workaround", "Force US WiFi region for 5GHz AP")
+    data object Watch : Screen("Galaxy Watch Power Saver", "Stop idle Bluetooth reconnect drain")
+    data object BtIdle : Screen("Auto-disable Bluetooth", "Turn off Bluetooth when idle")
+    data object Performance : Screen("Performance & Battery Tuning", "Relax CPU scaling and input boost thresholds")
+    data object Telemetry : Screen("Global Telemetry Block", "Disable Firebase Crashlytics system-wide")
 }
 
 /** Bottom-bar sections. */
@@ -17,6 +21,7 @@ enum class AppTab(val label: String) {
     Info("Info"),
     Keyboard("Keyboard"),
     System("System"),
+    Network("Network"),
 }
 
 /** Screens listed under the Keyboard tab. */
@@ -31,7 +36,15 @@ val keyboardScreens = listOf(
 /** Screens listed under the System tab. */
 val systemScreens = listOf(
     Screen.Zram,
-    Screen.WirelessAdb,
+    Screen.Performance,
     Screen.Dt2w,
+)
+
+/** Screens listed under the Network tab. */
+val networkScreens = listOf(
+    Screen.Telemetry,
+    Screen.WirelessAdb,
     Screen.Wifi5g,
+    Screen.Watch,
+    Screen.BtIdle,
 )

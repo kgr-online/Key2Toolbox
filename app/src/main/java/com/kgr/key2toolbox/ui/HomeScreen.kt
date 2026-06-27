@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -62,6 +63,12 @@ fun HomeScreen() {
                     icon = { Icon(Icons.Filled.Build, contentDescription = null) },
                     label = { Text(AppTab.System.label) }
                 )
+                NavigationBarItem(
+                    selected = tab == AppTab.Network,
+                    onClick = { tab = AppTab.Network; detail = null },
+                    icon = { Icon(Icons.Filled.Wifi, contentDescription = null) },
+                    label = { Text(AppTab.Network.label) }
+                )
             }
         }
     ) { padding ->
@@ -73,6 +80,7 @@ fun HomeScreen() {
                 AppTab.Info -> InfoScreen()
                 AppTab.Keyboard -> CategoryMenu("Keyboard", keyboardScreens) { detail = it }
                 AppTab.System -> CategoryMenu("System", systemScreens) { detail = it }
+                AppTab.Network -> CategoryMenu("Network", networkScreens) { detail = it }
             }
         }
     }
@@ -91,6 +99,10 @@ private fun DetailHost(screen: Screen, onBack: () -> Unit) {
         Screen.PinKeyboard -> PinKeyboardScreen(onBack)
         Screen.ImeBlock -> ImeBlockScreen(onBack)
         Screen.Wifi5g -> Wifi5gScreen(onBack)
+        Screen.Watch -> WatchScreen(onBack)
+        Screen.BtIdle -> BtIdleScreen(onBack)
+        Screen.Performance -> PerformanceScreen(onBack)
+        Screen.Telemetry -> TelemetryScreen(onBack)
     }
 }
 
