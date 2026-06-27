@@ -1,11 +1,15 @@
 #!/system/bin/sh
 # CPU Performance Tuning - Key2 Toolbox
 #
-# Wait for boot to complete, then add a short delay so we run after post_boot.sh
+# Wait for boot to complete and wait for the Qualcomm post-boot script to
+# finish executing, so we win the race and override the CPU parameters.
 until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 2
 done
-sleep 15
+until [ "$(getprop init.svc.qcom-post-boot)" = "stopped" ]; do
+    sleep 2
+done
+sleep 5
 
 # CPU LITTLE cluster (policy0) up_rate_limit_us
 POLICY0=/sys/devices/system/cpu/cpufreq/policy0/schedutil

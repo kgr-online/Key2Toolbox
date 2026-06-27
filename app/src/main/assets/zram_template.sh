@@ -1,12 +1,13 @@
 #!/system/bin/sh
-# Wait for boot to complete, then add a short delay so we run *after*
-# /vendor/bin/init.qcom.post_boot.sh (which hardcodes swappiness=100 at
-# late_start). Without the delay, the two scripts race on sys.boot_completed
-# and post_boot.sh wins roughly half the time.
+# Wait for boot to complete and wait for the Qualcomm post-boot script to
+# finish executing, so we win the race and override the memory parameters.
 until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 2
 done
-sleep 15  # outlast init.qcom.post_boot.sh
+until [ "$(getprop init.svc.qcom-post-boot)" = "stopped" ]; do
+    sleep 2
+done
+sleep 5
 
 # Re-initialise zram with configured size and algorithm.
 swapoff /dev/block/zram0 2>/dev/null
