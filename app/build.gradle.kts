@@ -11,8 +11,8 @@ android {
         applicationId = "com.kgr.key2toolbox"
         minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "4.1-beta4"
+        versionCode = 2
+        versionName = "4.2-beta1"
     }
 
     // To produce a release build signed with your existing keystore, fill these

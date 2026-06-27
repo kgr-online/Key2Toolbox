@@ -18,11 +18,22 @@ accessibility-service status.
   to the app (for games) by switching to a passthrough IME
 
 **System**
-- **ZRAM** compression algorithm + size (Off / 2GB / 3GB / 4GB)
+- **ZRAM** compression algorithm + size (Off / 2GB / 3GB / 4GB), VM swappiness
 - **Persistent wireless ADB** on a user-chosen static port
 - **Double-Tap to Wake** (DT2W)
+- **CPU Performance Tuning** - Schedutil `up_rate_limit_us` + CAF input-boost
+  frequency and duration
+
+**Network**
 - **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
   works (EU regdomains expose no 5GHz AP channels on this build)
+- **Bluetooth Auto-Disable** - watchdog daemon that turns Bluetooth off after a
+  configurable idle timeout (no device connected), preventing `hal_bluetooth_lock`
+  from blocking deep sleep overnight
+- **Wearable Power Saver** - put any GMS-paired wearable into Dormant mode so
+  out-of-range devices don't trigger constant Bluetooth reconnect alarms
+- **Global Telemetry Block** - disable Firebase Crashlytics collection across
+  all installed apps at boot
 
 The UI follows Material You (Monet), in light or dark to match the system.
 Most modules are stateless: they fire root commands on demand and persist by
@@ -170,6 +181,63 @@ surfaced on the screen: it also applies to WiFi as a client (you lose 2.4GHz
 ch 12-13 and EU-only 5GHz channels) and enables the upper US channels
 (149-165) that aren't EU-licensed. Also note SoftAP only starts with **WPA2**
 on this build - WPA3/SAE fails with `UNSUPPORTED_CONFIGURATION`.
+
+### CPU Performance Tuning (`PerformanceController`)
+Tunes two Qualcomm-specific knobs that the stock Qualcomm post-boot script sets
+but leaves at relatively conservative values:
+- **`up_rate_limit_us`** (Schedutil LITTLE cluster, policy0): how quickly the
+  governor can raise the CPU frequency. Default 500 µs; tuned value 2000 µs to
+  reduce unnecessary ramp-ups and save power at light loads.
+- **CAF input-boost frequency / duration**: the frequency cores are temporarily
+  boosted to on a touch/input event, and for how long. Tuned defaults reduce
+  the boost frequency (1401600 → 1113600 kHz on LITTLE cores) and shorten the
+  duration (40 → 20 ms) so the boost is present but more conservative.
+- **Persist**: installs `assets/performance_template.sh` (with substituted
+  values) to `/data/adb/service.d/cpu_performance.sh`. The boot script waits
+  for `init.svc.qcom-post-boot` to reach `stopped` before writing sysfs, so
+  it always wins the race against the Qualcomm tuner.
+- **Live apply**: writes the same sysfs nodes immediately without a reboot.
+
+### Bluetooth Auto-Disable (`BtIdleController`)
+A root watchdog daemon (`service.d/bt_idle.sh`) that checks once per minute
+whether Bluetooth has any device actively connected and turns it off after a
+configurable number of idle minutes (5 / 10 / 15 / 30 / 60, default 15). This
+prevents a bonded-but-out-of-range radio from holding `hal_bluetooth_lock` and
+blocking deep sleep overnight.
+
+Connection detection uses five strategies against `dumpsys bluetooth_manager`:
+1. Device table: MAC address line present without `NotConnected`.
+2. Active audio device: `mActiveDevice` set to a MAC in A2DP/Headset profile.
+3. Active playback: `mIsPlaying: true`.
+4. Profile state machines: any profile at `STATE_CONNECTED` / state 2.
+5. GATT maps: `GattClientMap` or `GattServerMap` has Entries > 0.
+
+Any match resets the idle counter. A PID lock file (`/data/adb/.bt_idle.lock`)
+ensures only one daemon instance runs at a time.
+
+### Wearable Power Saver (`WatchController`)
+Reads all wearables paired through GMS from
+`/data/data/com.google.android.gms/databases/connectionconfig.db` and lists
+them by name and MAC. Toggling a device **Dormant** sets `connectionEnabled = 0`
+in that SQLite table and force-stops GMS so it picks up the change immediately.
+On the next connection attempt the device is simply ignored by GMS.
+
+A `service.d/wearable_dormant.sh` boot script re-applies `connectionEnabled = 0`
+for all selected MACs at boot (retrying up to 30 × 2 s until the data partition
+is decrypted and the DB is accessible), because GMS can reset the field during
+a cold boot before our script runs.
+
+### Global Telemetry Block (`TelemetryController`)
+Scans `/data/data/*/com.google.firebase.crashlytics.xml` across all installed
+apps and sets `firebase_crashlytics_collection_enabled` to `false`, using
+`nsenter` to reach the real data partition from a root shell. If the key is
+already present it does an in-place `sed` rewrite; if absent it injects a
+`<boolean>` element before `</map>`. The screen shows how many apps have the
+Crashlytics XML (affected) vs how many are already blocked.
+
+A `service.d/block_telemetry.sh` boot script re-runs the same scan 15 seconds
+after `sys.boot_completed`, so freshly installed apps are caught on next boot
+without manual intervention.
 
 ## ⚠ Known risk: writing to `/data/adb/service.d/` from the app
 

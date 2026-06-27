@@ -2,6 +2,48 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [4.2-beta1] - 2026-06-28
+
+### Added
+- **Network tab** — new bottom-bar section grouping all network-adjacent tweaks.
+- **CPU Performance Tuning** (`PerformanceController`): tunes the Schedutil
+  `up_rate_limit_us` on the LITTLE cluster (policy0) and the CAF input-boost
+  frequency/duration via `/sys/devices/system/cpu/cpu_boost/`. Settings apply
+  live and persist via `service.d/cpu_performance.sh`; the script waits for
+  `init.svc.qcom-post-boot` to finish so it wins the race against the Qualcomm
+  post-boot tuner.
+- **Global Telemetry Block** (`TelemetryController`): scans every installed app
+  for `com.google.firebase.crashlytics.xml` and sets
+  `firebase_crashlytics_collection_enabled` to `false`. Runs once at boot
+  (after a 15-second delay so app data directories exist) and can also be
+  applied live from the screen, which reports how many apps are affected vs
+  already blocked.
+- **Wearable Power Saver** (`WatchController`, formerly Galaxy Watch module):
+  lists all wearables registered in GMS's `connectionconfig.db` (watches,
+  trackers, any GMS-paired device) and lets you toggle each into **Dormant**
+  mode. Dormant devices have `connectionEnabled = 0` written to the GMS
+  SQLite database, stopping GMS from firing Bluetooth reconnect alarms for
+  out-of-range devices. GMS is force-stopped to pick up the change immediately.
+  A `service.d/wearable_dormant.sh` boot script re-applies dormant state for
+  any selected MACs, since GMS can reset the field on a cold boot.
+- **Bluetooth Auto-Disable** (`BtIdleController`): installs a watchdog daemon
+  (`service.d/bt_idle.sh`) that turns Bluetooth off after a configurable
+  timeout (5 / 10 / 15 / 30 / 60 min, default 15) with no device connected.
+  Uses five detection strategies against `dumpsys bluetooth_manager`: device
+  table status, active A2DP/Headset device, `mIsPlaying` flag, profile
+  connection state, and GATT client/server map entries. Connecting any device
+  resets the timer. A PID lock prevents stacked instances.
+
+### Changed
+- **ZRAM UI defaults** updated to `lz4` compression, 3 GB size, and
+  swappiness 40 — values confirmed optimal for this device.
+- **Boot script race conditions fixed** for `force_us_wifi.sh` and
+  `adb_wireless.sh`: both now wait for `init.svc.qcom-post-boot` to reach
+  `stopped` before applying settings, preventing the Qualcomm post-boot script
+  from overwriting them.
+- **Wearable module generalised**: previously hardcoded for Galaxy Watch; now
+  reads all paired GMS wearable devices dynamically from `connectionconfig.db`.
+
 ## [4.1-beta4] - 2026-06-22
 
 ### Added
