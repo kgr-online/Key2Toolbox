@@ -6,66 +6,75 @@ import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.core.ShellResult
 
 /**
- * Galaxy/Wear watch power saver.
+ * Wearable Device Power Saver.
  *
- * A paired watch is registered in Play Services' wearable store
- * (connectionconfig.db) with connectionEnabled=1. While enabled but out of
- * range, GMS fires a Bluetooth RETRY_CONNECTION alarm every few minutes,
- * waking the CPU + Bluetooth HAL all day - a major screen-off drain. The
- * companion plugin being frozen does NOT stop this; the retries come from the
- * GMS node itself.
+ * Wearable devices (smartwatches, trackers) paired through Google Play Services
+ * are registered in the connectionconfig.db store. When a configured wearable is out of
+ * range but enabled, GMS regularly fires alarms to attempt reconnections, causing
+ * background battery drain.
  *
- * This toggles connectionEnabled in that DB *without unpairing*: the BT bond
- * and the node survive, so flipping back to active reconnects with no
- * re-pair (no Samsung factory-reset dance). "Dormant" stops the retries while
- * leaving Bluetooth free for other devices (speakers, etc).
- *
- * Persistence: when set dormant, installs /data/adb/service.d/watch_dormant.sh
- * which re-applies connectionEnabled=0 at boot, since GMS can re-enable the
- * node on a cold boot. Setting active removes that script.
+ * This controller toggles connectionEnabled dynamically in GMS's databases,
+ * allowing the user to put any registered wearable into a "Dormant" state
+ * when not in use.
  */
 object WatchController {
 
     private const val DB = "/data/data/com.google.android.gms/databases/connectionconfig.db"
-    private const val SCRIPT_NAME = "watch_dormant.sh"
+    private const val SCRIPT_NAME = "wearable_dormant.sh"
     private const val TARGET = "/data/adb/service.d/$SCRIPT_NAME"
+    private const val TEMPLATE_ASSET = "wearable_dormant_template.sh"
 
-    enum class State { ACTIVE, DORMANT, NONE, UNKNOWN }
+    data class WearableDevice(
+        val name: String,
+        val macAddress: String,
+        val enabled: Boolean
+    )
 
     private fun sqlite(query: String): ShellResult =
         RootShell.run("sqlite3 '$DB' \"$query\"")
 
-    /** Number of registered watch nodes. */
-    fun nodeCount(): Int =
-        sqlite("SELECT COUNT(*) FROM connectionConfigurations;").outString.trim().toIntOrNull() ?: 0
+    fun isSupported(): Boolean = RootShell.run("[ -f '$DB' ]").success
 
-    /** Names of registered watches, for display. */
-    fun nodeNames(): List<String> =
-        sqlite("SELECT name FROM connectionConfigurations;").out
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-
-    fun currentState(): State {
-        if (nodeCount() == 0) return State.NONE
-        val enabled = sqlite("SELECT MAX(connectionEnabled) FROM connectionConfigurations;")
-            .outString.trim().toIntOrNull() ?: return State.UNKNOWN
-        return if (enabled >= 1) State.ACTIVE else State.DORMANT
+    /** Reads the registered wearables from the GMS database. */
+    fun getDevices(): List<WearableDevice> {
+        val out = sqlite("SELECT name, pairedBtAddress, connectionEnabled FROM connectionConfigurations;").out
+        return out.mapNotNull { line ->
+            val parts = line.split('|')
+            if (parts.size >= 3) {
+                WearableDevice(
+                    name = parts[0].trim().ifEmpty { "Unnamed Wearable" },
+                    macAddress = parts[1].trim(),
+                    enabled = (parts[2].trim().toIntOrNull() ?: 1) >= 1
+                )
+            } else null
+        }
     }
 
-    fun isPersistedDormant(): Boolean = AssetInstaller.fileExists(TARGET)
+    /** Toggles the connection state of a specific wearable. */
+    fun setDeviceDormant(context: Context, macAddress: String, dormant: Boolean): ShellResult {
+        // 1. Update GMS database
+        val dbValue = if (dormant) 0 else 1
+        val dbResult = sqlite("UPDATE connectionConfigurations SET connectionEnabled=$dbValue WHERE pairedBtAddress='$macAddress';")
+        
+        // Restart GMS so it immediately picks up the state change
+        RootShell.run("am force-stop com.google.android.gms")
 
-    /**
-     * Sets all watch nodes dormant (enabled=0) or active (enabled=1), restarts
-     * GMS so it reloads the store, and persists/removes the boot script.
-     * Returns the result of the DB update + GMS restart.
-     */
-    fun setDormant(context: Context, dormant: Boolean): ShellResult {
-        if (dormant) AssetInstaller.installFromAsset(context, SCRIPT_NAME, TARGET)
-        else AssetInstaller.removeFile(TARGET)
+        // 2. Update persistent boot script state
+        val devices = getDevices()
+        val dormantMacs = devices.filter { 
+            if (it.macAddress == macAddress) dormant else !it.enabled 
+        }.map { it.macAddress }
 
-        return RootShell.run(
-            "sqlite3 '$DB' \"UPDATE connectionConfigurations SET connectionEnabled=" +
-                "${if (dormant) 0 else 1};\"; am force-stop com.google.android.gms"
-        )
+        if (dormantMacs.isEmpty()) {
+            AssetInstaller.removeFile(TARGET)
+        } else {
+            // Build the SQL IN clause: e.g. "'MAC1', 'MAC2'"
+            val macListStr = dormantMacs.joinToString(", ") { "'$it'" }
+            AssetInstaller.installFromAsset(context, TEMPLATE_ASSET, TARGET) { raw ->
+                raw.replace("__MAC_LIST__", macListStr)
+            }
+        }
+
+        return dbResult
     }
 }
