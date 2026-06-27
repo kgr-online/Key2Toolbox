@@ -27,27 +27,47 @@ while true; do
     fi
     # Check for any actively connected BT device.
     #
-    # "mConnectionState: 2" is too broad — it appears in bonded-but-idle device
-    # records and internal state objects, causing false positives.
-    #
-    # Strategy (first match wins):
-    #   1. ACL level: "state: ACL_CONNECTED" lines (reliable on AOSP / LineageOS).
-    #   2. Profile level: lines that start with a profile name and contain
-    #      "state=connected" (A2DP, HFP, Headset, etc.).
-    #   3. Legacy fallback: "mConnectionState=2" *only* on lines that also carry
-    #      a device MAC address, anchoring it to actual device-state lines.
+    # We parse the dumpsys bluetooth_manager output using four strategies:
+    #   1. Device Table: Line containing a MAC address and "Connected" but NOT "NotConnected".
+    #   2. Active Audio: Profile A2dpService or HeadsetService has mActiveDevice != null (pointing to a MAC).
+    #   3. Active Playback: A2dpService indicates mIsPlaying: true.
+    #   4. State Machines: Any profile connection status set to STATE_CONNECTED or 2.
+    #   5. GATT maps: GattClientMap or GattServerMap has Entries > 0 (e.g. active wearables).
     _bt_dump="$(dumpsys bluetooth_manager 2>/dev/null)"
     _connected=false
-    # 1. ACL connected (most reliable)
-    echo "$_bt_dump" | grep -qiE "state[[:space:]]*:[[:space:]]*ACL_CONNECTED" && _connected=true
-    # 2. Profile-level connected
-    if ! $_connected; then
-        echo "$_bt_dump" | grep -qiE "^[[:space:]]+(A2dp|Headset|HFP|Gatt|Map|Pan|HID|PAN)[^:]*state[[:space:]]*=[[:space:]]*connected" && _connected=true
+
+    # 1. Device Table Status Check
+    if echo "$_bt_dump" | grep -E "([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}" | grep -Fv "NotConnected" | grep -qi "Connected"; then
+        _connected=true
     fi
-    # 3. Legacy fallback: mConnectionState=2 anchored to a line with a BT MAC
+
+    # 2. Active Audio Device
     if ! $_connected; then
-        echo "$_bt_dump" | grep -E "([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}" | grep -q "mConnectionState[[:space:]]*:[[:space:]]*2" && _connected=true
+        echo "$_bt_dump" | grep -iA 5 "Profile: A2dpService" | grep -qiE "mActiveDevice[[:space:]]*:[[:space:]]*([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}" && _connected=true
     fi
+    if ! $_connected; then
+        echo "$_bt_dump" | grep -iA 5 "Profile: HeadsetService" | grep -qiE "mActiveDevice[[:space:]]*:[[:space:]]*([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}" && _connected=true
+    fi
+
+    # 3. Active Playback check
+    if ! $_connected; then
+        echo "$_bt_dump" | grep -qi "mIsPlaying[[:space:]]*:[[:space:]]*true" && _connected=true
+    fi
+
+    # 4. Connection State check
+    if ! $_connected; then
+        echo "$_bt_dump" | grep -qiE "mConnectionState[[:space:]]*:[[:space:]]*(STATE_CONNECTED|2)" && _connected=true
+    fi
+
+    # 5. GATT Clients/Servers map
+    if ! $_connected; then
+        _gatt_clients=$(echo "$_bt_dump" | grep -A 2 "GATT Client Map" | grep -oE "Entries:[[:space:]]*[0-9]+" | grep -oE "[0-9]+")
+        _gatt_servers=$(echo "$_bt_dump" | grep -A 2 "GATT Server Map" | grep -oE "Entries:[[:space:]]*[0-9]+" | grep -oE "[0-9]+")
+        if [ "${_gatt_clients:-0}" -gt 0 ] || [ "${_gatt_servers:-0}" -gt 0 ]; then
+            _connected=true
+        fi
+    fi
+
     if $_connected; then
         idle=0
     else
