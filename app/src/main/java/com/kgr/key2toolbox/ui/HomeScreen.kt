@@ -44,7 +44,8 @@ val systemScreens = listOf(
     Screen.Dt2w,
     Screen.Wifi5g,
     Screen.PlayStoreTagger,
-    Screen.K2PF
+    Screen.K2PF,
+    Screen.LedNotify
 )
 
 @Composable
@@ -105,6 +106,7 @@ private fun DetailHost(screen: Screen, onBack: () -> Unit) {
         Screen.Wifi5g -> Wifi5gScreen(onBack)
         Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
         Screen.K2PF -> K2PFScreen(onBack)
+        Screen.LedNotify -> LedNotifyScreen(onBack)
         Screen.Home -> Unit
     }
 }

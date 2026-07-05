@@ -15,4 +15,5 @@ sealed class Screen(val title: String, val subtitle: String = "") {
     data object Wifi5g : Screen("5GHz Hotspot Workaround", "Force US WiFi region for 5GHz SoftAP")
     data object PlayStoreTagger : Screen("Play Store Tagger", "Retag apps as Play Store installs")
     data object K2PF : Screen("BBProdFix Settings", "Manage k2prodfix module tweaks")
+    data object LedNotify : Screen("LED Notify Colors", "Per-app notification LED colors")
 }
