@@ -4,9 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -139,12 +142,24 @@ private fun MenuEntry(screen: Screen, onClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(screen.title, style = MaterialTheme.typography.titleMedium)
-            if (screen.subtitle.isNotEmpty()) {
-                Text(
-                    screen.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            if (screen.subtitle.isNotEmpty() || screen.access.isNotEmpty()) {
+                Row {
+                    if (screen.subtitle.isNotEmpty()) {
+                        Text(
+                            screen.subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (screen.access.isNotEmpty()) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            screen.access.joinToString(" ") { "[${it.label}]" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
             }
         }
     }
