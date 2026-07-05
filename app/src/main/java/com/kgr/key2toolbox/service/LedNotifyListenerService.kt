@@ -30,21 +30,27 @@ import java.util.concurrent.Executors
  * post/remove rather than incrementally tracked, so it self-corrects if an
  * event is ever missed.
  *
- * When more than one distinct color is active at once, [KEY_CYCLE_MODE]
- * decides what happens:
- *  - off (default): whichever managed notification was posted most recently
- *    wins the LED outright.
- *  - on: the LED cycles through every distinct active color in turn
- *    ([CYCLE_HOLD_MS] each), via a coroutine loop rather than the kernel
- *    trigger, since sysfs timer triggers can't natively chain multiple colors.
+ * The LED blinks in **software**: this device's LED driver doesn't expose a
+ * generic kernel timer trigger (confirmed via `cat .../trigger` - only fixed
+ * hardware triggers are listed, no `timer`), so [blinkJob] just alternates
+ * [LedNotifyManager.setColor] and [LedNotifyManager.off] on a coroutine timer
+ * instead. This is the same mechanism whether there's one active color or
+ * several:
+ *  - One color (or [KEY_CYCLE_MODE] off): that color blinks on repeat.
+ *  - Multiple distinct colors with [KEY_CYCLE_MODE] on: the loop walks
+ *    through each color in turn, blinking each once per pass - so with two
+ *    colors you see A-blink, B-blink, A-blink, B-blink, ... rather than a
+ *    long solid hold per color.
+ * The tradeoff versus a hardware trigger: this stops if the app process is
+ * killed (doze/battery optimization) until the next notification event
+ * restarts it, since there's no kernel-side timer keeping it alive independently.
  *
- * The LED blinks (kernel timer trigger) rather than staying solid, using the
- * user-configured on/off length. By default it's suppressed while the screen
- * is on (the LED is only useful when you're not already looking at the
- * screen); [KEY_FLASH_WHILE_SCREEN_ON] overrides that.
+ * By default the LED is suppressed while the screen is on (it's only useful
+ * when you're not already looking at the screen); [KEY_FLASH_WHILE_SCREEN_ON]
+ * overrides that.
  *
  * One-shot root writes happen on a single background thread so they never
- * block the listener's binder callbacks; the cycle loop runs on its own
+ * block the listener's binder callbacks; the blink loop runs on its own
  * coroutine scope so it isn't blocked waiting on those one-shot writes either.
  */
 class LedNotifyListenerService : NotificationListenerService() {
@@ -58,17 +64,14 @@ class LedNotifyListenerService : NotificationListenerService() {
         const val KEY_CYCLE_MODE = "cycle_mode"
         const val COLOR_KEY_PREFIX = "color_"
 
-        /** How long each color holds the LED while cycling through multiple. */
-        private const val CYCLE_HOLD_MS = 2000L
-
         fun colorKey(packageName: String) = "$COLOR_KEY_PREFIX$packageName"
     }
 
     private var prefs: SharedPreferences? = null
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
-    private val cycleScope = CoroutineScope(SupervisorJob())
-    private var cycleJob: Job? = null
-    private var cycleColors: List<Int> = emptyList()
+    private val blinkScope = CoroutineScope(SupervisorJob())
+    private var blinkJob: Job? = null
+    private var blinkColors: List<Int> = emptyList()
     @Volatile private var screenOn = true
     private var screenReceiver: BroadcastReceiver? = null
 
@@ -110,15 +113,15 @@ class LedNotifyListenerService : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
-        stopCycle()
+        stopBlink()
         worker.execute { LedNotifyManager.off() }
         unregisterScreenReceiver()
         super.onListenerDisconnected()
     }
 
     override fun onDestroy() {
-        stopCycle()
-        cycleScope.cancel()
+        stopBlink()
+        blinkScope.cancel()
         unregisterScreenReceiver()
         worker.shutdown()
         super.onDestroy()
@@ -134,8 +137,8 @@ class LedNotifyListenerService : NotificationListenerService() {
     private fun enabled(): Boolean = prefs?.getBoolean(KEY_ENABLED, false) ?: false
     private fun flashWhileScreenOn(): Boolean =
         prefs?.getBoolean(KEY_FLASH_WHILE_SCREEN_ON, false) ?: false
-    private fun flashLengthMs(): Int =
-        prefs?.getInt(KEY_FLASH_LENGTH_MS, DEFAULT_FLASH_LENGTH_MS) ?: DEFAULT_FLASH_LENGTH_MS
+    private fun flashLengthMs(): Long =
+        (prefs?.getInt(KEY_FLASH_LENGTH_MS, DEFAULT_FLASH_LENGTH_MS) ?: DEFAULT_FLASH_LENGTH_MS).toLong()
     private fun cycleModeEnabled(): Boolean = prefs?.getBoolean(KEY_CYCLE_MODE, false) ?: false
 
     private fun colorFor(packageName: String): Int? {
@@ -146,12 +149,12 @@ class LedNotifyListenerService : NotificationListenerService() {
     /** Re-derives what the LED should show from the current set of active notifications. */
     private fun recompute() {
         if (!enabled()) {
-            stopCycle()
+            stopBlink()
             LedNotifyManager.off()
             return
         }
         if (screenOn && !flashWhileScreenOn()) {
-            stopCycle()
+            stopBlink()
             LedNotifyManager.off()
             return
         }
@@ -171,38 +174,41 @@ class LedNotifyListenerService : NotificationListenerService() {
 
         when {
             distinctColors.isEmpty() -> {
-                stopCycle()
+                stopBlink()
                 LedNotifyManager.off()
             }
             distinctColors.size == 1 || !cycleModeEnabled() -> {
-                stopCycle()
-                val ms = flashLengthMs()
-                LedNotifyManager.setBlinking(distinctColors.first(), ms, ms)
+                startOrUpdateBlink(listOf(distinctColors.first()))
             }
-            else -> startOrUpdateCycle(distinctColors.toList())
+            else -> startOrUpdateBlink(distinctColors.toList())
         }
     }
 
-    /** Starts a coroutine that walks through [colors] forever, or leaves an equivalent one running. */
-    private fun startOrUpdateCycle(colors: List<Int>) {
-        if (colors == cycleColors && cycleJob?.isActive == true) return
-        cycleJob?.cancel()
-        cycleColors = colors
-        cycleJob = cycleScope.launch {
+    /**
+     * Starts a coroutine that blinks through [colors] forever (one on/off
+     * pulse per color per pass), or leaves an equivalent one already running.
+     */
+    private fun startOrUpdateBlink(colors: List<Int>) {
+        if (colors == blinkColors && blinkJob?.isActive == true) return
+        blinkJob?.cancel()
+        blinkColors = colors
+        blinkJob = blinkScope.launch {
             while (isActive) {
                 for (color in colors) {
                     if (!isActive) break
-                    val ms = flashLengthMs()
-                    LedNotifyManager.setBlinking(color, ms, ms)
-                    delay(CYCLE_HOLD_MS)
+                    LedNotifyManager.setColor(color)
+                    delay(flashLengthMs())
+                    if (!isActive) break
+                    LedNotifyManager.off()
+                    delay(flashLengthMs())
                 }
             }
         }
     }
 
-    private fun stopCycle() {
-        cycleJob?.cancel()
-        cycleJob = null
-        cycleColors = emptyList()
+    private fun stopBlink() {
+        blinkJob?.cancel()
+        blinkJob = null
+        blinkColors = emptyList()
     }
 }

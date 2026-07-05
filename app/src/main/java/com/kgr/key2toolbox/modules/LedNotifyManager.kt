@@ -103,56 +103,15 @@ object LedNotifyManager {
         }
     }
 
-    /**
-     * Blinks the LED [color] using the kernel's built-in "timer" trigger
-     * (`delay_on`/`delay_off` in ms) rather than a software loop - this way
-     * the pattern keeps running even if the app process is later killed by
-     * doze/battery optimization, since the kernel driver owns the timing.
-     *
-     * Write order matters here: the LED core snapshots whatever brightness is
-     * *currently set* as the trigger's "on" level at the moment `trigger` is
-     * switched to `timer`. Writing the color after activating the trigger
-     * captures stale (usually 0, leftover from a prior [off]) brightness as
-     * the on-level, so the LED never actually blinks - it just shows solid
-     * color from the direct write while the trigger silently blinks between
-     * 0 and 0. So: color first (while still on trigger=none), *then* switch
-     * to `timer`, *then* configure timing.
-     *
-     * On the "separate" layout the same on/off timing is written to all three
-     * channel nodes so R/G/B toggle in lockstep and the blended color holds
-     * steady while lit. If a device's driver doesn't expose delay_on/delay_off
-     * (some multicolor implementations don't), those writes silently fail and
-     * the LED falls back to solid - still correct, just not blinking.
-     */
-    fun setBlinking(color: Int, onMs: Int, offMs: Int) {
-        val r = (color shr 16) and 0xFF
-        val g = (color shr 8) and 0xFF
-        val b = color and 0xFF
-
-        when (detectMode()) {
-            LedMode.SEPARATE -> RootShell.run(
-                // 1) Solid color first, with trigger still "none".
-                SEPARATE_NODES.joinToString(" ; ") { "echo none > $it/trigger 2>/dev/null" } +
-                    " ; echo $r > $RED_NODE/brightness" +
-                    " ; echo $g > $GREEN_NODE/brightness" +
-                    " ; echo $b > $BLUE_NODE/brightness" +
-                    // 2) Now activate the timer trigger - it snapshots the
-                    //    color we just set as its "on" level.
-                    " ; " + SEPARATE_NODES.joinToString(" ; ") { "echo timer > $it/trigger 2>/dev/null" } +
-                    // 3) Configure on/off timing.
-                    " ; " + SEPARATE_NODES.joinToString(" ; ") {
-                        "echo $onMs > $it/delay_on 2>/dev/null ; echo $offMs > $it/delay_off 2>/dev/null"
-                    }
-            )
-            LedMode.MULTICOLOR -> RootShell.run(
-                "echo none > $MULTI_DIR/trigger 2>/dev/null ; " +
-                    "echo \"$r $g $b\" > $MULTI_DIR/multi_intensity ; " +
-                    "echo 255 > $MULTI_DIR/brightness ; " +
-                    "echo timer > $MULTI_DIR/trigger 2>/dev/null ; " +
-                    "echo $onMs > $MULTI_DIR/delay_on 2>/dev/null ; " +
-                    "echo $offMs > $MULTI_DIR/delay_off 2>/dev/null"
-            )
-            LedMode.NONE -> Unit
-        }
-    }
+    // NOTE: there is deliberately no setBlinking()/kernel-timer-trigger method
+    // here. This device's QPNP RGB LED driver doesn't register the generic
+    // Linux `timer` trigger at all - confirmed via
+    // `cat /sys/class/leds/red/trigger`, whose available list is entirely
+    // fixed hardware triggers (`rfkill-*`, `flash*_trigger`, `torch*_trigger`,
+    // `switch*_trigger`, `*-online`, `battery-*`, `mmc*`, `bms-online`) with
+    // no generic on/off timer among them. Writing `timer` to that node is
+    // silently rejected (invalid argument), so a solid color is the only
+    // thing this hardware can do on its own. Blinking is implemented in
+    // software instead, in [com.kgr.key2toolbox.service.LedNotifyListenerService],
+    // by alternating [setColor] and [off] on a coroutine timer.
 }

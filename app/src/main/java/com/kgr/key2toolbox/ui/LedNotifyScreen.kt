@@ -284,14 +284,18 @@ fun LedNotifyScreen(onBack: () -> Unit) {
                                 assign(app.pkg, color)
                                 if (color != null) {
                                     scope.launch {
+                                        // Preview with 3 actual on/off pulses at the
+                                        // chosen flash length - software blink, same
+                                        // mechanism the listener service uses, since
+                                        // this hardware has no kernel blink trigger.
                                         withContext(Dispatchers.IO) {
-                                            LedNotifyManager.setBlinking(color.toArgb(), flashLengthMs, flashLengthMs)
+                                            repeat(3) {
+                                                LedNotifyManager.setColor(color.toArgb())
+                                                delay(flashLengthMs.toLong())
+                                                LedNotifyManager.off()
+                                                delay(flashLengthMs.toLong())
+                                            }
                                         }
-                                        // Show a couple of full on/off cycles rather than
-                                        // a fixed delay, so long flash lengths (1s/2s) don't
-                                        // get cut off mid on-phase and look solid.
-                                        delay((flashLengthMs.toLong() * 2 * 2).coerceAtLeast(1500L))
-                                        withContext(Dispatchers.IO) { LedNotifyManager.off() }
                                     }
                                 }
                             }
