@@ -23,6 +23,13 @@ accessibility-service status.
 - **Double-Tap to Wake** (DT2W)
 - **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
   works (EU regdomains expose no 5GHz AP channels on this build)
+- **Play Store Tagger** - retag (or untag) installed apps as Play
+  Store-installed, so apps that check the install source stop complaining
+- **BBProdFix Settings** - companion page for the `bb-prodfix` Magisk
+  module's `system.prop`/`service.sh` tweaks
+- **LED Notify Colors** - per-app notification LED colors written straight
+  to the LED hardware, bypassing LineageOS's own (inaccurate on this device)
+  notification light color picker
 
 The UI follows Material You (Monet), in light or dark to match the system.
 Most modules are stateless: they fire root commands on demand and persist by
@@ -32,12 +39,17 @@ Keyboard Block - the last two ported from
 depend on a long-lived `Key2AccessibilityService` that watches IME/window
 state and intercepts physical key events, since none of that is observable
 from a one-shot root command. Their settings live in a `key2tweaks`
-SharedPreferences file rather than going through `AssetInstaller`.
+SharedPreferences file rather than going through `AssetInstaller`. LED
+Notify Colors follows a similar but separate pattern: it depends on a
+`NotificationListenerService` rather than the accessibility service, with
+its own `led_notify` SharedPreferences file.
 
 The accessibility-service modules only work once **Key2 Toolbox** is enabled
 under Settings → Accessibility - each of their screens shows a banner with a
 direct link there if it isn't. Reinstalling the app resets this, so it needs
-re-enabling after every fresh install.
+re-enabling after every fresh install. LED Notify Colors has the equivalent
+requirement for Settings → Notifications → Notification access, with its own
+banner.
 
 ## Signing with your existing keystore
 
@@ -171,6 +183,89 @@ ch 12-13 and EU-only 5GHz channels) and enables the upper US channels
 (149-165) that aren't EU-licensed. Also note SoftAP only starts with **WPA2**
 on this build - WPA3/SAE fails with `UNSUPPORTED_CONFIGURATION`.
 
+### Play Store Tagger (`PlayStoreTaggerManager`)
+Retags (or untags) already-installed apps as Play Store-installed, for apps
+that check their own install source and refuse to run/update otherwise.
+Extracted from a standalone app of the same name
+([kgr17/PlayStoreTagger](https://github.com/kgr17/PlayStoreTagger)), with
+changes mirrored back manually between the two.
+- **Tag / Untag mode**: switching to Untag flips the default filter from
+  "Non-Play" to "All" so already-tagged apps are visible to reverse.
+- Resolves each app's APK path(s) via `pm path`; a single APK goes through
+  a plain `pm install -i com.android.vending --dont-kill -r`, while
+  split/multi-APK installs go through the full session flow
+  (`pm install-create` → `pm install-write` per split, sized via `stat`, →
+  `pm install-commit`, with `pm install-abandon` on any failed write).
+  Untagging re-runs the same flow with no `-i` flag.
+- Filter chips: **Non-Play** (default) / **All**, plus a **System** toggle
+  to include system packages. Search box, per-app checkboxes, running app
+  count, and a scrollable log panel that streams each `pm` command's output
+  live during a batch operation.
+
+### BBProdFix Settings (`K2PFController`)
+Companion page for the `bb-prodfix` Magisk module (gated behind detection at
+`/data/adb/modules/bb-prodfix/` - the screen shows "Checking for bb-prodfix
+module…" then either the toggles or a not-installed message). Reads/writes
+`system.prop` and `service.sh` inside that module's directory directly, no
+separate persistence layer needed since the module's own boot scripts apply
+them:
+- **BlackBerry device identity** - a `ro.product.*` block across
+  `system`/`system_ext`/`odm`/`vendor`/`vendor_dlkm` partitions.
+- **Bluetooth A2DP offload** - also applied live via `setprop` immediately,
+  since those are `persist.*`/mutable props.
+- **Higher volume steps**, **SurfaceFlinger triple buffering**, **background
+  app limit** - each a small tagged prop block, added/removed by marker
+  comment so re-toggling doesn't duplicate lines.
+- **Swappiness** - not a boolean like the others but a numeric value patched
+  into the `sysctl -w vm.swappiness=` line in `service.sh` (applied live too);
+  the screen also reads `ZramController.isPersisted()` to flag if Key2
+  Toolbox's own ZRAM module is already managing swappiness, so the two don't
+  fight over the same setting.
+- All `system.prop`/`service.sh` rewrites go through `printf '%s' > file`
+  with `'` escaped as `'\''`, to avoid shell-quoting breakage on the prop
+  values. `ro.*` prop changes need a reboot to take effect; everything else
+  in this screen is live.
+
+### LED Notify Colors (`LedNotifyManager` + `LedNotifyListenerService`)
+Per-app notification LED colors, written directly to the LED class sysfs
+nodes via root - bypassing LineageOS's own per-app notification light color
+picker, whose color quantization doesn't match this device's actual LED
+hardware (arbitrary RGB gets snapped to the nearest color in a lookup table
+that's wrong for this kernel). Apps that set their own light color via
+`NotificationChannel.setLightColor()` (e.g. WhatsApp) skip that broken layer
+and come out correct, which is the same path this module takes.
+- **Detection** (`LedNotifyManager.detectMode`): probes for either a
+  "separate" RGB layout (`/sys/class/leds/red|green|blue/brightness`) or a
+  combined "multicolor" layout (`/sys/class/leds/rgb/multi_intensity`),
+  caching whichever is found; if neither exists, the screen shows a warning
+  instead of silently no-opping every write.
+- **Blinking** uses the kernel's `timer` trigger (`delay_on`/`delay_off`)
+  rather than a software loop, so the pattern survives the app process being
+  killed by doze/battery optimization. Write order matters: the color has to
+  be set *before* switching `trigger` to `timer`, since the trigger snapshots
+  whatever brightness is currently set as its "on" level at the moment of
+  activation - doing it in the other order silently produces a solid color
+  instead of a blink.
+- **`LedNotifyListenerService`** (a `NotificationListenerService`, requires
+  Settings → Notifications → Notification access) recomputes the LED state
+  from scratch on every notification post/remove rather than tracking deltas,
+  so it self-corrects if an event is ever missed.
+- **Multiple active notifications**: "Show only the most recent" (default)
+  lets whichever managed notification posted last own the LED outright;
+  "Cycle through colors" walks through every distinct active color in turn
+  (2s each) via a dedicated coroutine loop, since sysfs timer triggers can't
+  natively chain more than one color.
+- **Screen-on suppression**: off by default (the LED only fires while the
+  screen is off), overridable per the "Flash while screen is on" toggle,
+  tracked via a `BroadcastReceiver` on `ACTION_SCREEN_ON`/`ACTION_SCREEN_OFF`
+  registered in `onListenerConnected`.
+- Per-app colors and all of the above settings live in their own
+  `led_notify` SharedPreferences file, keyed by `color_<packageName>`.
+- For any app managed here, its own in-app LED color setting (and/or
+  LineageOS's per-app override) should be left unset - otherwise both the
+  system's lights service and this module end up racing to write the same
+  physical LED.
+
 ## ⚠ Known risk: writing to `/data/adb/service.d/` from the app
 
 In a previous session, **every attempt to write to `/data/adb/service.d/`
@@ -215,6 +310,10 @@ you'll see immediately if a persist operation silently failed.
   settings as SharedPreferences booleans/ints in the `key2tweaks` prefs file,
   and write the corresponding screen to read/write those same keys directly
   rather than going through `AssetInstaller`.
+- Same idea applies to anything that needs to observe notifications
+  specifically (see `LedNotifyListenerService`): use a
+  `NotificationListenerService` rather than the accessibility service, with
+  its own dedicated SharedPreferences file rather than reusing `key2tweaks`.
 - Either way, add a corresponding screen in `ui/` (following e.g.
   `CtrlKeyScreen.kt` for the simple case or `NavLockScreen.kt` /
   `ImeBlockScreen.kt` for the prefs-based case, all built on the shared
