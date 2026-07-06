@@ -1,6 +1,7 @@
 package com.kgr.key2toolbox.modules
 
 import com.kgr.key2toolbox.core.RootShell
+import java.util.concurrent.Executors
 
 /**
  * Root-level control of the notification RGB LED, bypassing LineageOS's own
@@ -26,6 +27,16 @@ import com.kgr.key2toolbox.core.RootShell
  * If neither is found, [detectMode] reports [LedMode.NONE] and callers should
  * disable the feature rather than silently no-op every write.
  *
+ * **Every write is serialized through [ledExecutor]**, a single dedicated
+ * thread, regardless of which caller's thread invokes [setColor]/[off] - the
+ * notification listener service's blink loop and the LED Notify screen's
+ * per-app test-preview button both end up going through the exact same
+ * queue. Without this, two callers writing to the LED at nearly the same
+ * moment (e.g. testing a swatch in the UI while a real notification is
+ * actively blinking) race on the same sysfs nodes, which produces
+ * intermittent-looking corruption (stuck on, stuck off, rapid flicker) as
+ * the two writers drift in and out of phase with each other.
+ *
  * NOTE: the exact node names/paths here are the common defaults for this
  * class of hardware. If `find /sys/class/leds -maxdepth 2` on the actual
  * Key2 shows different names, update [SEPARATE_NODES] / [MULTI_DIR] below -
@@ -43,6 +54,10 @@ object LedNotifyManager {
     private const val MULTI_DIR = "/sys/class/leds/rgb"
 
     @Volatile private var cachedMode: LedMode? = null
+
+    // Single dedicated thread every LED write is funneled through, no matter
+    // which caller/dispatcher/thread invokes setColor()/off() - see class doc.
+    private val ledExecutor = Executors.newSingleThreadExecutor()
 
     /** Detects (and caches) which LED layout this device exposes. */
     fun detectMode(force: Boolean = false): LedMode {
@@ -65,8 +80,22 @@ object LedNotifyManager {
 
     fun isAvailable(): Boolean = detectMode() != LedMode.NONE
 
-    /** Lights the LED a solid [color] (0xRRGGBB). No-ops if no LED was detected. */
+    /**
+     * Lights the LED a solid [color] (0xRRGGBB). No-ops if no LED was
+     * detected. Blocks the calling thread until the write has actually run
+     * on [ledExecutor] - callers on a coroutine dispatcher should invoke this
+     * from a background context (e.g. `Dispatchers.IO`), same as before.
+     */
     fun setColor(color: Int) {
+        ledExecutor.submit { setColorInternal(color) }.get()
+    }
+
+    /** Turns the LED off. Same threading contract as [setColor]. */
+    fun off() {
+        ledExecutor.submit { offInternal() }.get()
+    }
+
+    private fun setColorInternal(color: Int) {
         val r = (color shr 16) and 0xFF
         val g = (color shr 8) and 0xFF
         val b = color and 0xFF
@@ -89,8 +118,7 @@ object LedNotifyManager {
         }
     }
 
-    /** Turns the LED off. */
-    fun off() {
+    private fun offInternal() {
         when (detectMode()) {
             LedMode.SEPARATE -> RootShell.run(
                 SEPARATE_NODES.joinToString(" ; ") { "echo none > $it/trigger 2>/dev/null" } +

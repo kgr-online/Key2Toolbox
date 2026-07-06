@@ -13,6 +13,7 @@ import com.kgr.key2toolbox.modules.LedNotifyManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -32,15 +33,31 @@ import java.util.concurrent.Executors
  *
  * The LED blinks in **software**: this device's LED driver doesn't expose a
  * generic kernel timer trigger (confirmed via `cat .../trigger` - only fixed
- * hardware triggers are listed, no `timer`), so [blinkJob] just alternates
- * [LedNotifyManager.setColor] and [LedNotifyManager.off] on a coroutine timer
- * instead. This is the same mechanism whether there's one active color or
- * several:
- *  - One color (or [KEY_CYCLE_MODE] off): that color blinks on repeat.
- *  - Multiple distinct colors with [KEY_CYCLE_MODE] on: the loop walks
- *    through each color in turn, blinking each once per pass - so with two
- *    colors you see A-blink, B-blink, A-blink, B-blink, ... rather than a
- *    long solid hold per color.
+ * hardware triggers are listed, no `timer`), so [blinkJob] drives it directly:
+ *  - One active color (or [KEY_CYCLE_MODE] off): alternates that color and
+ *    off, each held for the configured flash length - a real blink.
+ *  - Multiple distinct colors with [KEY_CYCLE_MODE] on: each color gets its
+ *    own on/off blink in turn - green, off, blue, off, green, off, ... -
+ *    rather than swapping directly between colors with no gap.
+ * Each phase is scheduled against a fixed-rate clock (`nextTick += period`)
+ * rather than a plain `delay(period)` after each write, so root-shell latency
+ * doesn't compound into drift over time.
+ *
+ * **Everything here - `recompute()`, the blink loop, and one-shot writes -
+ * runs on a single dedicated thread ([executor]/[executorDispatcher]).** This
+ * matters because [LedNotifyManager]'s writes are plain blocking calls, not
+ * suspending ones: if `recompute()` restarts the blink while the *previous*
+ * blink coroutine happens to be mid-write, cancellation can't interrupt a
+ * blocking call, so for a moment both the old and new loop would be alive at
+ * once. On a multi-threaded dispatcher that means two threads racing to write
+ * the same LED concurrently - which looks exactly like intermittent
+ * corruption (blink runs fine for a while, then gets stuck on, stuck off, or
+ * flickers rapidly, in a repeating pattern) as the two loops drift in and out
+ * of phase with each other. Pinning everything to one thread makes that
+ * structurally impossible: a new coroutine can't even begin running until the
+ * old one's blocking call returns and it hits a suspension point where the
+ * cancellation actually takes effect.
+ *
  * The tradeoff versus a hardware trigger: this stops if the app process is
  * killed (doze/battery optimization) until the next notification event
  * restarts it, since there's no kernel-side timer keeping it alive independently.
@@ -48,10 +65,6 @@ import java.util.concurrent.Executors
  * By default the LED is suppressed while the screen is on (it's only useful
  * when you're not already looking at the screen); [KEY_FLASH_WHILE_SCREEN_ON]
  * overrides that.
- *
- * One-shot root writes happen on a single background thread so they never
- * block the listener's binder callbacks; the blink loop runs on its own
- * coroutine scope so it isn't blocked waiting on those one-shot writes either.
  */
 class LedNotifyListenerService : NotificationListenerService() {
 
@@ -68,8 +81,13 @@ class LedNotifyListenerService : NotificationListenerService() {
     }
 
     private var prefs: SharedPreferences? = null
-    private val worker: ExecutorService = Executors.newSingleThreadExecutor()
-    private val blinkScope = CoroutineScope(SupervisorJob())
+
+    // Single dedicated thread for every LED write and every recompute() call -
+    // see the class doc above for why this can't be a multi-threaded dispatcher.
+    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val executorDispatcher = executor.asCoroutineDispatcher()
+    private val scope = CoroutineScope(SupervisorJob() + executorDispatcher)
+
     private var blinkJob: Job? = null
     private var blinkColors: List<Int> = emptyList()
     @Volatile private var screenOn = true
@@ -85,7 +103,7 @@ class LedNotifyListenerService : NotificationListenerService() {
         val rx = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 screenOn = intent?.action == Intent.ACTION_SCREEN_ON
-                worker.execute { recompute() }
+                scope.launch { recompute() }
             }
         }
         val filter = IntentFilter().apply {
@@ -99,31 +117,31 @@ class LedNotifyListenerService : NotificationListenerService() {
             // Screen-state toggle just won't update live; feature still works.
         }
 
-        worker.execute { recompute() }
+        scope.launch { recompute() }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (!enabled()) return
-        worker.execute { recompute() }
+        scope.launch { recompute() }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
         if (!enabled()) return
-        worker.execute { recompute() }
+        scope.launch { recompute() }
     }
 
     override fun onListenerDisconnected() {
         stopBlink()
-        worker.execute { LedNotifyManager.off() }
+        scope.launch { LedNotifyManager.off() }
         unregisterScreenReceiver()
         super.onListenerDisconnected()
     }
 
     override fun onDestroy() {
         stopBlink()
-        blinkScope.cancel()
+        scope.cancel()
+        executor.shutdownNow()
         unregisterScreenReceiver()
-        worker.shutdown()
         super.onDestroy()
     }
 
@@ -185,22 +203,44 @@ class LedNotifyListenerService : NotificationListenerService() {
     }
 
     /**
-     * Starts a coroutine that blinks through [colors] forever (one on/off
-     * pulse per color per pass), or leaves an equivalent one already running.
+     * Starts a coroutine that shows [colors] forever, or leaves an equivalent
+     * one already running. Every color gets its own on/off blink - green,
+     * off, blue, off, green, off, ... - rather than swapping directly
+     * between colors with no gap.
+     *
+     * The "already running" check compares [colors] as a *set*, not an
+     * ordered list: `actives.sortedByDescending { postTime }` can reorder
+     * which color leads depending on notification update timing even when
+     * the underlying set of active colors hasn't actually changed, and
+     * restarting the loop over a pure reorder would just reintroduce the
+     * same race this method exists to avoid.
      */
     private fun startOrUpdateBlink(colors: List<Int>) {
-        if (colors == blinkColors && blinkJob?.isActive == true) return
+        if (colors.toSet() == blinkColors.toSet() && blinkJob?.isActive == true) return
         blinkJob?.cancel()
         blinkColors = colors
-        blinkJob = blinkScope.launch {
+        // null represents an "off" phase, inserted after every color.
+        val phases: List<Int?> = colors.flatMap { listOf(it, null) }
+
+        blinkJob = scope.launch {
+            var nextTick = System.currentTimeMillis()
             while (isActive) {
-                for (color in colors) {
+                for (phase in phases) {
                     if (!isActive) break
-                    LedNotifyManager.setColor(color)
-                    delay(flashLengthMs())
-                    if (!isActive) break
-                    LedNotifyManager.off()
-                    delay(flashLengthMs())
+                    if (phase != null) LedNotifyManager.setColor(phase) else LedNotifyManager.off()
+
+                    val period = flashLengthMs()
+                    nextTick += period
+                    val wait = nextTick - System.currentTimeMillis()
+                    if (wait > 0) {
+                        delay(wait)
+                    } else {
+                        // A write took longer than the configured period (e.g.
+                        // the root shell was briefly slow) - resync instead of
+                        // trying to catch up, so one slow write doesn't cause a
+                        // burst of instant phase changes right after.
+                        nextTick = System.currentTimeMillis()
+                    }
                 }
             }
         }
