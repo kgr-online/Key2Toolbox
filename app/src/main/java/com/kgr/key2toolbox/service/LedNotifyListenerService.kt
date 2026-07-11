@@ -58,9 +58,19 @@ import java.util.concurrent.Executors
  * old one's blocking call returns and it hits a suspension point where the
  * cancellation actually takes effect.
  *
- * The tradeoff versus a hardware trigger: this stops if the app process is
- * killed (doze/battery optimization) until the next notification event
- * restarts it, since there's no kernel-side timer keeping it alive independently.
+ * **[wakeLock] is held for as long as the blink loop is running.** Confirmed
+ * via logcat timing (see LedNotifyManager) that individual root-shell writes
+ * are consistently fast (single-digit ms) and the fixed-rate scheduler was
+ * landing right on target - so the remaining unevenness wasn't the write
+ * latency or the scheduling math. It turned out to correlate with whether the
+ * device was plugged in: Doze mode suspends CPU timing precision once the
+ * screen's off, the device is on battery, and it's been idle a while (but
+ * explicitly does *not* engage while charging) - so `delay()` calls in the
+ * blink loop were firing late and in bursts once Doze kicked in, which is
+ * exactly the "runs fine for a while, then stuck on/stuck off/flickers"
+ * pattern. A partial wake lock, held only while a blink loop is actually
+ * active, keeps the CPU responsive enough for the timer without needing to
+ * exempt the whole app from battery optimization.
  *
  * By default the LED is suppressed while the screen is on (it's only useful
  * when you're not already looking at the screen); [KEY_FLASH_WHILE_SCREEN_ON]
@@ -77,6 +87,11 @@ class LedNotifyListenerService : NotificationListenerService() {
         const val KEY_CYCLE_MODE = "cycle_mode"
         const val COLOR_KEY_PREFIX = "color_"
 
+        // Safety ceiling on the wake lock so a coroutine leak (bug elsewhere)
+        // can't hold it forever - it gets renewed well before this while a
+        // blink is genuinely still running (see startOrUpdateBlink).
+        private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L // 10 minutes
+
         fun colorKey(packageName: String) = "$COLOR_KEY_PREFIX$packageName"
     }
 
@@ -90,6 +105,7 @@ class LedNotifyListenerService : NotificationListenerService() {
 
     private var blinkJob: Job? = null
     private var blinkColors: List<Int> = emptyList()
+    private var wakeLock: PowerManager.WakeLock? = null
     @Volatile private var screenOn = true
     private var screenReceiver: BroadcastReceiver? = null
 
@@ -219,15 +235,27 @@ class LedNotifyListenerService : NotificationListenerService() {
         if (colors.toSet() == blinkColors.toSet() && blinkJob?.isActive == true) return
         blinkJob?.cancel()
         blinkColors = colors
+        acquireWakeLock()
         // null represents an "off" phase, inserted after every color.
         val phases: List<Int?> = colors.flatMap { listOf(it, null) }
 
         blinkJob = scope.launch {
             var nextTick = System.currentTimeMillis()
+            var lastWakeLockRenewal = System.currentTimeMillis()
             while (isActive) {
                 for (phase in phases) {
                     if (!isActive) break
                     if (phase != null) LedNotifyManager.setColor(phase) else LedNotifyManager.off()
+
+                    // Renew the wake lock's safety timeout periodically so a
+                    // genuinely long-running blink (someone leaves a
+                    // notification unread for hours) doesn't lose it and fall
+                    // back into Doze-affected timing partway through.
+                    val now = System.currentTimeMillis()
+                    if (now - lastWakeLockRenewal > WAKE_LOCK_TIMEOUT_MS / 2) {
+                        acquireWakeLock()
+                        lastWakeLockRenewal = now
+                    }
 
                     val period = flashLengthMs()
                     nextTick += period
@@ -250,5 +278,38 @@ class LedNotifyListenerService : NotificationListenerService() {
         blinkJob?.cancel()
         blinkJob = null
         blinkColors = emptyList()
+        releaseWakeLock()
+    }
+
+    private fun acquireWakeLock() {
+        val current = wakeLock
+        if (current != null) {
+            // Already held - just extend the safety timeout.
+            try {
+                current.acquire(WAKE_LOCK_TIMEOUT_MS)
+            } catch (_: Exception) {
+            }
+            return
+        }
+        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return
+        try {
+            val lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "K2TB:LedNotifyBlink")
+            lock.setReferenceCounted(false)
+            lock.acquire(WAKE_LOCK_TIMEOUT_MS)
+            wakeLock = lock
+        } catch (_: Exception) {
+            // Missing permission or unsupported - blink still runs, just
+            // subject to Doze timing on battery.
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            try {
+                if (it.isHeld) it.release()
+            } catch (_: Exception) {
+            }
+        }
+        wakeLock = null
     }
 }

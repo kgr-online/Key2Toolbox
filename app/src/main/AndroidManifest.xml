@@ -12,6 +12,12 @@
     <!-- Required by PlayStoreTagger to enumerate all installed packages. -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
+    <!-- Required by LedNotifyListenerService to hold a partial wake lock
+         while actively blinking, so Doze (screen off + on battery + idle)
+         doesn't suspend the CPU between coroutine delay() ticks and turn a
+         steady blink into a stuck-on/stuck-off/flicker mess. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"

@@ -1,6 +1,8 @@
 package com.kgr.key2toolbox.modules
 
+import android.util.Log
 import com.kgr.key2toolbox.core.RootShell
+import com.kgr.key2toolbox.core.ShellResult
 import java.util.concurrent.Executors
 
 /**
@@ -37,6 +39,18 @@ import java.util.concurrent.Executors
  * intermittent-looking corruption (stuck on, stuck off, rapid flicker) as
  * the two writers drift in and out of phase with each other.
  *
+ * **Every write's latency is logged** (tag `LedNotifyManager`, view via
+ * `adb logcat -s LedNotifyManager`) - blink timing is still reported as
+ * uneven even after fixing the concurrency race above, and `RootShell`'s own
+ * docs already flag that libsu may not reliably reuse a cached shell session
+ * on FolkPatch/APatch's `su` ("each exec() may run in a fresh shell
+ * invocation depending on libsu's pooling"). If per-write latency is itself
+ * wildly inconsistent (say, swinging between 10ms and 300ms+), that's the
+ * actual cause of the uneven blink - no amount of scheduling on the caller
+ * side can smooth out a write whose own duration varies that much, it can
+ * only avoid compounding the drift afterward. These logs are the way to
+ * confirm or rule that out with real numbers instead of guessing further.
+ *
  * NOTE: the exact node names/paths here are the common defaults for this
  * class of hardware. If `find /sys/class/leds -maxdepth 2` on the actual
  * Key2 shows different names, update [SEPARATE_NODES] / [MULTI_DIR] below -
@@ -45,6 +59,8 @@ import java.util.concurrent.Executors
 object LedNotifyManager {
 
     enum class LedMode { SEPARATE, MULTICOLOR, NONE }
+
+    private const val TAG = "LedNotifyManager"
 
     private const val RED_NODE = "/sys/class/leds/red"
     private const val GREEN_NODE = "/sys/class/leds/green"
@@ -63,12 +79,14 @@ object LedNotifyManager {
     fun detectMode(force: Boolean = false): LedMode {
         if (!force) cachedMode?.let { return it }
 
-        val probe = RootShell.run(
-            "if [ -e $RED_NODE/brightness ] && [ -e $GREEN_NODE/brightness ] && " +
-                "[ -e $BLUE_NODE/brightness ]; then echo separate; " +
-                "elif [ -e $MULTI_DIR/multi_intensity ]; then echo multicolor; " +
-                "else echo none; fi"
-        )
+        val probe = timedRun("detect") {
+            RootShell.run(
+                "if [ -e $RED_NODE/brightness ] && [ -e $GREEN_NODE/brightness ] && " +
+                    "[ -e $BLUE_NODE/brightness ]; then echo separate; " +
+                    "elif [ -e $MULTI_DIR/multi_intensity ]; then echo multicolor; " +
+                    "else echo none; fi"
+            )
+        }
         val mode = when (probe.outString.trim()) {
             "separate" -> LedMode.SEPARATE
             "multicolor" -> LedMode.MULTICOLOR
@@ -101,34 +119,51 @@ object LedNotifyManager {
         val b = color and 0xFF
 
         when (detectMode()) {
-            LedMode.SEPARATE -> RootShell.run(
-                // Reset any active blink trigger first, so brightness holds
-                // steady instead of being overridden by a timer trigger.
-                SEPARATE_NODES.joinToString(" ; ") { "echo none > $it/trigger 2>/dev/null" } +
-                    " ; echo $r > $RED_NODE/brightness" +
-                    " ; echo $g > $GREEN_NODE/brightness" +
-                    " ; echo $b > $BLUE_NODE/brightness"
-            )
-            LedMode.MULTICOLOR -> RootShell.run(
-                "echo none > $MULTI_DIR/trigger 2>/dev/null ; " +
-                    "echo \"$r $g $b\" > $MULTI_DIR/multi_intensity ; " +
-                    "echo 255 > $MULTI_DIR/brightness"
-            )
+            LedMode.SEPARATE -> timedRun("setColor") {
+                RootShell.run(
+                    // Reset any active blink trigger first, so brightness holds
+                    // steady instead of being overridden by a timer trigger.
+                    SEPARATE_NODES.joinToString(" ; ") { "echo none > $it/trigger 2>/dev/null" } +
+                        " ; echo $r > $RED_NODE/brightness" +
+                        " ; echo $g > $GREEN_NODE/brightness" +
+                        " ; echo $b > $BLUE_NODE/brightness"
+                )
+            }
+            LedMode.MULTICOLOR -> timedRun("setColor") {
+                RootShell.run(
+                    "echo none > $MULTI_DIR/trigger 2>/dev/null ; " +
+                        "echo \"$r $g $b\" > $MULTI_DIR/multi_intensity ; " +
+                        "echo 255 > $MULTI_DIR/brightness"
+                )
+            }
             LedMode.NONE -> Unit
         }
     }
 
     private fun offInternal() {
         when (detectMode()) {
-            LedMode.SEPARATE -> RootShell.run(
-                SEPARATE_NODES.joinToString(" ; ") { "echo none > $it/trigger 2>/dev/null" } +
-                    " ; " + SEPARATE_NODES.joinToString(" ; ") { "echo 0 > $it/brightness" }
-            )
-            LedMode.MULTICOLOR -> RootShell.run(
-                "echo none > $MULTI_DIR/trigger 2>/dev/null ; echo 0 > $MULTI_DIR/brightness"
-            )
+            LedMode.SEPARATE -> timedRun("off") {
+                RootShell.run(
+                    SEPARATE_NODES.joinToString(" ; ") { "echo none > $it/trigger 2>/dev/null" } +
+                        " ; " + SEPARATE_NODES.joinToString(" ; ") { "echo 0 > $it/brightness" }
+                )
+            }
+            LedMode.MULTICOLOR -> timedRun("off") {
+                RootShell.run(
+                    "echo none > $MULTI_DIR/trigger 2>/dev/null ; echo 0 > $MULTI_DIR/brightness"
+                )
+            }
             LedMode.NONE -> Unit
         }
+    }
+
+    /** Runs [block], logging how long the actual root shell call took. */
+    private inline fun timedRun(label: String, block: () -> ShellResult): ShellResult {
+        val start = System.nanoTime()
+        val result = block()
+        val ms = (System.nanoTime() - start) / 1_000_000
+        Log.d(TAG, "$label took ${ms}ms success=${result.success}")
+        return result
     }
 
     // NOTE: there is deliberately no setBlinking()/kernel-timer-trigger method
