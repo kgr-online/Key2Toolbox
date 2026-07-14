@@ -17,6 +17,7 @@
          doesn't suspend the CPU between coroutine delay() ticks and turn a
          steady blink into a stuck-on/stuck-off/flicker mess. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="false"

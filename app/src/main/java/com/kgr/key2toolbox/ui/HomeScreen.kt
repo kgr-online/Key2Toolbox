@@ -16,6 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Settings
+import com.kgr.key2toolbox.BuildConfig
+import com.kgr.key2toolbox.settings.SettingsScreen
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-enum class AppTab(val label: String) { Info("Info"), Keyboard("Keyboard"), System("System") }
+enum class AppTab(val label: String) { Info("Info"), Keyboard("Keyboard"), System("System"), Settings("Settings") }
 
 val keyboardScreens = listOf(
     Screen.CtrlKey,
@@ -79,6 +82,12 @@ fun HomeScreen() {
                     icon = { Icon(Icons.Filled.Build, contentDescription = null) },
                     label = { Text(AppTab.System.label) }
                 )
+                NavigationBarItem(
+                    selected = tab == AppTab.Settings,
+                    onClick = { tab = AppTab.Settings; detail = null },
+                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                    label = { Text(AppTab.Settings.label) }
+                )
             }
         }
     ) { padding ->
@@ -90,6 +99,7 @@ fun HomeScreen() {
                 AppTab.Info -> InfoScreen()
                 AppTab.Keyboard -> CategoryMenu("Keyboard", keyboardScreens) { detail = it }
                 AppTab.System -> CategoryMenu("System", systemScreens) { detail = it }
+                AppTab.Settings -> SettingsScreen(currentVersionName = BuildConfig.VERSION_NAME)
             }
         }
     }

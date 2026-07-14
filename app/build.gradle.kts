@@ -12,7 +12,7 @@ android {
         minSdk = 28
         targetSdk = 34
         versionCode = 1
-        versionName = "4.4-beta4"
+        versionName = "4.5-beta3"
     }
 
     // signingConfigs {
@@ -46,6 +46,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -70,6 +71,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // Root shell access (https://github.com/topjohnwu/libsu)
     implementation("com.github.topjohnwu.libsu:core:5.2.2")
