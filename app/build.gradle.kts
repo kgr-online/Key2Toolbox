@@ -11,15 +11,10 @@ android {
         applicationId = "com.kgr.key2toolbox"
         minSdk = 28
         targetSdk = 34
-        versionCode = 2
-        versionName = "4.2-beta1"
+        versionCode = 3
+        versionName = "4.6-beta1"
     }
 
-    // To produce a release build signed with your existing keystore, fill these
-    // in (or supply them via gradle.properties / environment variables instead
-    // of hardcoding the password here) and reference signingConfigs["release"]
-    // from the release buildType below.
-    //
     // signingConfigs {
     //     create("release") {
     //         storeFile = file("/path/to/kgr_signing.keystore")
@@ -51,6 +46,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -68,12 +64,14 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
 
     implementation(platform("androidx.compose:compose-bom:2024.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // Root shell access (https://github.com/topjohnwu/libsu)
     implementation("com.github.topjohnwu.libsu:core:5.2.2")
