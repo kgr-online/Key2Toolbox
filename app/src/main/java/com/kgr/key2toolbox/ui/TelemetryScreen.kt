@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,14 +52,18 @@ fun TelemetryScreen(onBack: () -> Unit) {
             enabled = TelemetryController.isPersisted()
             totalApps = TelemetryController.totalAffectedApps()
             blockedApps = TelemetryController.totalBlockedApps()
+            // The watchdog can die mid-session (e.g. the root shell that launched it
+            // got recycled) with nothing else noticing - self-heal here instead of
+            // leaving telemetry silently unblocked until the next reboot.
+            if (enabled && !TelemetryController.isRunning()) {
+                TelemetryController.setEnabled(context, true)
+            }
         }
     }
 
-    ScreenScaffold(title = Screen.Telemetry.title, onBack = onBack) {
+    ScreenScaffold(title = stringResource(Screen.Telemetry.titleRes), onBack = onBack) {
         Text(
-            "Globally deactivates Firebase Crashlytics collection system-wide. " +
-            "This halts background crash logs packaging and upload triggers, saving mobile data, " +
-            "RAM, and wakeup cycles.",
+            stringResource(R.string.desc_telemetry),
             style = MaterialTheme.typography.bodySmall
         )
 
@@ -66,21 +72,21 @@ fun TelemetryScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Protection Status", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.telemetry_protection_status), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = if (blockedApps > 0 && blockedApps == totalApps) 
-                        "Status: Fully Protected" 
-                    else if (blockedApps > 0) 
-                        "Status: Partially Protected" 
-                    else 
-                        "Status: Unprotected",
-                    color = if (blockedApps > 0 && blockedApps == totalApps) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
+                    text = if (blockedApps > 0 && blockedApps == totalApps)
+                        stringResource(R.string.telemetry_status_fully_protected)
+                    else if (blockedApps > 0)
+                        stringResource(R.string.telemetry_status_partially_protected)
+                    else
+                        stringResource(R.string.telemetry_status_unprotected),
+                    color = if (blockedApps > 0 && blockedApps == totalApps)
+                        MaterialTheme.colorScheme.primary
+                    else
                         MaterialTheme.colorScheme.error
                 )
-                Text("Detected apps with telemetry: $totalApps")
-                Text("Blocked apps: $blockedApps")
+                Text(stringResource(R.string.telemetry_detected_apps, totalApps))
+                Text(stringResource(R.string.telemetry_blocked_apps, blockedApps))
             }
         }
 
@@ -89,7 +95,7 @@ fun TelemetryScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Enable at Boot")
+            Text(stringResource(R.string.enable_at_boot))
             Switch(
                 checked = enabled,
                 enabled = !busy,
@@ -99,10 +105,9 @@ fun TelemetryScreen(onBack: () -> Unit) {
                     scope.launch(Dispatchers.IO) {
                         TelemetryController.setEnabled(context, it)
                         busy = false
-                        statusMessage = if (it) 
-                            "Auto-block enabled. Will run on every boot." 
-                        else 
-                            "Auto-block disabled."
+                        statusMessage = context.getString(
+                            if (it) R.string.status_telemetry_enabled else R.string.status_telemetry_disabled
+                        )
                     }
                 }
             )
@@ -120,12 +125,12 @@ fun TelemetryScreen(onBack: () -> Unit) {
                         TelemetryController.applyLive()
                         refreshCounts()
                         busy = false
-                        statusMessage = "Toggled telemetry off for all detected apps."
+                        statusMessage = context.getString(R.string.status_telemetry_toggled)
                     }
                 },
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Block all telemetry now")
+                Text(stringResource(R.string.telemetry_block_now))
             }
         }
 

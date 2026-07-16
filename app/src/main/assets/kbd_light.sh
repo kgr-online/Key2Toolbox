@@ -47,6 +47,8 @@ fade_down() {
     LAST_VAL=$TARGET
 }
 
+OFF_SLEEP=0.5
+
 while true; do
     LCD=$(cat /sys/class/leds/lcd-backlight/brightness)
 
@@ -58,9 +60,18 @@ while true; do
             LAST_VAL=0
         fi
         SCREEN_ON=0
-        sleep 0.5
+        sleep "$OFF_SLEEP"
+        # Back off the longer the screen stays off, so a sleeping phone isn't
+        # woken every 0.5s all night just to find nothing changed - ramps up
+        # to a 5s cap within a few cycles of screen-off.
+        case "$OFF_SLEEP" in
+            0.5) OFF_SLEEP=1 ;;
+            1) OFF_SLEEP=2 ;;
+            2) OFF_SLEEP=5 ;;
+        esac
         continue
     fi
+    OFF_SLEEP=0.5
 
     if [ "$SCREEN_ON" -eq 0 ]; then
         WAKE=1

@@ -1,0 +1,391 @@
+<resources>
+    <string name="app_name">Key2 Toolbox</string>
+    <string name="accessibility_description">Aktiviert die Nav-Sperre (verhindert versehentliches Zurück/Home/Übersicht beim Tippen), die PIN-Eingabe auf dem Sperrbildschirm über die physische Tastatur sowie den systemweiten Audio-EQ.</string>
+
+    <!-- Shared generic strings -->
+    <string name="generic_enabled">Aktiviert</string>
+    <string name="generic_back">← Zurück</string>
+    <string name="generic_search_apps">Apps durchsuchen</string>
+
+    <!-- Access-type tags shown on module cards -->
+    <string name="access_root">root</string>
+    <string name="access_accessibility">accessibility</string>
+    <string name="access_notification">notification</string>
+
+    <!-- Bottom nav tabs -->
+    <string name="tab_info">Info</string>
+    <string name="tab_keyboard">Tastatur</string>
+    <string name="tab_system">System</string>
+    <string name="tab_network">Netzwerk</string>
+    <string name="tab_settings">Einstellungen</string>
+
+    <!-- Screen titles/subtitles -->
+    <string name="title_battery_usage">Akkunutzung</string>
+
+    <string name="title_key_remap">Taste → Strg umbelegen</string>
+    <string name="subtitle_key_remap">Währungs- oder Convenience-Taste auf Strg umbelegt</string>
+    <string name="title_kbd_light">Adaptive Tastaturbeleuchtung</string>
+    <string name="subtitle_kbd_light">Automatisches Dimmen mit der Bildschirmhelligkeit</string>
+    <string name="title_nav_lock">Tastatur-Nav-Sperre</string>
+    <string name="subtitle_nav_lock">Versehentliche Nav-Tastendrücke verhindern</string>
+    <string name="title_pin_keyboard">Sperrbildschirm-PIN über Tastatur</string>
+    <string name="subtitle_pin_keyboard">PIN über die Hardware-Tasten eingeben</string>
+    <string name="title_ime_block">Tastatur-Blockierung pro App</string>
+    <string name="subtitle_ime_block">Tasten direkt an ausgewählte Apps weiterleiten</string>
+    <string name="title_calculator">Rechner-Tasten</string>
+    <string name="subtitle_calculator">Physische Tasten an eine Rechner-App im Vordergrund weiterleiten</string>
+    <string name="title_ime_suggestions">IME-Vorschläge</string>
+    <string name="subtitle_ime_suggestions">Strg+W/E/R wählt einen Tastatur-Vorschlag aus</string>
+
+    <string name="title_in_call_shortcuts">Anruf-Tastenkürzel</string>
+    <string name="subtitle_in_call_shortcuts">Stumm, Lautsprecher und Tastenfeld über die physische Tastatur</string>
+    <string name="title_auto_focus">Auto-Fokus</string>
+    <string name="subtitle_auto_focus">Erstes Textfeld automatisch fokussieren und beschreiben</string>
+    <string name="title_zram">ZRAM</string>
+    <string name="subtitle_zram">Komprimierungsalgorithmus und Größe</string>
+    <string name="title_performance">Leistungs- &amp; Akku-Optimierung</string>
+    <string name="subtitle_performance">CPU-Skalierung und Eingabe-Boost-Schwellenwerte lockern</string>
+    <string name="title_dt2w">Doppeltippen zum Aufwecken</string>
+    <string name="subtitle_dt2w">Bildschirm mit Doppeltipp aufwecken</string>
+    <string name="title_play_store_tagger">Play Store Tagger</string>
+    <string name="subtitle_play_store_tagger">Apps als Play-Store-Installationen kennzeichnen</string>
+    <string name="title_k2pf">BBProdFix-Einstellungen</string>
+    <string name="subtitle_k2pf">Anpassungen des k2prodfix-Moduls verwalten</string>
+    <string name="title_led_notify">LED-Benachrichtigungsfarben</string>
+    <string name="subtitle_led_notify">Benachrichtigungs-LED-Farben pro App</string>
+    <string name="title_extra_dim">Extra-Dimmung</string>
+    <string name="subtitle_extra_dim">Unter das Systemminimum dimmen, mit optionalem Nachtzeitplan</string>
+
+    <string name="title_telemetry">Globale Telemetrie-Blockierung</string>
+    <string name="subtitle_telemetry">Firebase Crashlytics systemweit deaktivieren</string>
+    <string name="title_wireless_adb">Dauerhaftes WLAN-ADB</string>
+    <string name="subtitle_wireless_adb">Fester Port, übersteht Neustarts</string>
+    <string name="title_wifi5g">5-GHz-Hotspot-Workaround</string>
+    <string name="subtitle_wifi5g">US-WLAN-Region für 5-GHz-AP erzwingen</string>
+    <string name="title_watch">Wearable-Akkusparer</string>
+    <string name="subtitle_watch">Bluetooth-Wiederverbindungsversuche im Hintergrund stoppen</string>
+    <string name="title_bt_idle">Bluetooth automatisch deaktivieren</string>
+    <string name="subtitle_bt_idle">Bluetooth bei Inaktivität ausschalten</string>
+
+    <!-- More shared generic strings -->
+    <string name="generic_yes">Ja</string>
+    <string name="generic_no">Nein</string>
+    <string name="generic_checking">wird geprüft…</string>
+    <string name="generic_ok">OK</string>
+    <string name="generic_cancel">Abbrechen</string>
+    <string name="generic_apply">Anwenden</string>
+    <string name="generic_disable">Deaktivieren</string>
+    <string name="generic_clear">Löschen</string>
+    <string name="generic_refresh">Aktualisieren</string>
+    <string name="generic_retry">Erneut versuchen</string>
+    <string name="generic_search">Suchen</string>
+    <string name="generic_unknown">unbekannt</string>
+    <string name="generic_unknown_inactive">unbekannt / inaktiv</string>
+    <string name="generic_not_set">nicht festgelegt</string>
+    <string name="generic_not_connected">nicht verbunden</string>
+    <string name="generic_persisted">Gespeichert: %1$s</string>
+    <string name="generic_currently_running">Aktuell aktiv: %1$s</string>
+    <string name="generic_live_state">Live-Status: %1$s</string>
+    <string name="generic_state">Status: %1$s</string>
+    <string name="generic_state_pending_boot">Status: %1$s (wird beim nächsten Start aktiv)</string>
+    <string name="generic_state_on">An</string>
+    <string name="generic_state_off">Aus</string>
+    <string name="generic_size">Größe</string>
+    <string name="generic_selected_of_apps">%1$d von %2$d Apps ausgewählt</string>
+    <string name="generic_minutes">%1$d Min.</string>
+    <string name="generic_hours">%1$d Std.</string>
+    <string name="generic_seconds">%1$ds</string>
+    <string name="generic_milliseconds">%1$dms</string>
+    <string name="generic_ms">%1$d ms</string>
+    <string name="generic_us">%1$d µs</string>
+    <string name="generic_mhz">%1$d MHz</string>
+    <string name="generic_mb">%1$d MB</string>
+    <string name="generic_percent">%1$d%%</string>
+    <string name="persisted_ok">ok</string>
+    <string name="persisted_mismatch">ABWEICHUNG - Schreibrechte von service.d prüfen</string>
+    <string name="enable_at_boot">Beim Start aktivieren</string>
+
+    <!-- Accessibility / notification access banners -->
+    <string name="accessibility_service_enabled">Bedienungshilfe: aktiviert</string>
+    <string name="accessibility_service_required">Diese Funktion benötigt die aktivierte Bedienungshilfe.</string>
+    <string name="accessibility_service_open_settings">Bedienungshilfe-Einstellungen öffnen</string>
+    <string name="notification_access_enabled">Benachrichtigungszugriff: aktiviert</string>
+    <string name="notification_access_required">Diese Funktion benötigt gewährten Benachrichtigungszugriff.</string>
+    <string name="notification_access_open_settings">Einstellungen für Benachrichtigungszugriff öffnen</string>
+
+    <!-- Calculator Keys -->
+    <string name="desc_calculator">Im AOSP/Google-Rechner werden physische Tasten an die Rechner-Schaltflächen weitergeleitet: Ziffern (Q W E R / S D F / Z X C für 0-9), sowie Operatoren - O = +, I = -, A = ×, G = ÷, M = ., U = %%, B = !, T/Y = ( ), Sym/Alt schaltet den wissenschaftlichen Modus um, Rücktaste löscht. Kein Root nötig - nutzt nur die Bedienungshilfe.</string>
+
+    <!-- IME Suggestions -->
+    <string name="requires_ctrl_remap">Strg+W/E/R funktioniert nur, wenn eine Taste auf Strg umbelegt ist - ansonsten haben diese Tastenkürzel keine Wirkung.</string>
+    <string name="action_open_key_remap">„Taste → Strg umbelegen“ öffnen</string>
+    <string name="desc_ime_suggestions">Drücke Strg+W, Strg+E oder Strg+R, um Vorschlag 1, 2 oder 3 aus der Vorschlagsleiste der physischen Tastatur auszuwählen (BlackBerry-Tastatur und ähnliche). Wirkt nur, wenn tatsächlich ein Vorschlag angezeigt wird, sodass Strg+W/E/R anderswo weiterhin normal funktionieren (z. B. zum Schließen eines Browser-Tabs). Erfordert eine auf Strg umbelegte Taste (siehe „Taste → Strg umbelegen“). Kein Root erforderlich.</string>
+
+    <!-- Call Shortcuts -->
+    <string name="requires_auto_focus_dialer">Stumm und Lautsprecher funktionieren eigenständig. Für schnelle, zuverlässige Eingabe von Wähltastatur-Ziffern (Kurzwahl) zusätzlich Auto-Fokus für die Telefon-/Wähler-App aktivieren.</string>
+    <string name="action_open_auto_focus">Auto-Fokus öffnen</string>
+    <string name="desc_in_call_shortcuts">Auf dem Anrufbildschirm der Google Telefon-App: M zum Stummschalten/Aufheben, die Währungstaste (oder Strg, falls umbelegt) zum Umschalten des Lautsprechers, sowie Q W E R / S D F / Z X C zum Öffnen des Wähltastenfelds und Eingeben von Ziffern. Kein Root erforderlich.</string>
+
+    <!-- Auto-Focus -->
+    <string name="desc_auto_focus">In den ausgewählten Apps wird das erste gefundene Textfeld fokussiert und beschrieben, sobald du eine druckbare Taste drückst, ohne dass zuvor etwas fokussiert war - praktisch für Such-/Eingabefelder, die sonst erst angetippt werden müssten. Kein Root erforderlich.</string>
+    <string name="enable_auto_focus">Auto-Fokus aktivieren</string>
+
+    <!-- Per-App Keyboard Block -->
+    <string name="desc_ime_block">In den ausgewählten Apps gehen physische Tastendrücke direkt an die App statt über die Tastatur - praktisch für Spiele, bei denen die BlackBerry-Tastatur die Tasten sonst abfängt. Während eine ausgewählte App geöffnet ist, wird die Eingabemethode auf eine wirkungslose Passthrough-Tastatur umgeschaltet und beim Verlassen wiederhergestellt. Benötigt Root.</string>
+    <string name="enable_ime_block">Blockierung pro App aktivieren</string>
+
+    <!-- Key Remap -->
+    <string name="key_remap_source_title">Auf Strg umbelegen</string>
+    <string name="key_remap_currency_label">Währungstaste</string>
+    <string name="key_remap_currency_desc">Die $/€-Taste neben der Leertaste. Das Umbelegen auf Strg beeinträchtigt die normale Eingabe nicht.</string>
+    <string name="key_remap_convenience_label">Convenience-Taste</string>
+    <string name="key_remap_convenience_desc">Die dedizierte Seitentaste. Das Umbelegen auf Strg bedeutet, dass sie ihr zugewiesenes Tastenkürzel nicht mehr auslöst.</string>
+    <string name="desc_key_remap">Belegt die ausgewählte Taste auf Ebene des Keylayouts auf Strg um, sodass sie als echter Modifizierer für die Tastenkürzel „Rechner-Tasten“ und „IME-Vorschläge“ funktioniert. Bleibt über Neustarts hinweg über ein service.d-Startskript erhalten.</string>
+
+    <!-- Adaptive Keyboard Backlight -->
+    <string name="status_kbd_light_enabled">Tastaturbeleuchtung aktiviert. Gespeichert: %1$s.</string>
+    <string name="status_kbd_light_disabled">Tastaturbeleuchtung deaktiviert. Gespeichert: %1$s.</string>
+
+    <!-- Lockscreen PIN on Keyboard -->
+    <string name="desc_pin_keyboard">Gib deine Sperrbildschirm-PIN über die physische Tastatur ein. Ziffern werden wie bei der Telefon-Wähltastatur zugeordnet: W E R = 1 2 3, S D F = 4 5 6, Z X C = 7 8 9, Q = 0. Eingabetaste bestätigt, Rücktaste löscht. Kein Root nötig - nutzt nur die Bedienungshilfe.</string>
+
+    <!-- Keyboard Nav Lock -->
+    <string name="nav_lock_intro">Verhindert versehentliche Zurück-/Home-/Übersicht-Tastendrücke, während die Tastatur angezeigt wird. Wähle unten einen Modus.</string>
+    <string name="nav_lock_toggle">Tastatur-Nav-Sperre</string>
+    <string name="nav_lock_gesture_desc">Doppeltipp auf Zurück (Taste behalten): Beim Tippen wird ein einzelner Tipp auf Zurück ignoriert - nur ein Doppeltipp löst sie aus. Nur Zurück funktioniert auf diese Weise; Android erlaubt einer App nicht, Home/Übersicht zu sperren. Aus = alle drei Tasten sind während des Tippens vollständig deaktiviert (benötigt Root).</string>
+    <string name="nav_lock_gesture_toggle">Doppeltipp auf Zurück</string>
+    <string name="nav_lock_always_off_desc">Nav-Tasten IMMER deaktivieren: hält Zurück/Home/Übersicht dauerhaft deaktiviert, nicht nur beim Tippen. Stattdessen mit Gesten navigieren. Setzt die obigen Modi außer Kraft; deaktivieren, um die Tasten wiederherzustellen. Benötigt Root.</string>
+    <string name="nav_lock_always_off_toggle">IMMER deaktivieren</string>
+
+    <!-- Double-Tap to Wake -->
+    <string name="dt2w_intro">Bei eingeschaltetem Bildschirm anwenden, damit die Geste für den Ruhezustand konfiguriert wird.</string>
+    <string name="status_dt2w_enabled">DT2W aktiviert. Gespeichert: %1$s.</string>
+    <string name="status_dt2w_disabled">DT2W deaktiviert. Gespeichert: %1$s.</string>
+
+    <!-- Auto-disable Bluetooth -->
+    <string name="desc_bt_idle">Schaltet Bluetooth nach einer Zeitspanne ohne verbundenes Gerät aus, damit ein untätiges Funkmodul das System nicht über Nacht wachhält. Das Verbinden von Kopfhörern, einer Uhr oder eines Lautsprechers setzt den Timer zurück.</string>
+    <string name="status_bt_idle_enabled">Bluetooth schaltet sich nach %1$d Min. ohne Verbindung aus.</string>
+    <string name="status_bt_idle_disabled">Automatische Deaktivierung aus. Bluetooth bleibt so, wie du es eingestellt hast.</string>
+    <string name="bt_idle_turn_off_after">Ausschalten nach</string>
+
+    <!-- ZRAM -->
+    <string name="zram_size_off">Aus</string>
+    <string name="zram_size_2gb">2 GB</string>
+    <string name="zram_size_3gb">3 GB</string>
+    <string name="zram_size_4gb">4 GB</string>
+    <string name="zram_current_live_size">Aktuelle Live-Größe: %1$s</string>
+    <string name="zram_current_live_algorithm">Aktueller Live-Algorithmus: %1$s</string>
+    <string name="zram_current_live_swappiness">Aktuelle Live-Swappiness: %1$s</string>
+    <string name="zram_persisted_setting">Gespeicherte Einstellung (wirkt beim nächsten Neustart): %1$s</string>
+    <string name="zram_compression_algorithm">Komprimierungsalgorithmus</string>
+    <string name="status_zram_algorithm">ZRAM-Algorithmus auf %1$s gesetzt. Wird beim nächsten Neustart angewendet.</string>
+    <string name="status_zram_size">ZRAM auf %1$s gesetzt. Wird beim nächsten Neustart angewendet.</string>
+    <string name="zram_swappiness">Swappiness</string>
+    <string name="desc_zram_swappiness">Steuert, wie aggressiv das System Seiten aus dem physischen Speicher auslagert. Höhere Werte lagern aggressiver aus und schonen so den Speicher für Dateicaches. Erfordert aktiviertes ZRAM (nicht Aus).</string>
+    <string name="status_zram_swappiness">Swappiness auf %1$d gesetzt und live angewendet.</string>
+    <string name="zram_apply_now">Jetzt anwenden</string>
+    <string name="zram_apply_dialog_title">ZRAM-Einstellungen jetzt anwenden?</string>
+    <string name="zram_apply_dialog_desc">Das Live-Ändern der Größe/Neukomprimieren von ZRAM deaktiviert kurzzeitig den Swap und kann dazu führen, dass Hintergrund-Apps bei Speicherdruck beendet werden. In der Regel ist es sicherer, dies festzulegen und stattdessen neu zu starten.</string>
+    <string name="status_zram_applied_live">ZRAM live angewendet: %1$s, %2$s, Swappiness=%3$d.</string>
+
+    <!-- Performance & Battery Tuning -->
+    <string name="desc_performance">Feinabstimmung der Skalierungsraten des Kernel-Schedulers und des CPU-Eingabe-Boosts zum Sparen von Akkulaufzeit. Optimierte Einstellungen lockern die Skalierung des CPU-LITTLE-Clusters und verringern die Intensität des Eingabe-Boosts während der Bildschirminteraktion.</string>
+    <string name="performance_current_live_status">Aktueller Live-Status</string>
+    <string name="performance_up_rate_limit">LITTLE-Cluster up_rate_limit: %1$s</string>
+    <string name="performance_input_boost_freq">Eingabe-Boost-Frequenz: %1$s</string>
+    <string name="performance_input_boost_duration">Eingabe-Boost-Dauer: %1$s</string>
+    <string name="performance_up_rate_limit_title">LITTLE-Cluster Schedutil up_rate_limit</string>
+    <string name="performance_up_rate_default">Standard (500 µs)</string>
+    <string name="performance_up_rate_tuned">Optimiert (2000 µs)</string>
+    <string name="performance_boost_freq_title">CAF-Eingabe-Boost-Frequenz (LITTLE)</string>
+    <string name="performance_boost_freq_default">Standard (1,4 GHz)</string>
+    <string name="performance_boost_freq_tuned">Optimiert (1,1 GHz)</string>
+    <string name="performance_boost_duration_title">CAF-Eingabe-Boost-Dauer</string>
+    <string name="performance_boost_duration_default">Standard (40 ms)</string>
+    <string name="performance_boost_duration_tuned">Optimiert (20 ms)</string>
+    <string name="performance_apply_live_now">Jetzt live anwenden</string>
+    <string name="status_performance_applied_live">Einstellungen live angewendet und für den Neustart gespeichert.</string>
+    <string name="status_performance_restored_live">Standardeinstellungen live wiederhergestellt.</string>
+    <string name="status_performance_saved">Einstellungen gespeichert. Werden beim nächsten Neustart angewendet.</string>
+
+    <!-- 5GHz Hotspot Workaround -->
+    <string name="desc_wifi5g_1">In diesem Build bietet keine EU-WLAN-Region 5-GHz-Hotspot-Kanäle (SoftAP) - nur die US-Region tut dies. Dies erzwingt den WLAN-Ländercode US, damit du einen 5-GHz-Hotspot betreiben kannst, und wendet dies bei jedem Start erneut an. Benötigt Root.</string>
+    <string name="desc_wifi5g_2">Zu beachten: Dies gilt auch für WLAN als Client - du verlierst die 2,4-GHz-Kanäle 12-13 und die EU-exklusiven 5-GHz-Kanäle, wodurch die Verbindung zu APs, die diese nutzen, unterbrochen werden kann. US erlaubt die oberen 5-GHz-Kanäle (149-165), die in der EU nicht lizenziert sind; für einen EU-konformen Hotspot bei den unteren Kanälen (36-48) bleiben. Deaktivieren, um deine Region wiederherzustellen.</string>
+    <string name="wifi5g_force_toggle">US-WLAN-Region erzwingen</string>
+    <string name="wifi5g_applied_region">Angewendete WLAN-Region: %1$s</string>
+
+    <!-- Persistent Wireless ADB -->
+    <string name="wireless_adb_wlan_ip">WLAN-IP: %1$s</string>
+    <string name="wireless_adb_current_port">Aktueller Live-Port: %1$s</string>
+    <string name="wireless_adb_port_label">Port</string>
+    <string name="wireless_adb_enable_apply">Aktivieren / Anwenden</string>
+    <string name="status_wireless_adb_enabled">WLAN-ADB auf Port %1$d aktiviert. Gespeichert: %2$s.</string>
+    <string name="status_wireless_adb_disabled">WLAN-ADB deaktiviert.</string>
+
+    <!-- Play Store Tagger -->
+    <string name="tagger_loading_apps">Apps werden geladen…</string>
+    <string name="tagger_no_root">Root-Zugriff nicht verfügbar. Gewähre Key2 Toolbox Root und versuche es erneut.</string>
+    <string name="tagger_error">Fehler: %1$s</string>
+    <string name="tagger_verb_tagged">gekennzeichnet</string>
+    <string name="tagger_verb_untagged">Kennzeichnung entfernt</string>
+    <string name="tagger_verb_tag">Kennzeichnen</string>
+    <string name="tagger_verb_untag">Kennzeichnung entfernen</string>
+    <string name="tagger_done">Fertig — %1$d %2$s</string>
+    <string name="tagger_done_with_failures">Fertig — %1$d %2$s, %3$d fehlgeschlagen</string>
+    <string name="tagger_back_to_list">Zurück zur Liste</string>
+    <string name="tagger_confirm_tag_desc">Installer für %1$d ausgewählte Apps auf com.android.vending setzen?</string>
+    <string name="tagger_confirm_untag_desc">Installer-Kennzeichnung für %1$d ausgewählte Apps entfernen? Sie werden dann als sideloaded angezeigt.</string>
+    <string name="tagger_confirm_title">%1$s %2$d Apps</string>
+    <string name="tagger_tag_as_play_store">Als Play Store kennzeichnen</string>
+    <string name="tagger_remove_tag">Kennzeichnung entfernen</string>
+    <string name="tagger_filter_non_play">Nicht-Play</string>
+    <string name="tagger_filter_all">Alle</string>
+    <string name="tagger_filter_system">System</string>
+    <string name="tagger_select_all">Alle auswählen</string>
+    <string name="tagger_count">%1$d Apps</string>
+    <string name="tagger_count_with_selection">%1$d Apps · %2$d ausgewählt</string>
+    <string name="tagger_action_tag">%1$d Apps als Play Store kennzeichnen</string>
+    <string name="tagger_action_untag">%1$d Apps entkennzeichnen (Installer entfernen)</string>
+    <string name="tagger_no_match">Keine Apps entsprechen \"%1$s\"</string>
+    <string name="tagger_all_already_tagged">Alle Apps sind bereits als Play-Store-installiert gekennzeichnet.</string>
+    <string name="tagger_no_apps_found">Keine Apps gefunden.</string>
+    <string name="tagger_tagging_progress">Kennzeichne %1$d/%2$d: %3$s</string>
+
+    <!-- BBProdFix Settings -->
+    <string name="k2pf_checking">Suche nach bb-prodfix-Modul…</string>
+    <string name="k2pf_not_installed">Das bb-prodfix-Modul (BBProdFix) ist nicht installiert.</string>
+    <string name="k2pf_install_instructions">Installiere das BBProdFix-Magisk-/APatch-Modul, um auf diese Einstellungen zuzugreifen. Kehre nach der Installation hierher zurück, um die Anpassungen zu verwalten.</string>
+    <string name="k2pf_intro">Verwalte hier die BBProdFix-Moduleinstellungen. Änderungen an Systemeigenschaften erfordern einen Neustart, um wirksam zu werden.</string>
+    <string name="k2pf_identity_title">BlackBerry-Geräteidentität</string>
+    <string name="k2pf_identity_desc">Erzwingt ro.product.*-Eigenschaften auf BlackBerry-Werte (brand=blackberry, model=KEY2, manufacturer=BlackBerry). Von manchen BB-spezifischen Apps benötigt, um zu prüfen, dass sie auf einem Key2 laufen. Deine ROM setzt diese eventuell bereits korrekt.</string>
+    <string name="k2pf_a2dp_title">Bluetooth-A2DP-Offload</string>
+    <string name="k2pf_a2dp_desc">Verlagert die Bluetooth-Audioverarbeitung auf den DSP. Verbessert die Audioqualität und Akkulaufzeit bei BT-Kopfhörern. Persist-Eigenschaften wirken live; ein Neustart des Audio-Stacks kann erforderlich sein.</string>
+    <string name="k2pf_volume_steps_title">Erweiterte Lautstärkestufen</string>
+    <string name="k2pf_volume_steps_desc">14 Anruflautstärkestufen und 30 Medienlautstärkestufen statt der Android-Standardwerte (7 und 15).</string>
+    <string name="k2pf_triple_buffer_title">SurfaceFlinger Triple Buffering</string>
+    <string name="k2pf_triple_buffer_desc">Erlaubt SurfaceFlinger, 3 Framebuffer statt 2 vorzuhalten. Kann Ruckler bei GPU-Last verringern.</string>
+    <string name="k2pf_bg_app_limit_title">Hintergrund-App-Limit (60)</string>
+    <string name="k2pf_bg_app_limit_desc">Weist den Qualcomm-Prozessmanager an, bis zu 60 Hintergrund-Apps zuzulassen, bevor sie beendet werden. Standard-Android geht deutlich aggressiver vor.</string>
+    <string name="k2pf_reboot_required">Neustart erforderlich</string>
+    <string name="k2pf_swappiness_owned_by_zram">Key2 Toolbox verwaltet die Swappiness über das ZRAM-Modul. Die BBProdFix-Swappiness ist deaktiviert — konfiguriere sie im ZRAM-Bildschirm.</string>
+    <string name="k2pf_swappiness_current">Aktueller Wert in BBProdFix service.sh: %1$s. Änderungen wirken beim nächsten Start.</string>
+    <string name="k2pf_swappiness_conservative">60 — Konservativ (empfohlen)</string>
+    <string name="k2pf_swappiness_balanced">80 — Ausgewogen</string>
+    <string name="k2pf_swappiness_aggressive">100 — Aggressiv</string>
+
+    <!-- LED Notify Colors -->
+    <string name="desc_led_notify">Weist jeder App eine rohe LED-Farbe zu, die direkt auf die LED-Hardware geschrieben wird - dies umgeht LineageOS\' eigene Farbauswahl für Benachrichtigungslicht, deren Farben auf diesem Gerät nicht genau wiedergegeben werden. Benötigt Root und Benachrichtigungszugriff.</string>
+    <string name="led_notify_no_root">Root nicht verfügbar - LED-Schreibvorgänge schlagen fehl.</string>
+    <string name="led_notify_no_led_device">Kein unterstütztes LED-Gerät auf dieser ROM/diesem Kernel gefunden.</string>
+    <string name="led_notify_enable">LED-Benachrichtigung aktivieren</string>
+    <string name="led_notify_flash_while_on">Blinken bei eingeschaltetem Bildschirm</string>
+    <string name="led_notify_flash_while_on_desc">Standardmäßig aus - die LED unterdrückt sich bereits selbst, sobald der Bildschirm an ist, da du ohnehin darauf schaust.</string>
+    <string name="led_notify_flash_length">Blinkdauer</string>
+    <string name="led_notify_multiple_active">Wenn mehrere Benachrichtigungen aktiv sind</string>
+    <string name="led_notify_most_recent">Nur die neueste anzeigen</string>
+    <string name="led_notify_cycle_colors">Durch Farben wechseln</string>
+    <string name="led_notify_assigned_count">%1$d von %2$d Apps haben eine zugewiesene Farbe</string>
+
+    <!-- Extra Dim -->
+    <string name="extra_dim_activated">Extra-Dimmung aktiviert</string>
+    <string name="status_extra_dim_activated">Extra-Dimmung aktiviert.</string>
+    <string name="status_extra_dim_deactivated">Extra-Dimmung deaktiviert.</string>
+    <string name="extra_dim_intensity">Dimmintensität: %1$d%%</string>
+    <string name="status_extra_dim_intensity">Dimmintensität auf %1$d%% gesetzt</string>
+    <string name="extra_dim_auto_night">Automatische Nachtdimmung</string>
+    <string name="desc_extra_dim_schedule">Schaltet Extra-Dimmung jeden Tag automatisch zur Startzeit ein und zur Endzeit aus, ohne dass die App geöffnet sein muss.</string>
+    <string name="extra_dim_schedule_state">Zeitplan: %1$s</string>
+    <string name="extra_dim_schedule_pending_boot">Zeitplan: %1$s (wird beim nächsten Start aktiv)</string>
+    <string name="extra_dim_starts_at">Beginnt um</string>
+    <string name="extra_dim_ends_at">Endet um</string>
+    <string name="desc_extra_dim">Reduziert die Bildschirmhelligkeit unter das übliche Systemminimum. Ideal zum Lesen bei wenig Licht und zum Sparen von Akkulaufzeit in der Nacht.</string>
+
+    <!-- Global Telemetry Block -->
+    <string name="desc_telemetry">Deaktiviert die Firebase-Crashlytics-Erfassung systemweit. Dies stoppt das Zusammenstellen und Hochladen von Absturzprotokollen im Hintergrund und spart so mobile Daten, RAM und Aufwachzyklen.</string>
+    <string name="telemetry_protection_status">Schutzstatus</string>
+    <string name="telemetry_status_fully_protected">Status: Vollständig geschützt</string>
+    <string name="telemetry_status_partially_protected">Status: Teilweise geschützt</string>
+    <string name="telemetry_status_unprotected">Status: Ungeschützt</string>
+    <string name="telemetry_detected_apps">Erkannte Apps mit Telemetrie: %1$d</string>
+    <string name="telemetry_blocked_apps">Blockierte Apps: %1$d</string>
+    <string name="status_telemetry_enabled">Automatische Blockierung aktiviert. Wird bei jedem Start ausgeführt.</string>
+    <string name="status_telemetry_disabled">Automatische Blockierung deaktiviert.</string>
+    <string name="status_telemetry_toggled">Telemetrie für alle erkannten Apps deaktiviert.</string>
+    <string name="telemetry_block_now">Gesamte Telemetrie jetzt blockieren</string>
+
+    <!-- Wearable Power Saver -->
+    <string name="desc_watch">Über Google Play-Dienste gekoppelte Smartwatches oder Fitness-Tracker erzeugen außerhalb der Reichweite ständige Wiederverbindungsversuche und Alarme, was den Akku belastet. Setze ein Gerät auf Ruhend, um diese Aufwachvorgänge zu stoppen, ohne die Kopplung aufzuheben oder einen Werksreset durchzuführen.</string>
+    <string name="watch_unsupported">Keine Google-Wearable-Verbindungsdatenbank erkannt. Diese Funktion ist nur aktiv, wenn Wear-OS- oder GMS-Wearables gekoppelt sind.</string>
+    <string name="watch_no_devices">Keine gekoppelten Wearables in Google Play-Diensten gefunden. Falls du eine Smartwatch besitzt, stelle sicher, dass sie eingerichtet und gekoppelt ist.</string>
+    <string name="watch_mac">MAC: %1$s</string>
+    <string name="watch_status_active">Status: Aktiv</string>
+    <string name="watch_status_dormant">Status: Ruhend (Energiesparen)</string>
+    <string name="status_watch_dormant">%1$s auf ruhend gesetzt. Wiederverbindungsschleifen gestoppt.</string>
+    <string name="status_watch_active">%1$s aktiviert. Verbinde erneut...</string>
+
+    <!-- Battery Usage -->
+    <string name="battery_usage_reset">Statistik zurücksetzen</string>
+    <string name="battery_usage_more_options">Weitere Optionen</string>
+    <string name="battery_usage_set_threshold">Schwellenwert für automatisches Zurücksetzen festlegen</string>
+    <string name="battery_usage_show_system">Systemapps anzeigen</string>
+    <string name="battery_usage_total">Gesamt seit letztem Zurücksetzen: %1$s</string>
+    <string name="battery_usage_threshold_desc">Setzt die Akkunutzungsstatistik automatisch zurück, sobald der Ladestand diesen Prozentsatz erreicht, da dieses Gerät nie ein Signal für vollständiges Laden meldet.</string>
+    <string name="desc_battery_usage">Geschätzter Akkuverbrauch pro App seit dem letzten Zurücksetzen, ausgelesen aus demselben Energiemodell wie Androids eigener Akkunutzungsbildschirm. Setzt sich automatisch zurück, wenn der Ladestand den festgelegten Schwellenwert erreicht, da der Ladecontroller dieses Geräts nie ein Signal für vollständiges Laden meldet, um Androids eigenes Zurücksetzen auszulösen.</string>
+
+    <!-- Info screen -->
+    <string name="info_device">Gerät</string>
+    <string name="info_battery">Akku</string>
+    <string name="info_battery_usage_row">Akkunutzung nach App</string>
+    <string name="info_battery_usage_hint">Schätzung pro App seit letztem Zurücksetzen</string>
+    <string name="info_model">Modell</string>
+    <string name="info_android">Android</string>
+    <string name="info_android_value">%1$s (API %2$d)</string>
+    <string name="info_lineageos">LineageOS</string>
+    <string name="info_build">Build</string>
+    <string name="info_security_patch">Sicherheitspatch</string>
+    <string name="info_kernel">Kernel</string>
+    <string name="info_level">Stand</string>
+    <string name="info_level_value">%1$d%%  (%2$s)</string>
+    <string name="info_health">Zustand</string>
+    <string name="info_temperature">Temperatur</string>
+    <string name="info_voltage">Spannung</string>
+    <string name="info_technology">Technologie</string>
+    <string name="info_capacity">Kapazität</string>
+    <string name="info_capacity_value">%1$d / %2$d mAh  (%3$d%%)</string>
+    <string name="info_charge_cycles">Ladezyklen</string>
+    <string name="battery_status_charging">Lädt</string>
+    <string name="battery_status_discharging">Entlädt</string>
+    <string name="battery_status_full">Voll</string>
+    <string name="battery_status_not_charging">Lädt nicht</string>
+    <string name="battery_health_good">Gut</string>
+    <string name="battery_health_overheat">Überhitzt</string>
+    <string name="battery_health_dead">Defekt</string>
+    <string name="battery_health_over_voltage">Überspannung</string>
+    <string name="battery_health_cold">Kalt</string>
+
+    <!-- Settings tab -->
+    <string name="settings_updates">Updates</string>
+    <string name="settings_quick_access">Schnellzugriff</string>
+    <string name="settings_accessibility_service">Bedienungshilfe</string>
+    <string name="settings_accessibility_service_subtitle">K2TBs Bedienungshilfe-Funktionen aktivieren</string>
+    <string name="settings_notification_access">Benachrichtigungszugriff</string>
+    <string name="settings_notification_access_subtitle">Benachrichtigungs-Listener aktivieren</string>
+    <string name="settings_contributors">Mitwirkende</string>
+    <string name="settings_about">Über</string>
+    <string name="settings_version">Key2Toolbox v%1$s</string>
+    <string name="settings_current_version">Aktuelle Version</string>
+    <string name="settings_check_now">Jetzt prüfen</string>
+    <string name="settings_checking_updates">Suche nach Updates…</string>
+    <string name="settings_up_to_date">Du bist auf dem neuesten Stand.</string>
+    <string name="settings_update_available">Update verfügbar: %1$s</string>
+    <string name="settings_download_install">Herunterladen &amp; installieren</string>
+    <string name="settings_downloading">Update wird heruntergeladen…</string>
+    <string name="settings_installing">Wird installiert…</string>
+    <string name="settings_installed">%1$s installiert. Starte die App neu, um den Vorgang abzuschließen.</string>
+    <string name="settings_install_failed">pm install fehlgeschlagen — logcat-Tag K2TB-Updater prüfen</string>
+    <string name="settings_update_unknown_error">Unbekannter Fehler beim Update</string>
+    <string name="settings_contributors_error">Mitwirkende konnten nicht geladen werden: %1$s</string>
+    <string name="settings_loading_contributors">Mitwirkende werden geladen…</string>
+    <string name="settings_no_contributors">Keine Daten zu Mitwirkenden verfügbar.</string>
+    <string name="settings_commits">%1$d Commits</string>
+</resources>

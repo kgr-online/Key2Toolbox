@@ -1,5 +1,6 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -8,12 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 /**
@@ -35,7 +38,7 @@ fun ScreenScaffold(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) {
-                Text("\u2190 Back")
+                Text(stringResource(R.string.generic_back))
             }
         }
 
@@ -43,4 +46,16 @@ fun ScreenScaffold(
 
         content()
     }
+}
+
+/**
+ * Subtle separator placed above a module's trailing description text, so it
+ * reads as disclaimer-like content rather than part of the controls above it.
+ * Deliberately carries no padding of its own - callers sit in containers that
+ * already space siblings evenly (a [Column]'s `spacedBy`), so adding padding
+ * here would make the gap above the divider larger than the gap below it.
+ */
+@Composable
+fun DescriptionDivider() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
 }

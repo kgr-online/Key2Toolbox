@@ -1,5 +1,6 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 /**
@@ -23,7 +25,7 @@ import androidx.compose.ui.unit.dp
 fun AccessibilityServiceBanner(serviceEnabled: Boolean) {
     if (serviceEnabled) {
         Text(
-            "Accessibility service: enabled",
+            stringResource(R.string.accessibility_service_enabled),
             color = androidx.compose.ui.graphics.Color(0xFF81C784)
         )
         return
@@ -36,14 +38,44 @@ fun AccessibilityServiceBanner(serviceEnabled: Boolean) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "This feature needs the accessibility service enabled.",
+                stringResource(R.string.accessibility_service_required),
                 color = androidx.compose.ui.graphics.Color(0xFFE57373),
                 style = MaterialTheme.typography.bodyMedium
             )
             Button(onClick = {
                 context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }) {
-                Text("Open Accessibility Settings")
+                Text(stringResource(R.string.accessibility_service_open_settings))
+            }
+        }
+    }
+}
+
+/** Localized "Yes"/"No", for the many status rows built as "Label: <bool>". */
+@Composable
+fun yesNo(value: Boolean): String =
+    if (value) stringResource(R.string.generic_yes)
+    else stringResource(R.string.generic_no)
+
+/**
+ * Generic "this feature depends on that other toggle" warning, e.g. IME
+ * Suggestions needing a key remapped to Ctrl, or Call Shortcuts' dialpad
+ * digits working better with Auto-Focus also enabled for the dialer.
+ */
+@Composable
+fun RequirementBanner(message: String, actionLabel: String, onAction: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                message,
+                color = androidx.compose.ui.graphics.Color(0xFFFFB74D),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Button(onClick = onAction) {
+                Text(actionLabel)
             }
         }
     }

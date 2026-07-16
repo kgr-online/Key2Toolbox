@@ -5,17 +5,22 @@ kernel) that bundles a set of previously-separate tweaks into one UI,
 organised into five bottom-bar sections:
 
 **Info** - device status landing page: build (model, Android, LineageOS,
-security patch, kernel), battery (level, health, temperature, voltage,
-technology, capacity-health % and charge cycles from sysfs), and root +
-accessibility-service status.
+security patch, kernel) and battery (level, health, temperature, voltage,
+technology, capacity-health % and charge cycles from sysfs, with a link into
+per-app battery usage). Root/accessibility-service status now lives in
+Settings → Quick Access instead of duplicating it here.
 
 **Keyboard**
-- **Convenience key → Ctrl** remap (`stmpe.kl` key 110)
+- **Remap Key → Ctrl** (`stmpe.kl`, Currency or Convenience key)
 - **Adaptive keyboard backlight** daemon
 - **Keyboard Nav Lock** - stops accidental Back/Home/Recents while typing
 - **Lockscreen PIN on Keyboard** - type your PIN on the physical keyboard
 - **Per-App Keyboard Block** - in chosen apps, route physical keys straight
   to the app (for games) by switching to a passthrough IME
+- **Calculator Keys** - route physical digit/operator keys to a foreground
+  AOSP/Google Calculator
+- **IME Suggestions** - Ctrl+W/E/R picks suggestion 1/2/3 from the keyboard's
+  candidate strip (needs a key remapped to Ctrl first)
 
 **System**
 - **ZRAM** compression algorithm + size (Off / 2GB / 3GB / 4GB), VM swappiness
@@ -30,6 +35,13 @@ accessibility-service status.
 - **LED Notify Colors** - per-app notification LED colors written straight
   to the LED hardware, bypassing LineageOS's own (inaccurate on this device)
   notification light color picker
+- **Extra Dim** - dims below the system's standard minimum brightness, with
+  an optional daily on/off schedule
+- **Call Shortcuts** - mute, speaker, and dialpad digits from the physical
+  keyboard during a Google Phone call (mute/speaker work standalone; fast
+  digit entry also wants Auto-Focus enabled for the dialer)
+- **Auto-Focus** - focus and type into the first text field automatically in
+  chosen apps, on the first printable key press
 
 **Network**
 - **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
@@ -81,14 +93,31 @@ the build script.
 
 ## How each module works
 
-### Ctrl key (`CtrlKeyController`)
-- **Persist**: installs `assets/ctrl_key.sh` (the exact known-working script)
-  to `/data/adb/service.d/ctrl_key.sh` via `install -m 755`.
-- **Live apply**: runs the same `setenforce 0` → `nsenter -t 1 -m -- mount -o rw,remount /vendor`
-  → `sed -i s/FUNCTION/CTRL_LEFT/` → `setenforce 1` sequence directly (and the
-  reverse to disable).
-- Status display reads back `key 110` from `/vendor/usr/keylayout/stmpe.kl`
-  live, separately from whether the boot script is installed.
+### Key Remap (`KeyRemapController`)
+Remaps a chosen physical key to Ctrl, so it works as a real modifier for the
+Calculator Keys and IME Suggestions shortcuts. Choice of source key:
+**Currency** (`stmpe.kl` scancode 5, normally keycode `4`) or **Convenience**
+(scancode 110, normally `FUNCTION`) - the only two spare/remappable keys on
+this keyboard's layout (replaces the old single-key-only `CtrlKeyController`).
+- **Live apply**: `setenforce 0` → `nsenter -t 1 -m -- mount -o rw,remount /vendor`
+  → whitespace-tolerant `sed -E` swap of the chosen scancode's line to
+  `CTRL_LEFT` → `setenforce 1`. Before applying, both known source keys are
+  first reverted back to their original keycode (a no-op for whichever one
+  isn't currently remapped), so switching sources never leaves a stale
+  double-remap.
+- **Persist**: installs `assets/key_remap_template.sh` (with `__SCANCODE__`/
+  `__ORIGINAL_KEYCODE__` substituted for the selected source) to
+  `/data/adb/service.d/key_remap.sh`.
+- **Live reload**: editing `stmpe.kl` alone doesn't take effect until reboot -
+  confirmed on-device that `InputReader` keeps using whichever keylayout it
+  parsed when the input device was first opened. Unbinding/rebinding the
+  `stmpe-keypad` i2c driver (the trick q25toolbox's `Q25_keyboard` driver
+  needs) is a no-op here too, since this driver doesn't tear down
+  `/dev/input/eventN` on unbind. What does work: writing `remove` then `add`
+  to the keypad's own `/sys/class/input/eventN/uevent` file - the same
+  device-hotplug event `InputReader` reacts to for a real unplug/replug.
+  Confirmed live: the physical key reports the stale keycode before this and
+  the remapped one immediately after, with no reboot.
 
 ### ZRAM (`ZramController`)
 - **Compression algorithm**: read dynamically from
@@ -189,6 +218,59 @@ consumes no keys) via root `ime enable`/`ime set`, saving the previous IME to
 restore on the way out. The picked packages are a `StringSet` in the
 `key2tweaks` prefs; the app list uses a `<queries>` launcher intent so it can
 enumerate launchable apps on Android 11+.
+
+### Calculator Keys (`CalculatorInputFix`)
+Routes physical digit/operator keys to a foreground AOSP/Google Calculator's
+buttons via the accessibility tree, since those apps don't otherwise accept
+raw hardware key input for most operators. Digits reuse the same
+Q/W/E/R/S/D/F/Z/X/C mapping already established for the lockscreen PIN
+keyboard; new mappings added for this feature: O/I/A/G = + − × ÷, M = decimal
+point, U = percent, B = factorial, T/Y = parentheses, Sym/Alt = toggle
+scientific mode. Digits are inserted directly into the formula view's text
+(`ACTION_SET_TEXT`); everything else clicks the matching button by resource id
+(`com.android.calculator2:id/...`), with a text-label fallback if the id
+lookup misses. No root required.
+
+### IME Suggestions (`Key2AccessibilityService`)
+Ctrl+W/E/R picks suggestion 1/2/3 from the physical keyboard's candidate
+strip (confirmed on the BlackBerry Keyboard, where the strip is a row of
+clickable `TextView`s next to an unrelated toggle button, filtered out by
+class name). Only consumes the key press if a suggestion was actually found
+and clicked, so Ctrl+W/E/R still behave normally elsewhere (e.g. closing a
+browser tab) when nothing is showing. Needs a key remapped to Ctrl (see Key
+Remap) to be reachable at all. No root required.
+
+### Call Shortcuts (`Key2AccessibilityService`)
+On the Google Phone call screen: M mutes/unmutes, the Currency key (or Ctrl,
+if remapped) toggles the speaker, and Q/W/E/R/S/D/F/Z/X/C dial digits into the
+keypad (auto-opening it on the first digit if it isn't already open, polling
+briefly for the open animation to finish before injecting). Gated on the
+in-call screen having its full 3-toggle set (keypad/mute/speaker) so it can't
+misfire on the pre-call dial-a-number screen, which shares the same foreground
+package. Digit injection goes through root `input keyevent`; everything else
+is a direct accessibility-tree click.
+
+### Auto-Focus (`AutoFocusController`)
+In chosen apps, focuses and types into the first text field as soon as you
+press a printable key with nothing already focused - handy for search/entry
+fields that otherwise need a tap first.
+- **Finding the field**: walks the window's node tree for the first
+  `EditText`/`AutoCompleteTextView`; if a `WebView` is present (a browser),
+  the search is scoped to inside it, so a page with no `<input>` falls
+  through to nothing rather than the browser chrome's own address bar.
+- **Focus + type**: fires both `ACTION_FOCUS` and `ACTION_CLICK` (some search
+  boxes, e.g. Google Maps' omnibox, only activate via click, opening a full
+  overlay), then waits for real input focus to land - woken instantly by a
+  `CountDownLatch` counted down from `onAccessibilityEvent` the moment the
+  target field is actually focused (a 1s timeout is just the safety net for
+  apps where that never cleanly fires), rather than a fixed poll delay.
+  Types via `ACTION_SET_TEXT` (not synthetic `input keyevent`, which was
+  found unreliable this soon after a focus transition) - in the Google
+  Dialer's own number field specifically, the physical letter key's
+  phone-keypad digit is inserted instead of the raw letter.
+- Gated on a live "is anything already focused?" check rather than a
+  per-app-session flag, so it naturally re-arms whenever focus is actually
+  lost (e.g. tapping back), without needing an app change to reset it.
 
 ### 5GHz Hotspot Workaround (`WifiRegdomainController`)
 On this build every EU WiFi regdomain exposes **zero** 5GHz SoftAP channels
@@ -301,6 +383,28 @@ and come out correct, which is the same path this module takes.
   system's lights service and this module end up racing to write the same
   physical LED.
 
+### Extra Dim (`ExtraDimController`)
+Dims the screen below the system's standard minimum via
+`Settings.Secure.reduce_bright_colors_activated`/`reduce_bright_colors_level`,
+with a manual toggle + intensity slider and an optional daily on/off schedule.
+- **Schedule** ("Auto Night Dim"): a `service.d/extra_dim_schedule.sh` watchdog
+  daemon (from `assets/extra_dim_schedule_template.sh`, with `__START_MINUTES__`/
+  `__END_MINUTES__` substituted) polls every 30s and only writes the setting on
+  an actual on/off transition, so a manual toggle in between isn't immediately
+  overwritten. Minutes-since-midnight, so any time (e.g. 00:35) is supported.
+- **Detached daemon launch**: started via
+  `nohup setsid sh ... </dev/null >/dev/null 2>&1 &` rather than a bare
+  `nohup ... &`, since the latter didn't reliably survive the invoking root
+  shell session being recycled.
+- **Lock file** (`/data/adb/.extra_dim_schedule.lock`): a PID lock that also
+  verifies `/proc/$PID/cmdline` still names this script before treating it as
+  held, rather than a plain `kill -0 $PID` check that can false-positive on an
+  unrelated process reusing the same PID.
+- **Self-heal**: the screen's own state-loading effect relaunches the daemon
+  if the schedule is enabled but not currently running, instead of just
+  reporting "not running" passively - catches the case where it died mid-session
+  for any reason.
+
 ### Bluetooth Auto-Disable (`BtIdleController`)
 A root watchdog daemon (`service.d/bt_idle.sh`) that checks once per minute
 whether Bluetooth has any device actively connected and turns it off after a
@@ -337,10 +441,32 @@ apps and sets `firebase_crashlytics_collection_enabled` to `false`, using
 already present it does an in-place `sed` rewrite; if absent it injects a
 `<boolean>` element before `</map>`. The screen shows how many apps have the
 Crashlytics XML (affected) vs how many are already blocked.
+- **Watchdog, not one-shot**: apps rewrite their own Crashlytics XML at
+  runtime (re-enabling collection on app start), so a single boot-time pass
+  gets silently undone. `service.d/block_telemetry.sh` re-scans every 30
+  minutes instead (ported from q25toolbox, along with the fixes below).
+- **Detached launch + hardened lock**: same two fixes as Extra Dim's daemon -
+  launched via `nohup setsid sh ... </dev/null` (a bare `nohup ... &` didn't
+  reliably survive the invoking root shell session recycling), and the PID
+  lock also checks `/proc/$PID/cmdline` rather than a bare `kill -0`, so a
+  reused PID can't be mistaken for the watchdog still running.
+- **Self-heal**: the screen's own state-loading effect relaunches the
+  watchdog if it's enabled but not running, instead of leaving telemetry
+  silently unblocked until the next reboot.
 
-A `service.d/block_telemetry.sh` boot script re-runs the same scan 15 seconds
-after `sys.boot_completed`, so freshly installed apps are caught on next boot
-without manual intervention.
+### Battery Usage (`BatteryUsageController`, opened from the Info screen's Battery card)
+Per-app estimated battery use since the last reset, read from the same
+`dumpsys batterystats --checkin` power model as Android's own Battery usage
+screen (machine-parseable, unlike the human-readable dump) - not through
+Settings' own UI, which never populates on this device (it requires a
+`BATTERY_STATUS_FULL` transition the charging driver never reports).
+- **Auto-reset**: a substitute for the missing full-charge signal - a
+  `BroadcastReceiver` on `ACTION_BATTERY_CHANGED` resets stats once charging
+  crosses a configurable threshold (default 100%), armed once per plug-in
+  session so it doesn't refire on every subsequent broadcast at/above the
+  threshold.
+- Pie chart + per-app list (color-coded, matched between the two), with a
+  system-app filter and manual "block all now" reset.
 
 ## ⚠ Known risk: writing to `/data/adb/service.d/` from the app
 
@@ -375,7 +501,7 @@ you'll see immediately if a persist operation silently failed.
 ## Extending
 
 - For stateless root-command modules, add a `core`-style controller in
-  `modules/`, following the pattern of `CtrlKeyController` /
+  `modules/`, following the pattern of `KeyRemapController` /
   `ZramController` / `KbdLightController` / `WirelessAdbController` /
   `Dt2wController` (persist via `AssetInstaller`, live-apply via
   `RootShell.run`).
@@ -391,7 +517,7 @@ you'll see immediately if a persist operation silently failed.
   `NotificationListenerService` rather than the accessibility service, with
   its own dedicated SharedPreferences file rather than reusing `key2tweaks`.
 - Either way, add a corresponding screen in `ui/` (following e.g.
-  `CtrlKeyScreen.kt` for the simple case or `NavLockScreen.kt` /
+  `KeyRemapScreen.kt` for the simple case or `NavLockScreen.kt` /
   `ImeBlockScreen.kt` for the prefs-based case, all built on the shared
   `ScreenScaffold`), and wire it into `DetailHost` plus the section lists in
   `ui/HomeScreen.kt` and `ui/Screen.kt`.

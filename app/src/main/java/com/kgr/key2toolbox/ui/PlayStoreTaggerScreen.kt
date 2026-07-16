@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -62,26 +64,26 @@ fun PlayStoreTaggerScreen(onBack: () -> Unit) {
 
     var showConfirm by remember { mutableStateOf(false) }
 
-    ScreenScaffold(title = Screen.PlayStoreTagger.title, onBack = onBack) {
+    ScreenScaffold(title = stringResource(Screen.PlayStoreTagger.titleRes), onBack = onBack) {
         when (val s = state) {
             is TaggerUiState.Loading -> {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Text("Loading apps…")
+                    Text(stringResource(R.string.tagger_loading_apps))
                 }
             }
 
             is TaggerUiState.NoRoot -> {
                 Text(
-                    "Root access not available. Grant root to Key2 Toolbox and try again.",
+                    stringResource(R.string.tagger_no_root),
                     color = Color(0xFFE57373)
                 )
-                Button(onClick = { vm.load(context) }) { Text("Retry") }
+                Button(onClick = { vm.load(context) }) { Text(stringResource(R.string.generic_retry)) }
             }
 
             is TaggerUiState.Error -> {
-                Text("Error: ${s.message}", color = Color(0xFFE57373))
-                Button(onClick = { vm.load(context) }) { Text("Retry") }
+                Text(stringResource(R.string.tagger_error, s.message), color = Color(0xFFE57373))
+                Button(onClick = { vm.load(context) }) { Text(stringResource(R.string.generic_retry)) }
             }
 
             is TaggerUiState.Tagging -> {
@@ -91,13 +93,14 @@ fun PlayStoreTaggerScreen(onBack: () -> Unit) {
             is TaggerUiState.Done -> {
                 val success = s.results.values.count { it == null }
                 val fail = s.results.size - success
-                val verb = if (s.tagMode == TagMode.TAG) "tagged" else "untagged"
+                val verb = if (s.tagMode == TagMode.TAG) stringResource(R.string.tagger_verb_tagged) else stringResource(R.string.tagger_verb_untagged)
                 Text(
-                    "Done — $success $verb${if (fail > 0) ", $fail failed" else ""}",
+                    if (fail > 0) stringResource(R.string.tagger_done_with_failures, success, verb, fail)
+                    else stringResource(R.string.tagger_done, success, verb),
                     color = if (fail == 0) Color(0xFF81C784) else Color(0xFFE57373)
                 )
                 LogPanel(log = s.log)
-                TextButton(onClick = { vm.dismissResults() }) { Text("Back to list") }
+                TextButton(onClick = { vm.dismissResults() }) { Text(stringResource(R.string.tagger_back_to_list)) }
             }
 
             is TaggerUiState.Ready -> {
@@ -123,20 +126,20 @@ fun PlayStoreTaggerScreen(onBack: () -> Unit) {
         val count = vm.selectedCount()
         val s = state
         val mode = if (s is TaggerUiState.Ready) s.tagMode else TagMode.TAG
-        val verb = if (mode == TagMode.TAG) "Tag" else "Untag"
+        val verb = if (mode == TagMode.TAG) stringResource(R.string.tagger_verb_tag) else stringResource(R.string.tagger_verb_untag)
         val desc = if (mode == TagMode.TAG)
-            "Set installer to com.android.vending for $count selected app${if (count != 1) "s" else ""}?"
+            stringResource(R.string.tagger_confirm_tag_desc, count)
         else
-            "Clear installer tag for $count selected app${if (count != 1) "s" else ""}? They will show as sideloaded."
+            stringResource(R.string.tagger_confirm_untag_desc, count)
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showConfirm = false },
-            title = { Text("$verb $count app${if (count != 1) "s" else ""}") },
+            title = { Text(stringResource(R.string.tagger_confirm_title, verb, count)) },
             text = { Text(desc) },
             confirmButton = {
                 Button(onClick = { showConfirm = false; vm.tagSelected() }) { Text(verb) }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showConfirm = false }) { Text(stringResource(R.string.generic_cancel)) }
             }
         )
     }
@@ -164,12 +167,12 @@ private fun ReadyContent(
         FilterChip(
             selected = state.tagMode == TagMode.TAG,
             onClick = { onTagModeChange(TagMode.TAG) },
-            label = { Text("Tag as Play Store") }
+            label = { Text(stringResource(R.string.tagger_tag_as_play_store)) }
         )
         FilterChip(
             selected = state.tagMode == TagMode.UNTAG,
             onClick = { onTagModeChange(TagMode.UNTAG) },
-            label = { Text("Remove tag") }
+            label = { Text(stringResource(R.string.tagger_remove_tag)) }
         )
     }
 
@@ -177,7 +180,7 @@ private fun ReadyContent(
     OutlinedTextField(
         value = state.query,
         onValueChange = onQueryChange,
-        label = { Text("Search") },
+        label = { Text(stringResource(R.string.generic_search)) },
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
     )
@@ -190,50 +193,51 @@ private fun ReadyContent(
         FilterChip(
             selected = state.filter == FilterMode.NON_PLAY,
             onClick = { onFilterChange(FilterMode.NON_PLAY) },
-            label = { Text("Non-Play") }
+            label = { Text(stringResource(R.string.tagger_filter_non_play)) }
         )
         FilterChip(
             selected = state.filter == FilterMode.ALL,
             onClick = { onFilterChange(FilterMode.ALL) },
-            label = { Text("All") }
+            label = { Text(stringResource(R.string.tagger_filter_all)) }
         )
         FilterChip(
             selected = state.showSystem,
             onClick = onToggleSystem,
-            label = { Text("System") }
+            label = { Text(stringResource(R.string.tagger_filter_system)) }
         )
     }
 
     // Selection controls
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(onClick = onSelectAll) { Text("Select all") }
-        TextButton(onClick = onClearSelection) { Text("Clear") }
-        TextButton(onClick = onRefresh) { Text("Refresh") }
+        TextButton(onClick = onSelectAll) { Text(stringResource(R.string.tagger_select_all)) }
+        TextButton(onClick = onClearSelection) { Text(stringResource(R.string.generic_clear)) }
+        TextButton(onClick = onRefresh) { Text(stringResource(R.string.generic_refresh)) }
     }
 
     // Count / selection status
     Text(
-        "${state.apps.size} apps" +
-            if (selectedCount > 0) " · $selectedCount selected" else "",
+        if (selectedCount > 0) stringResource(R.string.tagger_count_with_selection, state.apps.size, selectedCount)
+        else stringResource(R.string.tagger_count, state.apps.size),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
     // Tag button — only shown when something is selected
     if (selectedCount > 0) {
-        val verb = if (state.tagMode == TagMode.TAG) "Tag" else "Untag"
         Button(onClick = onTagClick, modifier = Modifier.fillMaxWidth()) {
-            Text("$verb $selectedCount app${if (selectedCount != 1) "s" else ""}" +
-                if (state.tagMode == TagMode.TAG) " as Play Store" else " (clear installer)")
+            Text(
+                if (state.tagMode == TagMode.TAG) stringResource(R.string.tagger_action_tag, selectedCount)
+                else stringResource(R.string.tagger_action_untag, selectedCount)
+            )
         }
     }
 
     // Empty state
     if (state.apps.isEmpty()) {
-        val msg = if (state.query.isNotEmpty()) "No apps match \"${state.query}\""
+        val msg = if (state.query.isNotEmpty()) stringResource(R.string.tagger_no_match, state.query)
         else when (state.filter) {
-            FilterMode.NON_PLAY -> "All apps are already tagged as Play Store installed."
-            FilterMode.ALL -> "No apps found."
+            FilterMode.NON_PLAY -> stringResource(R.string.tagger_all_already_tagged)
+            FilterMode.ALL -> stringResource(R.string.tagger_no_apps_found)
         }
         Text(msg, color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
@@ -302,7 +306,7 @@ private fun AppRow(app: AppInfo, onToggle: () -> Unit) {
 private fun TaggingPanel(progress: Int, total: Int, currentApp: String, log: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-        Text("Tagging $progress/$total: $currentApp")
+        Text(stringResource(R.string.tagger_tagging_progress, progress, total, currentApp))
     }
     LogPanel(log = log)
 }

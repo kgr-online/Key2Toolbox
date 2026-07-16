@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
@@ -37,16 +39,16 @@ fun Dt2wScreen(onBack: () -> Unit) {
         }
     }
 
-    ScreenScaffold(title = Screen.Dt2w.title, onBack = onBack) {
+    ScreenScaffold(title = stringResource(Screen.Dt2w.titleRes), onBack = onBack) {
         Text(
-            "Apply with the screen ON for the gesture to be configured on suspend.",
+            stringResource(R.string.dt2w_intro),
             style = MaterialTheme.typography.bodySmall
         )
-        Text("Live state: ${state.name}")
-        Text("Persisted: ${if (persisted) "Yes" else "No"}")
+        Text(stringResource(R.string.generic_live_state, state.name))
+        Text(stringResource(R.string.generic_persisted, yesNo(persisted)))
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text(stringResource(R.string.generic_enabled))
             Switch(
                 checked = state == Dt2wController.State.ON,
                 enabled = !busy,
@@ -63,9 +65,13 @@ fun Dt2wScreen(onBack: () -> Unit) {
                         state = Dt2wController.currentState()
                         persisted = Dt2wController.isPersisted()
                         busy = false
-                        statusMessage =
-                            "DT2W ${if (enable) "enabled" else "disabled"}. " +
-                                "Persisted: ${if (persisted == enable) "yes" else "NO - check service.d write permissions"}."
+                        val persistedNote = context.getString(
+                            if (persisted == enable) R.string.persisted_ok else R.string.persisted_mismatch
+                        )
+                        statusMessage = context.getString(
+                            if (enable) R.string.status_dt2w_enabled else R.string.status_dt2w_disabled,
+                            persistedNote
+                        )
                     }
                 }
             )

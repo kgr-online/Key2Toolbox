@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -46,17 +48,16 @@ fun NavLockScreen(onBack: () -> Unit) {
         }
     }
 
-    ScreenScaffold(title = Screen.NavLock.title, onBack = onBack) {
+    ScreenScaffold(title = stringResource(Screen.NavLock.titleRes), onBack = onBack) {
         AccessibilityServiceBanner(serviceEnabled)
 
         Text(
-            "Stops accidental Back / Home / Recents presses while the keyboard is " +
-                "showing. Pick a mode below.",
+            stringResource(R.string.nav_lock_intro),
             style = MaterialTheme.typography.bodySmall
         )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Keyboard Nav Lock")
+            Text(stringResource(R.string.nav_lock_toggle))
             Switch(
                 checked = navLock,
                 onCheckedChange = { checked ->
@@ -67,15 +68,12 @@ fun NavLockScreen(onBack: () -> Unit) {
         }
 
         Text(
-            "Double-tap Back (keep button): while typing, a single tap on Back is " +
-                "ignored - only a double-tap fires it. Only Back works this way; " +
-                "Android won't let an app gate Home/Recents. Off = all three buttons " +
-                "are fully disabled while typing (needs root).",
+            stringResource(R.string.nav_lock_gesture_desc),
             style = MaterialTheme.typography.bodySmall
         )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Double-tap Back")
+            Text(stringResource(R.string.nav_lock_gesture_toggle))
             Switch(
                 checked = gestureMode,
                 onCheckedChange = { checked ->
@@ -86,14 +84,12 @@ fun NavLockScreen(onBack: () -> Unit) {
         }
 
         Text(
-            "Disable nav buttons ALWAYS: keeps Back / Home / Recents disabled " +
-                "permanently, not just while typing. Navigate with gestures instead. " +
-                "Overrides the modes above; turn off to restore the buttons. Needs root.",
+            stringResource(R.string.nav_lock_always_off_desc),
             style = MaterialTheme.typography.bodySmall
         )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Disable ALWAYS")
+            Text(stringResource(R.string.nav_lock_always_off_toggle))
             Switch(
                 checked = alwaysOff,
                 onCheckedChange = { checked ->
@@ -111,11 +107,14 @@ fun NavLockScreen(onBack: () -> Unit) {
             )
         }
         Text(
-            "Persisted: " + when (alwaysOffPersisted) {
-                null -> "checking…"
-                true -> "Yes"
-                false -> "No"
-            },
+            stringResource(
+                R.string.generic_persisted,
+                when (alwaysOffPersisted) {
+                    null -> stringResource(R.string.generic_checking)
+                    true -> stringResource(R.string.generic_yes)
+                    false -> stringResource(R.string.generic_no)
+                }
+            ),
             style = MaterialTheme.typography.bodySmall
         )
     }

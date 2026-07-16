@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.modules.AutoFocusController
 import com.kgr.key2toolbox.service.Key2AccessibilityService
 import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
 import kotlinx.coroutines.Dispatchers
@@ -39,27 +40,23 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 
 /**
- * Per-app keyboard block: pick the apps where physical key presses should reach
- * the app directly. The accessibility service watches the foreground app and, in
- * a selected app, switches the default IME to a do-nothing passthrough keyboard
- * (restoring the previous one on exit).
+ * Focus and type: on the first printable key press in a selected app while
+ * nothing is focused, finds and focuses the first text field (or the first
+ * one inside a WebView, if present) and types the key into it - useful for
+ * apps whose search/entry field needs a tap before the physical keyboard
+ * does anything.
  */
 @Composable
-fun ImeBlockScreen(onBack: () -> Unit) {
+fun AutoFocusScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember {
         context.getSharedPreferences(Key2AccessibilityService.PREFS, Context.MODE_PRIVATE)
     }
 
     var serviceEnabled by remember { mutableStateOf(false) }
-    var enabled by remember {
-        mutableStateOf(prefs.getBoolean(Key2AccessibilityService.KEY_IME_BLOCK, false))
-    }
+    var enabled by remember { mutableStateOf(AutoFocusController.isEnabled(prefs)) }
     var selected by remember {
-        mutableStateOf(
-            prefs.getStringSet(Key2AccessibilityService.KEY_IME_BLOCK_APPS, emptySet())
-                ?.toSet() ?: emptySet()
-        )
+        mutableStateOf(AutoFocusController.getSelectedApps(prefs))
     }
     var apps by remember { mutableStateOf<List<AppEntry>?>(null) }
     var query by remember { mutableStateOf("") }
@@ -71,7 +68,7 @@ fun ImeBlockScreen(onBack: () -> Unit) {
 
     fun persist(newSet: Set<String>) {
         selected = newSet
-        prefs.edit().putStringSet(Key2AccessibilityService.KEY_IME_BLOCK_APPS, newSet).apply()
+        prefs.edit().putStringSet(AutoFocusController.KEY_AUTO_FOCUS_APPS, newSet).apply()
     }
 
     val filtered = remember(apps, query) {
@@ -92,22 +89,22 @@ fun ImeBlockScreen(onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text(stringResource(R.string.generic_back)) }
         }
-        Text(stringResource(Screen.ImeBlock.titleRes), style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(Screen.AutoFocus.titleRes), style = MaterialTheme.typography.headlineSmall)
 
         AccessibilityServiceBanner(serviceEnabled)
 
         Text(
-            stringResource(R.string.desc_ime_block),
+            stringResource(R.string.desc_auto_focus),
             style = MaterialTheme.typography.bodySmall
         )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.enable_ime_block))
+            Text(stringResource(R.string.enable_auto_focus))
             Switch(
                 checked = enabled,
                 onCheckedChange = { checked ->
                     enabled = checked
-                    prefs.edit().putBoolean(Key2AccessibilityService.KEY_IME_BLOCK, checked).apply()
+                    prefs.edit().putBoolean(AutoFocusController.KEY_AUTO_FOCUS, checked).apply()
                 }
             )
         }
@@ -144,10 +141,7 @@ fun ImeBlockScreen(onBack: () -> Unit) {
                                 .toggleable(
                                     value = checked,
                                     onValueChange = { on ->
-                                        persist(
-                                            if (on) selected + app.pkg
-                                            else selected - app.pkg
-                                        )
+                                        persist(if (on) selected + app.pkg else selected - app.pkg)
                                     }
                                 )
                                 .padding(vertical = 6.dp),

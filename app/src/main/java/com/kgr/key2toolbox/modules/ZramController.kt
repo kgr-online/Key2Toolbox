@@ -1,6 +1,8 @@
 package com.kgr.key2toolbox.modules
 
 import android.content.Context
+import androidx.annotation.StringRes
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.core.ShellResult
@@ -22,11 +24,11 @@ object ZramController {
 
     const val DEFAULT_ALGORITHM = "lz4"
 
-    enum class Size(val mb: Int, val label: String) {
-        OFF(0, "Off"),
-        GB2(2048, "2 GB"),
-        GB3(3072, "3 GB"),
-        GB4(4096, "4 GB")
+    enum class Size(val mb: Int, @StringRes val labelRes: Int) {
+        OFF(0, R.string.zram_size_off),
+        GB2(2048, R.string.zram_size_2gb),
+        GB3(3072, R.string.zram_size_3gb),
+        GB4(4096, R.string.zram_size_4gb)
     }
 
     fun isPersisted(): Boolean = AssetInstaller.fileExists(TARGET)

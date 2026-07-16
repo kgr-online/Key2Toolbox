@@ -1,6 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+val keystoreProperties = Properties().apply {
+    val propsFile = rootProject.file("keystore.properties")
+    if (propsFile.exists()) {
+        load(propsFile.inputStream())
+    }
 }
 
 android {
@@ -15,14 +24,16 @@ android {
         versionName = "4.6-beta1"
     }
 
-    // signingConfigs {
-    //     create("release") {
-    //         storeFile = file("/path/to/kgr_signing.keystore")
-    //         storePassword = "kgr_keystore_2024"
-    //         keyAlias = "kgr"
-    //         keyPassword = "kgr_keystore_2024"
-    //     }
-    // }
+    signingConfigs {
+        if (keystoreProperties.containsKey("storeFile")) {
+            create("release") {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+    }
 
     buildTypes {
         release {
@@ -31,7 +42,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // signingConfig = signingConfigs.getByName("release")
+            if (keystoreProperties.containsKey("storeFile")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

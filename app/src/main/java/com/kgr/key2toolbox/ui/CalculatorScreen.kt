@@ -21,26 +21,23 @@ import com.kgr.key2toolbox.service.Key2AccessibilityService
 import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
 
 @Composable
-fun PinKeyboardScreen(onBack: () -> Unit) {
+fun CalculatorScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember {
         context.getSharedPreferences(Key2AccessibilityService.PREFS, Context.MODE_PRIVATE)
     }
 
     var serviceEnabled by remember { mutableStateOf(false) }
-    var enabled by remember { mutableStateOf(prefs.getBoolean(Key2AccessibilityService.KEY_PIN_INPUT, true)) }
+    var enabled by remember {
+        mutableStateOf(prefs.getBoolean(Key2AccessibilityService.KEY_CALCULATOR, false))
+    }
 
     LaunchedEffect(Unit) {
         serviceEnabled = isKey2AccessibilityServiceEnabled(context)
     }
 
-    ScreenScaffold(title = stringResource(Screen.PinKeyboard.titleRes), onBack = onBack) {
+    ScreenScaffold(title = stringResource(Screen.Calculator.titleRes), onBack = onBack) {
         AccessibilityServiceBanner(serviceEnabled)
-
-        Text(
-            stringResource(R.string.desc_pin_keyboard),
-            style = MaterialTheme.typography.bodySmall
-        )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.generic_enabled))
@@ -48,9 +45,15 @@ fun PinKeyboardScreen(onBack: () -> Unit) {
                 checked = enabled,
                 onCheckedChange = { checked ->
                     enabled = checked
-                    prefs.edit().putBoolean(Key2AccessibilityService.KEY_PIN_INPUT, checked).apply()
+                    prefs.edit().putBoolean(Key2AccessibilityService.KEY_CALCULATOR, checked).apply()
                 }
             )
         }
+
+        DescriptionDivider()
+        Text(
+            stringResource(R.string.desc_calculator),
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }

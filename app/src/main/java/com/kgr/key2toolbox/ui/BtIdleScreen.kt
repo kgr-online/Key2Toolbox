@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.FilterChip
@@ -41,8 +43,8 @@ fun BtIdleScreen(onBack: () -> Unit) {
             running = BtIdleController.isRunning()
             busy = false
             statusMessage = if (newEnabled)
-                "Bluetooth will turn off after $newMinutes min with nothing connected."
-            else "Auto-disable off. Bluetooth stays as you set it."
+                context.getString(R.string.status_bt_idle_enabled, newMinutes)
+            else context.getString(R.string.status_bt_idle_disabled)
         }
     }
 
@@ -54,17 +56,18 @@ fun BtIdleScreen(onBack: () -> Unit) {
         }
     }
 
-    ScreenScaffold(title = Screen.BtIdle.title, onBack = onBack) {
+    ScreenScaffold(title = stringResource(Screen.BtIdle.titleRes), onBack = onBack) {
         Text(
-            "Turns Bluetooth off after a period with no device connected, so an idle " +
-                "radio can't hold the system awake overnight. Connecting earbuds, a " +
-                "watch or a speaker resets the timer.",
+            stringResource(R.string.desc_bt_idle),
             style = MaterialTheme.typography.bodySmall
         )
-        Text("State: ${if (enabled) "On" else "Off"}${if (enabled && !running) " (starts at next boot)" else ""}")
+        Text(
+            if (enabled && !running) stringResource(R.string.generic_state_pending_boot, stringResource(R.string.generic_state_on))
+            else stringResource(R.string.generic_state, if (enabled) stringResource(R.string.generic_state_on) else stringResource(R.string.generic_state_off))
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text(stringResource(R.string.generic_enabled))
             Switch(
                 checked = enabled,
                 enabled = !busy,
@@ -72,7 +75,7 @@ fun BtIdleScreen(onBack: () -> Unit) {
             )
         }
 
-        Text("Turn off after", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.bt_idle_turn_off_after), style = MaterialTheme.typography.titleSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BtIdleController.TIMEOUT_OPTIONS.forEach { opt ->
                 FilterChip(
@@ -82,7 +85,7 @@ fun BtIdleScreen(onBack: () -> Unit) {
                         minutes = opt
                         if (enabled) apply(true, opt)
                     },
-                    label = { Text(if (opt >= 60) "${opt / 60} h" else "$opt min") }
+                    label = { Text(if (opt >= 60) stringResource(R.string.generic_hours, opt / 60) else stringResource(R.string.generic_minutes, opt)) }
                 )
             }
         }

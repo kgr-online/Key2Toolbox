@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,17 +63,21 @@ fun ZramScreen(onBack: () -> Unit) {
         }
     }
 
-    ScreenScaffold(title = Screen.Zram.title, onBack = onBack) {
+    ScreenScaffold(title = stringResource(Screen.Zram.titleRes), onBack = onBack) {
         Text(
-            "Current live size: " +
-                (liveSizeBytes?.let { "${it / 1024 / 1024} MB" } ?: "unknown / inactive")
+            stringResource(
+                R.string.zram_current_live_size,
+                liveSizeBytes?.let { stringResource(R.string.generic_mb, it / 1024 / 1024) } ?: stringResource(R.string.generic_unknown_inactive)
+            )
         )
-        Text("Current live algorithm: ${liveAlgorithm ?: "unknown"}")
-        Text("Current live swappiness: ${liveSwappiness ?: "unknown"}")
+        Text(stringResource(R.string.zram_current_live_algorithm, liveAlgorithm ?: stringResource(R.string.generic_unknown)))
+        Text(stringResource(R.string.zram_current_live_swappiness, liveSwappiness?.toString() ?: stringResource(R.string.generic_unknown)))
         Text(
-            "Persisted setting (applies on next reboot): " +
-                if (selectedSize == ZramController.Size.OFF) "Off"
-                else "${selectedSize.label}, $selectedAlgorithm, swappiness=$selectedSwappiness"
+            stringResource(
+                R.string.zram_persisted_setting,
+                if (selectedSize == ZramController.Size.OFF) stringResource(R.string.zram_size_off)
+                else "${stringResource(selectedSize.labelRes)}, $selectedAlgorithm, swappiness=$selectedSwappiness"
+            )
         )
 
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -79,7 +85,7 @@ fun ZramScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Compression algorithm", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.zram_compression_algorithm), style = MaterialTheme.typography.titleMedium)
 
                 availableAlgorithms.forEach { algo ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -93,7 +99,7 @@ fun ZramScreen(onBack: () -> Unit) {
                                     scope.launch(Dispatchers.IO) {
                                         ZramController.setSize(context, selectedSize, algo, selectedSwappiness, applyLive = false)
                                         busy = false
-                                        statusMessage = "ZRAM algorithm set to $algo. Will apply on next reboot."
+                                        statusMessage = context.getString(R.string.status_zram_algorithm, algo)
                                     }
                                 }
                             }
@@ -109,7 +115,7 @@ fun ZramScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Size", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.generic_size), style = MaterialTheme.typography.titleMedium)
 
                 ZramController.Size.entries.forEach { size ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -122,11 +128,11 @@ fun ZramScreen(onBack: () -> Unit) {
                                 scope.launch(Dispatchers.IO) {
                                     ZramController.setSize(context, size, selectedAlgorithm, selectedSwappiness, applyLive = false)
                                     busy = false
-                                    statusMessage = "ZRAM set to ${size.label}. Will apply on next reboot."
+                                    statusMessage = context.getString(R.string.status_zram_size, context.getString(size.labelRes))
                                 }
                             }
                         )
-                        Text(size.label)
+                        Text(stringResource(size.labelRes))
                     }
                 }
             }
@@ -137,11 +143,9 @@ fun ZramScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Swappiness", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.zram_swappiness), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Controls how aggressively the system swaps pages out of physical memory. " +
-                        "Higher values swap more aggressively, preserving memory for file caches. " +
-                        "Requires ZRAM to be enabled (not Off).",
+                    stringResource(R.string.desc_zram_swappiness),
                     style = MaterialTheme.typography.bodySmall
                 )
 
@@ -166,7 +170,7 @@ fun ZramScreen(onBack: () -> Unit) {
                                     )
                                     liveSwappiness = ZramController.currentLiveSwappiness()
                                     busy = false
-                                    statusMessage = "Swappiness set to $selectedSwappiness and applied live."
+                                    statusMessage = context.getString(R.string.status_zram_swappiness, selectedSwappiness)
                                 }
                             }
                         },
@@ -186,7 +190,7 @@ fun ZramScreen(onBack: () -> Unit) {
             enabled = !busy && selectedSize != ZramController.Size.OFF,
             onClick = { showApplyWarning = true }
         ) {
-            Text("Apply now")
+            Text(stringResource(R.string.zram_apply_now))
         }
 
         statusMessage?.let {
@@ -196,13 +200,9 @@ fun ZramScreen(onBack: () -> Unit) {
         if (showApplyWarning) {
             AlertDialog(
                 onDismissRequest = { showApplyWarning = false },
-                title = { Text("Apply ZRAM settings now?") },
+                title = { Text(stringResource(R.string.zram_apply_dialog_title)) },
                 text = {
-                    Text(
-                        "Resizing/recompressing ZRAM live briefly disables swap and can " +
-                            "cause background apps to be killed under memory pressure. " +
-                            "It's usually safer to set this and reboot instead."
-                    )
+                    Text(stringResource(R.string.zram_apply_dialog_desc))
                 },
                 confirmButton = {
                     TextButton(onClick = {
@@ -214,12 +214,15 @@ fun ZramScreen(onBack: () -> Unit) {
                             liveAlgorithm = ZramController.currentAlgorithm()
                             liveSwappiness = ZramController.currentLiveSwappiness()
                             busy = false
-                            statusMessage = "ZRAM applied live: ${selectedSize.label}, $selectedAlgorithm, swappiness=$selectedSwappiness."
+                            statusMessage = context.getString(
+                                R.string.status_zram_applied_live,
+                                context.getString(selectedSize.labelRes), selectedAlgorithm, selectedSwappiness
+                            )
                         }
-                    }) { Text("Apply") }
+                    }) { Text(stringResource(R.string.generic_apply)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showApplyWarning = false }) { Text("Cancel") }
+                    TextButton(onClick = { showApplyWarning = false }) { Text(stringResource(R.string.generic_cancel)) }
                 }
             )
         }

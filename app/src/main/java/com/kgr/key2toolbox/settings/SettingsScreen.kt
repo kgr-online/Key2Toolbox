@@ -18,9 +18,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage // swap for your existing image loader if K2TB uses a different one
+import com.kgr.key2toolbox.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,13 +53,13 @@ fun SettingsScreen(
             .padding(16.dp)
     ) {
         Text(
-            "Settings",
+            stringResource(R.string.tab_settings),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        SectionHeader("Updates")
+        SectionHeader(stringResource(R.string.settings_updates))
         UpdateCard(
             currentVersion = currentVersionName,
             state = updateState,
@@ -82,10 +84,10 @@ fun SettingsScreen(
                         updateState = if (success) {
                             UpdateState.Installed(release.tagName)
                         } else {
-                            UpdateState.Failed("pm install failed — check logcat tag K2TB-Updater")
+                            UpdateState.Failed(context.getString(R.string.settings_install_failed))
                         }
                     } catch (e: Exception) {
-                        updateState = UpdateState.Failed(e.message ?: "Unknown error during update")
+                        updateState = UpdateState.Failed(e.message ?: context.getString(R.string.settings_update_unknown_error))
                     }
                 }
             }
@@ -93,17 +95,17 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        SectionHeader("Quick Access")
+        SectionHeader(stringResource(R.string.settings_quick_access))
         SettingsRow(
-            title = "Accessibility Service",
-            subtitle = "Enable K2TB's accessibility features",
+            title = stringResource(R.string.settings_accessibility_service),
+            subtitle = stringResource(R.string.settings_accessibility_service_subtitle),
             icon = Icons.Default.Accessibility
         ) {
             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         SettingsRow(
-            title = "Notification Access",
-            subtitle = "Enable notification listener",
+            title = stringResource(R.string.settings_notification_access),
+            subtitle = stringResource(R.string.settings_notification_access_subtitle),
             icon = Icons.Default.Notifications
         ) {
             context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
@@ -111,7 +113,7 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        SectionHeader("Contributors")
+        SectionHeader(stringResource(R.string.settings_contributors))
         ContributorsSection(
             contributors = contributors,
             error = contributorsError,
@@ -121,9 +123,9 @@ fun SettingsScreen(
         )
 
         Spacer(Modifier.height(24.dp))
-        SectionHeader("About")
+        SectionHeader(stringResource(R.string.settings_about))
         Text(
-            "Key2Toolbox v$currentVersionName",
+            stringResource(R.string.settings_version, currentVersionName),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -194,12 +196,12 @@ private fun UpdateCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Current version", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_current_version), style = MaterialTheme.typography.bodySmall)
                     Text(currentVersion, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 }
                 if (state !is UpdateState.Downloading && state !is UpdateState.Installing) {
                     Button(onClick = onCheckNow) {
-                        Text("Check now")
+                        Text(stringResource(R.string.settings_check_now))
                     }
                 }
             }
@@ -212,18 +214,18 @@ private fun UpdateCard(
                 is UpdateState.Checking -> Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Checking for updates…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_checking_updates), style = MaterialTheme.typography.bodySmall)
                 }
 
                 is UpdateState.UpToDate -> Text(
-                    "You're up to date.",
+                    stringResource(R.string.settings_up_to_date),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 is UpdateState.UpdateAvailable -> Column {
                     Text(
-                        "Update available: ${state.release.tagName}",
+                        stringResource(R.string.settings_update_available, state.release.tagName),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -237,12 +239,12 @@ private fun UpdateCard(
                     }
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = { onInstall(state.release) }) {
-                        Text("Download & install")
+                        Text(stringResource(R.string.settings_download_install))
                     }
                 }
 
                 is UpdateState.Downloading -> Column {
-                    Text("Downloading update…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_downloading), style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(4.dp))
                     if (state.progress >= 0) {
                         LinearProgressIndicator(
@@ -257,11 +259,11 @@ private fun UpdateCard(
                 is UpdateState.Installing -> Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Installing…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_installing), style = MaterialTheme.typography.bodySmall)
                 }
 
                 is UpdateState.Installed -> Text(
-                    "Installed ${state.version}. Restart the app to finish.",
+                    stringResource(R.string.settings_installed, state.version),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -284,7 +286,7 @@ private fun ContributorsSection(
 ) {
     when {
         error != null -> Text(
-            "Couldn't load contributors: $error",
+            stringResource(R.string.settings_contributors_error, error),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -292,11 +294,11 @@ private fun ContributorsSection(
         contributors == null -> Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(8.dp))
-            Text("Loading contributors…", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.settings_loading_contributors), style = MaterialTheme.typography.bodySmall)
         }
 
         contributors.isEmpty() -> Text(
-            "No contributor data available.",
+            stringResource(R.string.settings_no_contributors),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -331,7 +333,7 @@ private fun ContributorChip(contributor: GitHubContributor, onClick: () -> Unit)
             maxLines = 1
         )
         Text(
-            "${contributor.contributions} commits",
+            stringResource(R.string.settings_commits, contributor.contributions),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1

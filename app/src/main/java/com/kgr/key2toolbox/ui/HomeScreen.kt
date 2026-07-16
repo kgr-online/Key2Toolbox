@@ -1,6 +1,8 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,11 +30,14 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -42,6 +47,21 @@ fun HomeScreen() {
 
     BackHandler(enabled = detail != null) { detail = null }
 
+    // Hoisted up here (rather than inside each tab's own composable) so that
+    // switching tabs - which disposes/recreates whichever `when(tab)` branch
+    // you're leaving - doesn't reset scroll position or re-fetch Info's data
+    // from scratch every time you revisit a tab.
+    val context = LocalContext.current
+    val infoState = remember { InfoState() }
+    val infoScroll = rememberScrollState()
+    val keyboardScroll = rememberScrollState()
+    val systemScroll = rememberScrollState()
+    val networkScroll = rememberScrollState()
+
+    LaunchedEffect(Unit) {
+        infoState.refresh(context)
+    }
+
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -49,31 +69,31 @@ fun HomeScreen() {
                     selected = tab == AppTab.Info && detail == null,
                     onClick = { tab = AppTab.Info; detail = null },
                     icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                    label = { Text(AppTab.Info.label) }
+                    label = { Text(stringResource(AppTab.Info.labelRes)) }
                 )
                 NavigationBarItem(
                     selected = tab == AppTab.Keyboard,
                     onClick = { tab = AppTab.Keyboard; detail = null },
                     icon = { Icon(Icons.Filled.Keyboard, contentDescription = null) },
-                    label = { Text(AppTab.Keyboard.label) }
+                    label = { Text(stringResource(AppTab.Keyboard.labelRes)) }
                 )
                 NavigationBarItem(
                     selected = tab == AppTab.System,
                     onClick = { tab = AppTab.System; detail = null },
                     icon = { Icon(Icons.Filled.Build, contentDescription = null) },
-                    label = { Text(AppTab.System.label) }
+                    label = { Text(stringResource(AppTab.System.labelRes)) }
                 )
                 NavigationBarItem(
                     selected = tab == AppTab.Network,
                     onClick = { tab = AppTab.Network; detail = null },
                     icon = { Icon(Icons.Filled.Wifi, contentDescription = null) },
-                    label = { Text(AppTab.Network.label) }
+                    label = { Text(stringResource(AppTab.Network.labelRes)) }
                 )
                 NavigationBarItem(
                     selected = tab == AppTab.Settings,
                     onClick = { tab = AppTab.Settings; detail = null },
                     icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text(AppTab.Settings.label) }
+                    label = { Text(stringResource(AppTab.Settings.labelRes)) }
                 )
             }
         }
@@ -81,12 +101,12 @@ fun HomeScreen() {
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             val current = detail
             if (current != null) {
-                DetailHost(current) { detail = null }
+                DetailHost(current, onBack = { detail = null }, onNavigate = { detail = it })
             } else when (tab) {
-                AppTab.Info -> InfoScreen()
-                AppTab.Keyboard -> CategoryMenu("Keyboard", keyboardScreens) { detail = it }
-                AppTab.System -> CategoryMenu("System", systemScreens) { detail = it }
-                AppTab.Network -> CategoryMenu("Network", networkScreens) { detail = it }
+                AppTab.Info -> InfoScreen(infoState, infoScroll, onOpenBatteryUsage = { detail = Screen.BatteryUsage })
+                AppTab.Keyboard -> CategoryMenu(stringResource(AppTab.Keyboard.labelRes), keyboardScreens, keyboardScroll) { detail = it }
+                AppTab.System -> CategoryMenu(stringResource(AppTab.System.labelRes), systemScreens, systemScroll) { detail = it }
+                AppTab.Network -> CategoryMenu(stringResource(AppTab.Network.labelRes), networkScreens, networkScroll) { detail = it }
                 AppTab.Settings -> SettingsScreen(currentVersionName = BuildConfig.VERSION_NAME)
             }
         }
@@ -94,13 +114,17 @@ fun HomeScreen() {
 }
 
 @Composable
-private fun DetailHost(screen: Screen, onBack: () -> Unit) {
+private fun DetailHost(screen: Screen, onBack: () -> Unit, onNavigate: (Screen) -> Unit) {
     when (screen) {
-        Screen.CtrlKey -> CtrlKeyScreen(onBack)
+        Screen.KeyRemap -> KeyRemapScreen(onBack)
         Screen.KbdLight -> KbdLightScreen(onBack)
         Screen.NavLock -> NavLockScreen(onBack)
         Screen.PinKeyboard -> PinKeyboardScreen(onBack)
         Screen.ImeBlock -> ImeBlockScreen(onBack)
+        Screen.Calculator -> CalculatorScreen(onBack)
+        Screen.ImeSuggestions -> ImeSuggestionsScreen(onBack, onNavigateToKeyRemap = { onNavigate(Screen.KeyRemap) })
+        Screen.InCallShortcuts -> InCallShortcutsScreen(onBack, onNavigateToAutoFocus = { onNavigate(Screen.AutoFocus) })
+        Screen.AutoFocus -> AutoFocusScreen(onBack)
         Screen.Zram -> ZramScreen(onBack)
         Screen.WirelessAdb -> WirelessAdbScreen(onBack)
         Screen.Dt2w -> Dt2wScreen(onBack)
@@ -112,16 +136,23 @@ private fun DetailHost(screen: Screen, onBack: () -> Unit) {
         Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
         Screen.K2PF -> K2PFScreen(onBack)
         Screen.LedNotify -> LedNotifyScreen(onBack)
+        Screen.ExtraDim -> ExtraDimScreen(onBack)
+        Screen.BatteryUsage -> BatteryUsageScreen(onBack)
         Screen.Home -> Unit
     }
 }
 
 @Composable
-private fun CategoryMenu(title: String, screens: List<Screen>, onNavigate: (Screen) -> Unit) {
+private fun CategoryMenu(
+    title: String,
+    screens: List<Screen>,
+    scrollState: ScrollState,
+    onNavigate: (Screen) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -143,20 +174,21 @@ private fun MenuEntry(screen: Screen, onClick: () -> Unit) {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(screen.title, style = MaterialTheme.typography.titleMedium)
-            if (screen.subtitle.isNotEmpty() || screen.access.isNotEmpty()) {
+            Text(stringResource(screen.titleRes), style = MaterialTheme.typography.titleMedium)
+            if (screen.subtitleRes != 0 || screen.access.isNotEmpty()) {
                 Row {
-                    if (screen.subtitle.isNotEmpty()) {
+                    if (screen.subtitleRes != 0) {
                         Text(
-                            screen.subtitle,
+                            stringResource(screen.subtitleRes),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     if (screen.access.isNotEmpty()) {
                         Spacer(Modifier.width(6.dp))
+                        val accessLabels = screen.access.map { stringResource(it.labelRes) }
                         Text(
-                            screen.access.joinToString(" ") { "[${it.label}]" },
+                            accessLabels.joinToString(" ") { "[$it]" },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )

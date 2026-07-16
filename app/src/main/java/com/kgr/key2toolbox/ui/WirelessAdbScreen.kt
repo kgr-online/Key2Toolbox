@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,17 +45,17 @@ fun WirelessAdbScreen(onBack: () -> Unit) {
         }
     }
 
-    ScreenScaffold(title = Screen.WirelessAdb.title, onBack = onBack) {
-        Text("WLAN IP: ${wlanIp ?: "not connected"}")
-        Text("Current live port: ${livePort ?: "not set"}")
-        Text("Persisted: ${if (persisted) "Yes" else "No"}")
+    ScreenScaffold(title = stringResource(Screen.WirelessAdb.titleRes), onBack = onBack) {
+        Text(stringResource(R.string.wireless_adb_wlan_ip, wlanIp ?: stringResource(R.string.generic_not_connected)))
+        Text(stringResource(R.string.wireless_adb_current_port, livePort?.toString() ?: stringResource(R.string.generic_not_set)))
+        Text(stringResource(R.string.generic_persisted, yesNo(persisted)))
 
         OutlinedTextField(
             value = portText,
             onValueChange = { value ->
                 if (value.length <= 5 && value.all { it.isDigit() }) portText = value
             },
-            label = { Text("Port") },
+            label = { Text(stringResource(R.string.wireless_adb_port_label)) },
             enabled = !busy,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -71,12 +73,13 @@ fun WirelessAdbScreen(onBack: () -> Unit) {
                         livePort = WirelessAdbController.currentLivePort()
                         wlanIp = WirelessAdbController.currentWlanIp()
                         busy = false
-                        statusMessage =
-                            "Wireless ADB enabled on port $port. " +
-                                "Persisted: ${if (persisted) "yes" else "NO - check service.d write permissions"}."
+                        val persistedNote = context.getString(
+                            if (persisted) R.string.persisted_ok else R.string.persisted_mismatch
+                        )
+                        statusMessage = context.getString(R.string.status_wireless_adb_enabled, port, persistedNote)
                     }
                 }
-            ) { Text("Enable / Apply") }
+            ) { Text(stringResource(R.string.wireless_adb_enable_apply)) }
 
             Button(
                 enabled = !busy,
@@ -88,10 +91,10 @@ fun WirelessAdbScreen(onBack: () -> Unit) {
                         livePort = WirelessAdbController.currentLivePort()
                         wlanIp = WirelessAdbController.currentWlanIp()
                         busy = false
-                        statusMessage = "Wireless ADB disabled."
+                        statusMessage = context.getString(R.string.status_wireless_adb_disabled)
                     }
                 }
-            ) { Text("Disable") }
+            ) { Text(stringResource(R.string.generic_disable)) }
         }
 
         statusMessage?.let {

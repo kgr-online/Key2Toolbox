@@ -7,23 +7,45 @@ import com.kgr.key2toolbox.core.ShellResult
 
 /**
  * Manages global Firebase Crashlytics telemetry block.
- * Installs /data/adb/service.d/block_telemetry.sh.
+ *
+ * Apps rewrite com.google.firebase.crashlytics.xml at runtime, so a one-shot
+ * boot pass gets undone. The installed script (block_telemetry.sh) is a
+ * watchdog daemon that re-applies the block every [INTERVAL_MIN] minutes.
  */
 object TelemetryController {
 
     private const val SCRIPT_NAME = "block_telemetry.sh"
     private const val TARGET = "/data/adb/service.d/$SCRIPT_NAME"
     private const val TEMPLATE_ASSET = "block_telemetry_template.sh"
+    private const val LOCK = "/data/adb/.block_telemetry.lock"
+
+    /** How often the watchdog re-scans and re-blocks. */
+    private const val INTERVAL_MIN = 30
 
     fun isPersisted(): Boolean = AssetInstaller.fileExists(TARGET)
 
+    /** Whether the watchdog daemon is currently running. */
+    fun isRunning(): Boolean =
+        RootShell.run("pgrep -f $SCRIPT_NAME >/dev/null 2>&1 && echo yes || echo no")
+            .outString.trim() == "yes"
+
     fun setEnabled(context: Context, enabled: Boolean): ShellResult {
-        val result = if (enabled) {
-            AssetInstaller.installFromAsset(context, TEMPLATE_ASSET, TARGET)
+        // Stop any running daemon and clear its lock so we don't stack instances.
+        RootShell.run("pkill -f $SCRIPT_NAME 2>/dev/null; rm -f $LOCK")
+
+        return if (enabled) {
+            val result = AssetInstaller.installFromAsset(context, TEMPLATE_ASSET, TARGET) { raw ->
+                raw.replace("__INTERVAL_MIN__", INTERVAL_MIN.toString())
+            }
+            // Launch live, detached, so blocking starts now without a reboot. setsid
+            // detaches into its own session so it doesn't get dragged down when the
+            // invoking root shell (a transient libsu session) is later recycled -
+            // same fix as ExtraDimController's schedule daemon.
+            RootShell.run("nohup setsid sh $TARGET </dev/null >/dev/null 2>&1 &")
+            result
         } else {
             AssetInstaller.removeFile(TARGET)
         }
-        return result
     }
 
     /** Runs the telemetry disable loop live. */

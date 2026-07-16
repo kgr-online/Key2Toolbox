@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,9 +63,11 @@ fun PerformanceScreen(onBack: () -> Unit) {
             refreshLiveValues()
             busy = false
             statusMessage = if (applyLive) {
-                if (newEnabled) "Settings applied live and persisted for reboot." else "Default settings restored live."
+                context.getString(
+                    if (newEnabled) R.string.status_performance_applied_live else R.string.status_performance_restored_live
+                )
             } else {
-                "Settings saved. Will apply on next reboot."
+                context.getString(R.string.status_performance_saved)
             }
         }
     }
@@ -80,11 +84,9 @@ fun PerformanceScreen(onBack: () -> Unit) {
         }
     }
 
-    ScreenScaffold(title = Screen.Performance.title, onBack = onBack) {
+    ScreenScaffold(title = stringResource(Screen.Performance.titleRes), onBack = onBack) {
         Text(
-            "Fine-tune kernel scheduler scaling rates and CPU input boost to save battery. " +
-            "Tuned settings relax the CPU LITTLE cluster scaling and lower the input boost intensity " +
-            "during screen interaction.",
+            stringResource(R.string.desc_performance),
             style = MaterialTheme.typography.bodySmall
         )
 
@@ -93,10 +95,10 @@ fun PerformanceScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Current Live Status", style = MaterialTheme.typography.titleMedium)
-                Text("LITTLE Cluster up_rate_limit: " + (liveUpRateLimit?.let { "$it µs" } ?: "unknown"))
-                Text("Input Boost Freq: " + (liveBoostFreq?.let { if (it == 0) "Off" else "${it / 1000} MHz" } ?: "unknown"))
-                Text("Input Boost Duration: " + (liveBoostMs?.let { if (it == 0) "Off" else "$it ms" } ?: "unknown"))
+                Text(stringResource(R.string.performance_current_live_status), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.performance_up_rate_limit, liveUpRateLimit?.let { stringResource(R.string.generic_us, it) } ?: stringResource(R.string.generic_unknown)))
+                Text(stringResource(R.string.performance_input_boost_freq, liveBoostFreq?.let { if (it == 0) stringResource(R.string.generic_state_off) else stringResource(R.string.generic_mhz, it / 1000) } ?: stringResource(R.string.generic_unknown)))
+                Text(stringResource(R.string.performance_input_boost_duration, liveBoostMs?.let { if (it == 0) stringResource(R.string.generic_state_off) else stringResource(R.string.generic_ms, it) } ?: stringResource(R.string.generic_unknown)))
             }
         }
 
@@ -105,7 +107,7 @@ fun PerformanceScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Enable at Boot")
+            Text(stringResource(R.string.enable_at_boot))
             Switch(
                 checked = enabled,
                 enabled = !busy,
@@ -122,11 +124,11 @@ fun PerformanceScreen(onBack: () -> Unit) {
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("LITTLE Cluster Schedutil up_rate_limit", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.performance_up_rate_limit_title), style = MaterialTheme.typography.titleMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
-                            PerformanceController.DEFAULT_UP_RATE_LIMIT to "Default (500 µs)",
-                            PerformanceController.TUNED_UP_RATE_LIMIT to "Tuned (2000 µs)"
+                            PerformanceController.DEFAULT_UP_RATE_LIMIT to stringResource(R.string.performance_up_rate_default),
+                            PerformanceController.TUNED_UP_RATE_LIMIT to stringResource(R.string.performance_up_rate_tuned)
                         ).forEach { (opt, label) ->
                             FilterChip(
                                 selected = selectedUpRateLimit == opt,
@@ -140,12 +142,12 @@ fun PerformanceScreen(onBack: () -> Unit) {
                         }
                     }
 
-                    Text("CAF Input Boost Frequency (LITTLE)", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.performance_boost_freq_title), style = MaterialTheme.typography.titleMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
-                            PerformanceController.DEFAULT_INPUT_BOOST_FREQ to "Default (1.4 GHz)",
-                            PerformanceController.TUNED_INPUT_BOOST_FREQ to "Tuned (1.1 GHz)",
-                            0 to "Off"
+                            PerformanceController.DEFAULT_INPUT_BOOST_FREQ to stringResource(R.string.performance_boost_freq_default),
+                            PerformanceController.TUNED_INPUT_BOOST_FREQ to stringResource(R.string.performance_boost_freq_tuned),
+                            0 to stringResource(R.string.generic_state_off)
                         ).forEach { (opt, label) ->
                             FilterChip(
                                 selected = selectedBoostFreq == opt,
@@ -159,12 +161,12 @@ fun PerformanceScreen(onBack: () -> Unit) {
                         }
                     }
 
-                    Text("CAF Input Boost Duration", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.performance_boost_duration_title), style = MaterialTheme.typography.titleMedium)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
-                            PerformanceController.DEFAULT_INPUT_BOOST_MS to "Default (40 ms)",
-                            PerformanceController.TUNED_INPUT_BOOST_MS to "Tuned (20 ms)",
-                            0 to "Off"
+                            PerformanceController.DEFAULT_INPUT_BOOST_MS to stringResource(R.string.performance_boost_duration_default),
+                            PerformanceController.TUNED_INPUT_BOOST_MS to stringResource(R.string.performance_boost_duration_tuned),
+                            0 to stringResource(R.string.generic_state_off)
                         ).forEach { (opt, label) ->
                             FilterChip(
                                 selected = selectedBoostMs == opt,
@@ -192,7 +194,7 @@ fun PerformanceScreen(onBack: () -> Unit) {
                 },
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Apply live now")
+                Text(stringResource(R.string.performance_apply_live_now))
             }
         }
 

@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.ui
 
+import com.kgr.key2toolbox.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
@@ -37,12 +39,12 @@ fun KbdLightScreen(onBack: () -> Unit) {
         }
     }
 
-    ScreenScaffold(title = Screen.KbdLight.title, onBack = onBack) {
-        Text("Persisted: ${if (persisted) "Yes" else "No"}")
-        Text("Currently running: ${if (running) "Yes" else "No"}")
+    ScreenScaffold(title = stringResource(Screen.KbdLight.titleRes), onBack = onBack) {
+        Text(stringResource(R.string.generic_persisted, yesNo(persisted)))
+        Text(stringResource(R.string.generic_currently_running, yesNo(running)))
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text(stringResource(R.string.generic_enabled))
             Switch(
                 checked = persisted,
                 enabled = !busy,
@@ -57,9 +59,13 @@ fun KbdLightScreen(onBack: () -> Unit) {
                         persisted = KbdLightController.isPersisted()
                         running = KbdLightController.isRunningLive()
                         busy = false
-                        statusMessage =
-                            "Keyboard backlight ${if (enable) "enabled" else "disabled"}. " +
-                                "Persisted: ${if (persisted == enable) "ok" else "MISMATCH - check service.d write permissions"}."
+                        val persistedNote = context.getString(
+                            if (persisted == enable) R.string.persisted_ok else R.string.persisted_mismatch
+                        )
+                        statusMessage = context.getString(
+                            if (enable) R.string.status_kbd_light_enabled else R.string.status_kbd_light_disabled,
+                            persistedNote
+                        )
                     }
                 }
             )
