@@ -28,7 +28,7 @@ sealed class GitHubResult<out T> {
 
 object GitHubClient {
 
-    private const val OWNER = "kgr17"
+    private const val OWNER = "kgr-online"
     private const val REPO = "Key2Toolbox"
     private const val USER_AGENT = "Key2Toolbox-App"
 

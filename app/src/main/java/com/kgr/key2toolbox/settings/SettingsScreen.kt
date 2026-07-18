@@ -1,14 +1,19 @@
 package com.kgr.key2toolbox.settings
 
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,15 +21,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage // swap for your existing image loader if K2TB uses a different one
+import com.kgr.key2toolbox.service.Key2AccessibilityService // adjust package if this lives elsewhere
+import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(
@@ -32,10 +47,65 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var updateState by remember { mutableStateOf<UpdateState>(UpdateState.Idle) }
     var contributors by remember { mutableStateOf<List<GitHubContributor>?>(null) }
     var contributorsError by remember { mutableStateOf<String?>(null) }
+
+    var accessibilityEnabled by remember { mutableStateOf(false) }
+    var notificationEnabled by remember { mutableStateOf(false) }
+    var rootEnabled by remember { mutableStateOf<Boolean?>(null) } // null = still checking
+
+    var backupMessage by remember { mutableStateOf<String?>(null) }
+    var backupError by remember { mutableStateOf<String?>(null) }
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) } // awaiting confirmation
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val json = SettingsBackup.exportToJson(context, currentVersionName)
+                    SettingsBackup.writeToUri(context, uri, json)
+                }
+                backupError = null
+                backupMessage = "Settings exported successfully."
+            } catch (e: Exception) {
+                backupMessage = null
+                backupError = "Export failed: ${e.javaClass.simpleName}: ${e.message}"
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        pendingImportUri = uri // confirm before overwriting current settings
+    }
+
+    fun refreshStatuses() {
+        accessibilityEnabled = isAccessibilityServiceEnabled(context)
+        notificationEnabled = NotificationManagerCompat.getEnabledListenerPackages(context)
+            .contains(context.packageName)
+        scope.launch {
+            rootEnabled = withContext(Dispatchers.IO) { Shell.getShell().isRoot }
+        }
+    }
+
+    // Initial check, plus re-check whenever the user returns to the app
+    // (e.g. after toggling Accessibility/Notification access in system settings)
+    DisposableEffect(lifecycleOwner) {
+        refreshStatuses()
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refreshStatuses()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Load contributors once when the screen is first shown
     LaunchedEffect(Unit) {
@@ -45,9 +115,53 @@ fun SettingsScreen(
         }
     }
 
+    pendingImportUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = { Text("Import settings?") },
+            text = {
+                Text(
+                    "This will overwrite your current module settings (keys present in " +
+                    "the backup file) with the values from the selected file. This can't be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingImportUri = null
+                    scope.launch {
+                        try {
+                            val result = withContext(Dispatchers.IO) {
+                                val json = SettingsBackup.readFromUri(context, uri)
+                                SettingsBackup.importFromJson(context, json)
+                            }
+                            when (result) {
+                                is SettingsBackup.ImportResult.Success -> {
+                                    backupError = null
+                                    backupMessage = "Restored ${result.restoredKeys} setting(s)." +
+                                        if (result.skippedFiles > 0) " (${result.skippedFiles} unrecognized pref file(s) skipped.)" else ""
+                                }
+                                is SettingsBackup.ImportResult.Failure -> {
+                                    backupMessage = null
+                                    backupError = result.message
+                                }
+                            }
+                        } catch (e: Exception) {
+                            backupMessage = null
+                            backupError = "Import failed: ${e.javaClass.simpleName}: ${e.message}"
+                        }
+                    }
+                }) { Text("Import") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImportUri = null }) { Text("Cancel") }
+            }
+        )
+    }
+
     Column(
         Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         Text(
@@ -94,19 +208,58 @@ fun SettingsScreen(
         Spacer(Modifier.height(24.dp))
 
         SectionHeader("Quick Access")
-        SettingsRow(
+        StatusSettingsRow(
             title = "Accessibility Service",
             subtitle = "Enable K2TB's accessibility features",
-            icon = Icons.Default.Accessibility
+            icon = Icons.Default.Accessibility,
+            enabled = accessibilityEnabled
         ) {
             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
-        SettingsRow(
+        StatusSettingsRow(
             title = "Notification Access",
             subtitle = "Enable notification listener",
-            icon = Icons.Default.Notifications
+            icon = Icons.Default.Notifications,
+            enabled = notificationEnabled
         ) {
             context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
+        RootStatusRow(rootEnabled = rootEnabled)
+
+        Spacer(Modifier.height(24.dp))
+
+        SectionHeader("Backup & Restore")
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    "Export your module settings (keyboard, LED, etc.) to a JSON file, " +
+                    "or restore from a previous backup.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(java.util.Date())
+                        exportLauncher.launch("key2toolbox_backup_$timestamp.json")
+                    }) {
+                        Text("Export")
+                    }
+                    OutlinedButton(onClick = {
+                        importLauncher.launch(arrayOf("application/json"))
+                    }) {
+                        Text("Import")
+                    }
+                }
+                backupMessage?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+                backupError?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
         }
 
         Spacer(Modifier.height(24.dp))
@@ -128,14 +281,14 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "github.com/kgr17/Key2Toolbox",
+            "github.com/kgr-online/Key2Toolbox",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .padding(top = 4.dp)
                 .clickable {
                     context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/kgr17/Key2Toolbox"))
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/kgr-online/Key2Toolbox"))
                     )
                 }
         )
@@ -154,10 +307,11 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
-private fun SettingsRow(
+private fun StatusSettingsRow(
     title: String,
     subtitle: String,
     icon: ImageVector,
+    enabled: Boolean,
     onClick: () -> Unit
 ) {
     Row(
@@ -175,8 +329,68 @@ private fun SettingsRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text(
+                if (enabled) "Enabled" else "Not enabled",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = if (enabled) Color(0xFF4CAF50) else Color(0xFFE57373)
+            )
         }
     }
+}
+
+/** Root has no dedicated system settings page to link to (varies by APatch/FolkPatch/Magisk),
+ *  so this is informational only, not clickable. */
+@Composable
+private fun RootStatusRow(rootEnabled: Boolean?) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.padding(end = 16.dp))
+        Column {
+            Text("Root Access", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Required for system-level modules",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                when (rootEnabled) {
+                    true -> "Enabled"
+                    false -> "Not enabled"
+                    null -> "Checking…"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = when (rootEnabled) {
+                    true -> Color(0xFF4CAF50)
+                    false -> Color(0xFFE57373)
+                    null -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
+    }
+}
+
+/** Checks whether Key2AccessibilityService is currently enabled via the
+ *  system's ENABLED_ACCESSIBILITY_SERVICES setting. */
+private fun isAccessibilityServiceEnabled(context: android.content.Context): Boolean {
+    val expected = ComponentName(context, Key2AccessibilityService::class.java)
+    val enabledServicesSetting = Settings.Secure.getString(
+        context.contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    ) ?: return false
+
+    val splitter = android.text.TextUtils.SimpleStringSplitter(':')
+    splitter.setString(enabledServicesSetting)
+    while (splitter.hasNext()) {
+        val enabled = ComponentName.unflattenFromString(splitter.next())
+        if (enabled == expected) return true
+    }
+    return false
 }
 
 @Composable
