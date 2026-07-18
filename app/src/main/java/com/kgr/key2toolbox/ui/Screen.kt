@@ -57,7 +57,7 @@ sealed class Screen(
         listOf(AccessType.ROOT)
     )
     data object K2PF : Screen(
-        "BBProdFix Settings", "Manage k2prodfix module tweaks",
+        "K2ProdFix Settings", "Manage k2prodfix module tweaks",
         listOf(AccessType.ROOT)
     )
     data object LedNotify : Screen(

@@ -37,21 +37,21 @@ import androidx.compose.ui.unit.dp
 enum class AppTab(val label: String) { Info("Info"), Keyboard("Keyboard"), System("System"), Settings("Settings") }
 
 val keyboardScreens = listOf(
-    Screen.CtrlKey,
     Screen.KbdLight,
+    Screen.CtrlKey,
     Screen.NavLock,
     Screen.PinKeyboard,
     Screen.ImeBlock
 )
 
 val systemScreens = listOf(
-    Screen.Zram,
-    Screen.WirelessAdb,
-    Screen.Dt2w,
     Screen.Wifi5g,
-    Screen.PlayStoreTagger,
+    Screen.Dt2w,
     Screen.K2PF,
-    Screen.LedNotify
+    Screen.LedNotify,
+    Screen.WirelessAdb,
+    Screen.PlayStoreTagger,
+    Screen.Zram
 )
 
 @Composable
