@@ -44,24 +44,31 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Enabled")
             Switch(
-                checked = keymapState == CtrlKeyController.State.CTRL,
+                checked = persisted,
                 enabled = !busy,
                 onCheckedChange = { enable ->
                     busy = true
                     scope.launch(Dispatchers.IO) {
-                        if (enable) {
-                            CtrlKeyController.enablePersist(context)
-                            CtrlKeyController.applyLiveOn()
+                        val result = if (enable) {
+                            CtrlKeyController.applyOn(context)
                         } else {
-                            CtrlKeyController.disablePersist()
-                            CtrlKeyController.applyLiveOff()
+                            CtrlKeyController.applyOff(context)
                         }
+                        val needsReboot = CtrlKeyController.requiresReboot()
                         keymapState = CtrlKeyController.currentKeymapState()
                         persisted = CtrlKeyController.isPersisted()
                         busy = false
-                        statusMessage =
-                            "Ctrl remap ${if (enable) "enabled" else "disabled"}. " +
-                                "Persisted: ${if (persisted) "yes" else "NO - check service.d write permissions"}."
+
+                        statusMessage = when {
+                            !result.success ->
+                                "Failed to ${if (enable) "enable" else "disable"} Ctrl remap: ${result.outString}"
+                            needsReboot ->
+                                "Ctrl remap ${if (enable) "staged" else "un-staged"}. " +
+                                    "Reboot your device for this to take effect."
+                            else ->
+                                "Ctrl remap ${if (enable) "enabled" else "disabled"}. " +
+                                    "Persisted: ${if (persisted) "yes" else "NO - check service.d write permissions"}."
+                        }
                     }
                 }
             )

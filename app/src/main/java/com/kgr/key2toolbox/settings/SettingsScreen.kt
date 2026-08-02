@@ -60,6 +60,7 @@ fun SettingsScreen(
     var backupMessage by remember { mutableStateOf<String?>(null) }
     var backupError by remember { mutableStateOf<String?>(null) }
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) } // awaiting confirmation
+    var selectedModules by remember { mutableStateOf(SettingsBackup.BackupModule.entries.toSet()) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -68,7 +69,7 @@ fun SettingsScreen(
         scope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    val json = SettingsBackup.exportToJson(context, currentVersionName)
+                    val json = SettingsBackup.exportToJson(context, currentVersionName, selectedModules)
                     SettingsBackup.writeToUri(context, uri, json)
                 }
                 backupError = null
@@ -121,8 +122,9 @@ fun SettingsScreen(
             title = { Text("Import settings?") },
             text = {
                 Text(
-                    "This will overwrite your current module settings (keys present in " +
-                    "the backup file) with the values from the selected file. This can't be undone."
+                    "This will overwrite your current settings for the selected module(s) " +
+                    "(keys present in the backup file) with the values from the selected " +
+                    "file. Unselected modules are left untouched. This can't be undone."
                 )
             },
             confirmButton = {
@@ -132,13 +134,13 @@ fun SettingsScreen(
                         try {
                             val result = withContext(Dispatchers.IO) {
                                 val json = SettingsBackup.readFromUri(context, uri)
-                                SettingsBackup.importFromJson(context, json)
+                                SettingsBackup.importFromJson(context, json, selectedModules)
                             }
                             when (result) {
                                 is SettingsBackup.ImportResult.Success -> {
                                     backupError = null
                                     backupMessage = "Restored ${result.restoredKeys} setting(s)." +
-                                        if (result.skippedFiles > 0) " (${result.skippedFiles} unrecognized pref file(s) skipped.)" else ""
+                                        (if (result.zramRestored) " ZRAM config restored — reboot to apply." else "")
                                 }
                                 is SettingsBackup.ImportResult.Failure -> {
                                     backupMessage = null
@@ -233,23 +235,56 @@ fun SettingsScreen(
             Column(Modifier.padding(16.dp)) {
                 Text(
                     "Export your module settings (keyboard, LED, etc.) to a JSON file, " +
-                    "or restore from a previous backup.",
+                    "or restore from a previous backup. Pick which modules to include below.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
+                SettingsBackup.BackupModule.entries.forEach { module ->
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = module in selectedModules,
+                            onCheckedChange = { checked ->
+                                selectedModules = if (checked) {
+                                    selectedModules + module
+                                } else {
+                                    selectedModules - module
+                                }
+                            }
+                        )
+                        Text(module.label, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = {
-                        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(java.util.Date())
-                        exportLauncher.launch("key2toolbox_backup_$timestamp.json")
-                    }) {
+                    Button(
+                        enabled = selectedModules.isNotEmpty(),
+                        onClick = {
+                            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(java.util.Date())
+                            exportLauncher.launch("key2toolbox_backup_$timestamp.json")
+                        }
+                    ) {
                         Text("Export")
                     }
-                    OutlinedButton(onClick = {
-                        importLauncher.launch(arrayOf("application/json"))
-                    }) {
+                    OutlinedButton(
+                        enabled = selectedModules.isNotEmpty(),
+                        onClick = {
+                            importLauncher.launch(arrayOf("application/json"))
+                        }
+                    ) {
                         Text("Import")
                     }
+                }
+                if (selectedModules.isEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Select at least one module above.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
                 backupMessage?.let {
                     Spacer(Modifier.height(8.dp))

@@ -1,0 +1,6 @@
+id=k2tb_ctrlfix
+name=K2TB Ctrl Key Fix
+version=v1
+versionCode=1
+author=kgr-online
+description=Remaps key 110 (Fn) to CTRL_LEFT for the K2TB Ctrl Key module

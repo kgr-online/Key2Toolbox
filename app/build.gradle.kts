@@ -12,7 +12,7 @@ android {
         minSdk = 28
         targetSdk = 34
         versionCode = 1
-        versionName = "4.6-beta3"
+        versionName = "4.6-beta5"
     }
 
     // signingConfigs {
@@ -56,6 +56,13 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "Key2Toolbox-${defaultConfig.versionName}-${name}.apk"
         }
     }
 }
