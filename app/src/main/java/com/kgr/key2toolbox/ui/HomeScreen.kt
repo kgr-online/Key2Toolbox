@@ -38,10 +38,10 @@ enum class AppTab(val label: String) { Info("Info"), Keyboard("Keyboard"), Syste
 
 val keyboardScreens = listOf(
     Screen.KbdLight,
-    Screen.CtrlKey,
     Screen.NavLock,
     Screen.PinKeyboard,
-    Screen.ImeBlock
+    Screen.ImeBlock,
+    Screen.CtrlKey
 )
 
 val systemScreens = listOf(

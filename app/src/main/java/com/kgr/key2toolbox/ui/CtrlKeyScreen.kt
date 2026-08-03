@@ -26,25 +26,31 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     var keymapState by remember { mutableStateOf(CtrlKeyController.State.UNKNOWN) }
-    var persisted by remember { mutableStateOf(false) }
+    var ctrlPersisted by remember { mutableStateOf(false) }
+    var symState by remember { mutableStateOf(CtrlKeyController.SymState.UNKNOWN) }
+    var symPersisted by remember { mutableStateOf(false) }
+    var symApplicable by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             keymapState = CtrlKeyController.currentKeymapState()
-            persisted = CtrlKeyController.isPersisted()
+            ctrlPersisted = CtrlKeyController.isPersisted()
+            symState = CtrlKeyController.currentSymState()
+            symPersisted = CtrlKeyController.isSymPersisted()
+            symApplicable = CtrlKeyController.isSymFixApplicable()
         }
     }
 
     ScreenScaffold(title = Screen.CtrlKey.title, onBack = onBack) {
-        Text("Live keymap: ${keymapState.name}")
-        Text("Persisted: ${if (persisted) "Yes" else "No"}")
+        Text("Live Ctrl keymap: ${keymapState.name}")
+        Text("Ctrl persisted: ${if (ctrlPersisted) "Yes" else "No"}")
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text("Enable Ctrl remap")
             Switch(
-                checked = persisted,
+                checked = ctrlPersisted,
                 enabled = !busy,
                 onCheckedChange = { enable ->
                     busy = true
@@ -56,7 +62,7 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
                         }
                         val needsReboot = CtrlKeyController.requiresReboot()
                         keymapState = CtrlKeyController.currentKeymapState()
-                        persisted = CtrlKeyController.isPersisted()
+                        ctrlPersisted = CtrlKeyController.isPersisted()
                         busy = false
 
                         statusMessage = when {
@@ -67,10 +73,57 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
                                     "Reboot your device for this to take effect."
                             else ->
                                 "Ctrl remap ${if (enable) "enabled" else "disabled"}. " +
-                                    "Persisted: ${if (persisted) "yes" else "NO - check service.d write permissions"}."
+                                    "Persisted: ${if (ctrlPersisted) "yes" else "NO - check service.d write permissions"}."
                         }
                     }
                 }
+            )
+        }
+
+        if (symApplicable) {
+            Text(
+                "Fixes the physical SYM key, which some ROM builds map incorrectly " +
+                    "(the symbol picker won't open until this is fixed).",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text("Live SYM keymap: ${symState.name}")
+            Text("SYM fix persisted: ${if (symPersisted) "Yes" else "No"}")
+
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Enable SYM fix")
+                Switch(
+                    checked = symPersisted,
+                    enabled = !busy,
+                    onCheckedChange = { enable ->
+                        busy = true
+                        scope.launch(Dispatchers.IO) {
+                            val result = if (enable) {
+                                CtrlKeyController.applySymOn(context)
+                            } else {
+                                CtrlKeyController.applySymOff(context)
+                            }
+                            val needsReboot = CtrlKeyController.requiresReboot()
+                            symState = CtrlKeyController.currentSymState()
+                            symPersisted = CtrlKeyController.isSymPersisted()
+                            busy = false
+
+                            statusMessage = when {
+                                !result.success ->
+                                    "Failed to ${if (enable) "enable" else "disable"} SYM fix: ${result.outString}"
+                                needsReboot ->
+                                    "SYM fix ${if (enable) "staged" else "un-staged"}. " +
+                                        "Reboot your device for this to take effect."
+                                else ->
+                                    "SYM fix ${if (enable) "enabled" else "disabled"}."
+                            }
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                "SYM already works natively on this device - no fix needed.",
+                style = MaterialTheme.typography.bodySmall
             )
         }
 

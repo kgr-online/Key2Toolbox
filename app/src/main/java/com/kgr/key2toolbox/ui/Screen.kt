@@ -15,7 +15,7 @@ sealed class Screen(
 
     // Keyboard tab
     data object CtrlKey : Screen(
-        "Convenience Key → Ctrl", "Remap convenience key to Ctrl",
+        "Physical Keyboard Fixes", "Remap Ctrl key, fix SYM key",
         listOf(AccessType.ROOT)
     )
     data object KbdLight : Screen(
