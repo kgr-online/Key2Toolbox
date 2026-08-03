@@ -1,35 +1,42 @@
 # Key2 Toolbox
 
-A root app for the BlackBerry Key2 (FolkPatch/APatch, LineageOS 22.2, 4.19
-kernel) that bundles a set of previously-separate tweaks into one UI,
-organised into three bottom-bar sections:
+A root app for the BlackBerry Key2 'Athena' (FolkPatch/APatch/Magisk, LineageOS 22.2, 4.4 and 4.19
+kernels) that bundles a set of previously-separate tweaks into one UI,
+organized into three bottom-bar sections:
 
-**Info** - device status landing page: build (model, Android, LineageOS,
+**Info**
+- **Device status landing page**: build (model, Android, LineageOS,
 security patch, kernel), battery (level, health, temperature, voltage,
 technology, capacity-health % and charge cycles from sysfs), and root +
-accessibility-service status.
+accessibility-service status
 
 **Keyboard**
-- **Convenience key → Ctrl** remap (`stmpe.kl` key 110)
-- **Adaptive keyboard backlight** daemon
+- **Adaptive keyboard backlight** daemon 
 - **Keyboard Nav Lock** - stops accidental Back/Home/Recents while typing
 - **Lockscreen PIN on Keyboard** - type your PIN on the physical keyboard
 - **Per-App Keyboard Block** - in chosen apps, route physical keys straight
   to the app (for games) by switching to a passthrough IME
+- **Physical Keyboard Fixes** - remap Convenience key to Ctrl (key 110) and
+  fix the SYM key (key 100), auto-detected per device/kernel
 
 **System**
-- **ZRAM** compression algorithm + size (Off / 2GB / 3GB / 4GB)
-- **Persistent wireless ADB** on a user-chosen static port
-- **Double-Tap to Wake** (DT2W)
 - **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
   works (EU regdomains expose no 5GHz AP channels on this build)
-- **Play Store Tagger** - retag (or untag) installed apps as Play
-  Store-installed, so apps that check the install source stop complaining
-- **BBProdFix Settings** - companion page for the `bb-prodfix` Magisk
+- **Double-Tap to Wake** - (DT2W) Primarily needed for the 4.19 kernel. Setting in Gestures must also be toggled on
+- **K2ProdFix Settings** - companion page for the `bb-prodfix` Magisk
   module's `system.prop`/`service.sh` tweaks
 - **LED Notify Colors** - per-app notification LED colors written straight
   to the LED hardware, bypassing LineageOS's own (inaccurate on this device)
   notification light color picker
+- **Persistent wireless ADB** - on a user-chosen static port
+- **Play Store Tagger** - retag (or untag) installed apps as Play
+  Store-installed, so apps that check the install source stop complaining
+- **ZRAM** - compression algorithm + size (Off / 2GB / 3GB / 4GB) + swappiness selector
+
+**Settings**
+- **Application Updater**
+- **Quick access** - Check [root], [accessibility] and [notification] status
+- **Backup/Restore** - Backup and restore your application settings. Select supported modules. 
 
 The UI follows Material You (Monet), in light or dark to match the system.
 Most modules are stateless: they fire root commands on demand and persist by
@@ -62,47 +69,17 @@ the build script.
 
 ## How each module works
 
-### Ctrl key (`CtrlKeyController`)
-- **Persist**: installs `assets/ctrl_key.sh` (the exact known-working script)
-  to `/data/adb/service.d/ctrl_key.sh` via `install -m 755`.
-- **Live apply**: runs the same `setenforce 0` → `nsenter -t 1 -m -- mount -o rw,remount /vendor`
-  → `sed -i s/FUNCTION/CTRL_LEFT/` → `setenforce 1` sequence directly (and the
-  reverse to disable).
-- Status display reads back `key 110` from `/vendor/usr/keylayout/stmpe.kl`
-  live, separately from whether the boot script is installed.
-
-### ZRAM (`ZramController`)
-- **Compression algorithm**: read dynamically from
-  `/sys/block/zram0/comp_algorithm`, so the screen only offers algorithms
-  this kernel actually supports (confirmed: `lzo`, `lz4`, `zstd`, `deflate`).
-- **Size**: Off / 2GB / 3GB / 4GB.
-- **Persist**: installs `assets/zram_template.sh` (with `__ALGO__` and
-  `__SIZE_MB__` substituted) to `/data/adb/service.d/zram_size.sh`. Selecting
-  "Off" removes the script.
-- **Live apply** (behind a confirmation dialog): `swapoff` → reset → set
-  `comp_algorithm` → set `disksize` → `mkswap` → `swapon`. This briefly
-  disables swap and can cause background apps to be killed - the dialog
-  warns about this, default is reboot-to-apply.
-
-### Keyboard backlight (`KbdLightController`)
-- This script is a persistent loop, not a one-shot config, so "enabled" =
-  install `assets/kbd_light.sh` to `service.d` for next boot, **and**
-  optionally launch it right now (`nohup sh ... &`) / kill it
-  (`pkill -f kbd_light.sh`) so you don't need to reboot to test.
-
-### Wireless ADB (`WirelessAdbController`)
-- User enters a port; **persist** installs `assets/adb_wireless_template.sh`
-  (with `__PORT__` substituted) to `/data/adb/service.d/adb_wireless.sh`,
-  which sets `adb_wifi_enabled` and pins `persist.adb.tcp.port` /
-  `service.adb.tcp.port` at boot.
-- **Live apply** sets the same properties immediately.
-- The screen also shows the device's current WLAN IP (via `ip route get`,
-  checked against a `wlan*`-named interface so it doesn't report a cellular
-  IP when WiFi is down) and the live port, so you can confirm the
-  `adb connect <ip>:<port>` target at a glance.
-- If you previously had a separate static-port script, remove it once this
-  module's persistence is confirmed working, so two boot scripts aren't
-  racing to set the same property.
+### 5GHz Hotspot Workaround (`WifiRegdomainController`)
+On this build every EU WiFi regdomain exposes **zero** 5GHz SoftAP channels
+(`SupportedChannelListIn5g[]`), so 5GHz hotspot is greyed out / fails with
+`NO_CHANNEL`; only the US regdomain has them. This forces the WiFi country
+code to US via `cmd wifi force-country-code enabled US`, applied live and
+persisted with `assets/force_us_wifi.sh` (which re-applies it after each boot
+once the WiFi service is up, since the override resets on reboot). Trade-off,
+surfaced on the screen: it also applies to WiFi as a client (you lose 2.4GHz
+ch 12-13 and EU-only 5GHz channels) and enables the upper US channels
+(149-165) that aren't EU-licensed. Also note SoftAP only starts with **WPA2**
+on this build - WPA3/SAE fails with `UNSUPPORTED_CONFIGURATION`.
 
 ### Double-Tap to Wake (`Dt2wController`)
 - Toggles the `wake_gesture` sysfs node on the main touchscreen
@@ -118,6 +95,36 @@ the build script.
   unresolved driver/HAL-level issue from earlier debugging (sysfs write
   appears to succeed but the gesture doesn't engage) rather than a bug in
   the app itself.
+
+### K2ProdFix Settings (`K2PFController`)
+Companion page for the `bb-prodfix` Magisk module (gated behind detection at
+`/data/adb/modules/bb-prodfix/` - the screen shows "Checking for bb-prodfix
+module…" then either the toggles or a not-installed message). Reads/writes
+`system.prop` and `service.sh` inside that module's directory directly, no
+separate persistence layer needed since the module's own boot scripts apply
+them:
+- **BlackBerry device identity** - a `ro.product.*` block across
+  `system`/`system_ext`/`odm`/`vendor`/`vendor_dlkm` partitions.
+- **Bluetooth A2DP offload** - also applied live via `setprop` immediately,
+  since those are `persist.*`/mutable props.
+- **Higher volume steps**, **SurfaceFlinger triple buffering**, **background
+  app limit** - each a small tagged prop block, added/removed by marker
+  comment so re-toggling doesn't duplicate lines.
+- **Swappiness** - not a boolean like the others but a numeric value patched
+  into the `sysctl -w vm.swappiness=` line in `service.sh` (applied live too);
+  the screen also reads `ZramController.isPersisted()` to flag if Key2
+  Toolbox's own ZRAM module is already managing swappiness, so the two don't
+  fight over the same setting.
+- All `system.prop`/`service.sh` rewrites go through `printf '%s' > file`
+  with `'` escaped as `'\''`, to avoid shell-quoting breakage on the prop
+  values. `ro.*` prop changes need a reboot to take effect; everything else
+  in this screen is live.
+
+### Keyboard backlight (`KbdLightController`)
+- This script is a persistent loop, not a one-shot config, so "enabled" =
+  install `assets/kbd_light.sh` to `service.d` for next boot, **and**
+  optionally launch it right now (`nohup sh ... &`) / kill it
+  (`pkill -f kbd_light.sh`) so you don't need to reboot to test.
 
 ### Keyboard Nav Lock (`Key2AccessibilityService`)
 Ported from nozerorma/key2-tweaks. Stops accidental Back / Home / Recents
@@ -144,87 +151,6 @@ The service recomputes the desired button state (`reconcileNav()`) whenever
 an accessibility event fires or any of the three prefs change, and always
 re-enables the buttons in `onUnbind`/`onDestroy` so a crash or disable never
 leaves them stuck off.
-
-### Lockscreen PIN on Keyboard (`Key2AccessibilityService`)
-Ported from nozerorma/key2-tweaks. No root needed. While the keyguard is
-locked, maps physical key presses to taps on SystemUI's PIN pad via
-`AccessibilityNodeInfo`, so the PIN can be entered on the hardware keyboard
-instead of the touchscreen. Digits map phone-dialpad style onto QWERTY:
-`W E R` = `1 2 3`, `S D F` = `4 5 6`, `Z X C` = `7 8 9`, `Q` = `0` (number
-row and numpad keys also work directly). Enter/D-pad-center confirms,
-Delete/Backspace deletes. Button lookup tries known SystemUI view IDs first
-(`key0`-`key9`, `delete_button`, `key_enter`, etc.) and falls back to a
-recursive node search by visible text or content description if those IDs
-don't match on this build.
-
-### Per-App Keyboard Block (`Key2AccessibilityService` + `Key2PassthroughIme`)
-In a chosen set of apps, physical key presses are routed straight to the app
-instead of going through the keyboard. On the Key2 the BlackBerry IME
-intercepts and translates hardware keys (it even ignores the system keymap -
-`stmpe.kcm` maps the currency key to `$`, but the IME still emits `4`), which
-interferes with games. The service tracks the foreground app
-(`foregroundAppPackage()` from the active application window) and, when a
-selected package is in front, switches the default IME to a bundled
-do-nothing input method (`Key2PassthroughIme`, which inflates no view and
-consumes no keys) via root `ime enable`/`ime set`, saving the previous IME to
-restore on the way out. The picked packages are a `StringSet` in the
-`key2tweaks` prefs; the app list uses a `<queries>` launcher intent so it can
-enumerate launchable apps on Android 11+.
-
-### 5GHz Hotspot Workaround (`WifiRegdomainController`)
-On this build every EU WiFi regdomain exposes **zero** 5GHz SoftAP channels
-(`SupportedChannelListIn5g[]`), so 5GHz hotspot is greyed out / fails with
-`NO_CHANNEL`; only the US regdomain has them. This forces the WiFi country
-code to US via `cmd wifi force-country-code enabled US`, applied live and
-persisted with `assets/force_us_wifi.sh` (which re-applies it after each boot
-once the WiFi service is up, since the override resets on reboot). Trade-off,
-surfaced on the screen: it also applies to WiFi as a client (you lose 2.4GHz
-ch 12-13 and EU-only 5GHz channels) and enables the upper US channels
-(149-165) that aren't EU-licensed. Also note SoftAP only starts with **WPA2**
-on this build - WPA3/SAE fails with `UNSUPPORTED_CONFIGURATION`.
-
-### Play Store Tagger (`PlayStoreTaggerManager`)
-Retags (or untags) already-installed apps as Play Store-installed, for apps
-that check their own install source and refuse to run/update otherwise.
-Extracted from a standalone app of the same name
-([kgr17/PlayStoreTagger](https://github.com/kgr17/PlayStoreTagger)), with
-changes mirrored back manually between the two.
-- **Tag / Untag mode**: switching to Untag flips the default filter from
-  "Non-Play" to "All" so already-tagged apps are visible to reverse.
-- Resolves each app's APK path(s) via `pm path`; a single APK goes through
-  a plain `pm install -i com.android.vending --dont-kill -r`, while
-  split/multi-APK installs go through the full session flow
-  (`pm install-create` → `pm install-write` per split, sized via `stat`, →
-  `pm install-commit`, with `pm install-abandon` on any failed write).
-  Untagging re-runs the same flow with no `-i` flag.
-- Filter chips: **Non-Play** (default) / **All**, plus a **System** toggle
-  to include system packages. Search box, per-app checkboxes, running app
-  count, and a scrollable log panel that streams each `pm` command's output
-  live during a batch operation.
-
-### BBProdFix Settings (`K2PFController`)
-Companion page for the `bb-prodfix` Magisk module (gated behind detection at
-`/data/adb/modules/bb-prodfix/` - the screen shows "Checking for bb-prodfix
-module…" then either the toggles or a not-installed message). Reads/writes
-`system.prop` and `service.sh` inside that module's directory directly, no
-separate persistence layer needed since the module's own boot scripts apply
-them:
-- **BlackBerry device identity** - a `ro.product.*` block across
-  `system`/`system_ext`/`odm`/`vendor`/`vendor_dlkm` partitions.
-- **Bluetooth A2DP offload** - also applied live via `setprop` immediately,
-  since those are `persist.*`/mutable props.
-- **Higher volume steps**, **SurfaceFlinger triple buffering**, **background
-  app limit** - each a small tagged prop block, added/removed by marker
-  comment so re-toggling doesn't duplicate lines.
-- **Swappiness** - not a boolean like the others but a numeric value patched
-  into the `sysctl -w vm.swappiness=` line in `service.sh` (applied live too);
-  the screen also reads `ZramController.isPersisted()` to flag if Key2
-  Toolbox's own ZRAM module is already managing swappiness, so the two don't
-  fight over the same setting.
-- All `system.prop`/`service.sh` rewrites go through `printf '%s' > file`
-  with `'` escaped as `'\''`, to avoid shell-quoting breakage on the prop
-  values. `ro.*` prop changes need a reboot to take effect; everything else
-  in this screen is live.
 
 ### LED Notify Colors (`LedNotifyManager` + `LedNotifyListenerService`)
 Per-app notification LED colors, written directly to the LED class sysfs
@@ -265,6 +191,116 @@ and come out correct, which is the same path this module takes.
   LineageOS's per-app override) should be left unset - otherwise both the
   system's lights service and this module end up racing to write the same
   physical LED.
+
+### Lockscreen PIN on Keyboard (`Key2AccessibilityService`)
+Ported from nozerorma/key2-tweaks. No root needed. While the keyguard is
+locked, maps physical key presses to taps on SystemUI's PIN pad via
+`AccessibilityNodeInfo`, so the PIN can be entered on the hardware keyboard
+instead of the touchscreen. Digits map phone-dialpad style onto QWERTY:
+`W E R` = `1 2 3`, `S D F` = `4 5 6`, `Z X C` = `7 8 9`, `Q` = `0` (number
+row and numpad keys also work directly). Enter/D-pad-center confirms,
+Delete/Backspace deletes. Button lookup tries known SystemUI view IDs first
+(`key0`-`key9`, `delete_button`, `key_enter`, etc.) and falls back to a
+recursive node search by visible text or content description if those IDs
+don't match on this build.
+
+### Per-App Keyboard Block (`Key2AccessibilityService` + `Key2PassthroughIme`)
+In a chosen set of apps, physical key presses are routed straight to the app
+instead of going through the keyboard. On the Key2 the BlackBerry IME
+intercepts and translates hardware keys (it even ignores the system keymap -
+`stmpe.kcm` maps the currency key to `$`, but the IME still emits `4`), which
+interferes with games. The service tracks the foreground app
+(`foregroundAppPackage()` from the active application window) and, when a
+selected package is in front, switches the default IME to a bundled
+do-nothing input method (`Key2PassthroughIme`, which inflates no view and
+consumes no keys) via root `ime enable`/`ime set`, saving the previous IME to
+restore on the way out. The picked packages are a `StringSet` in the
+`key2tweaks` prefs; the app list uses a `<queries>` launcher intent so it can
+enumerate launchable apps on Android 11+.
+
+### Physical Keyboard Fixes (`CtrlKeyController`)
+Two independent physical-key corrections for the BlackBerry keyboard, sharing
+one auto-detection step (via `/proc/bus/input/devices`, matching on the
+`stmpe` input device name) that determines both the device/kernel generation
+and which persistence mechanism applies:
+- **Ctrl remap** (key 110): `FUNCTION` → `CTRL_LEFT`. A preference - off by
+  default, user's choice.
+- **SYM fix** (key 100): `ALT_RIGHT` → `SYM`. A correctness fix, not a
+  preference: without it the physical SYM key does nothing at all on
+  devices where the ROM ships no device-specific keylayout file and falls
+  back to AOSP's `Generic.kl`, which has no concept of a BlackBerry SYM key.
+  `isSymFixApplicable()` hides/no-ops this toggle on devices where SYM
+  already works natively (see below).
+
+**NEW kernel** (4.19, input device name `stmpe`): the ROM ships
+`/vendor/usr/keylayout/stmpe.kl` with SYM already correct natively - nothing
+to fix there, so the SYM toggle is inapplicable on this generation. Ctrl
+remap applies live via `setenforce 0` → `nsenter -t 1 -m -- mount -o
+rw,remount /vendor` → `sed -i s/FUNCTION/CTRL_LEFT/` → `setenforce 1` (and
+the reverse to disable), persisted via a `/data/adb/service.d/ctrl_key.sh`
+boot script - the original working mechanism, unchanged.
+
+**OLD kernel** (4.4, input device name `stmpe_keypad`, e.g. LOS 22.2
+BBF100): the ROM ships no device-specific keylayout file at all. A pristine
+`Generic.kl`-derived template (`assets/ctrl_key_layout.kl`, key 100 =
+`ALT_RIGHT` / key 110 = `FUNCTION` - i.e. unpatched) is staged as a
+Magisk-style module at `/data/adb/modules/k2tb_ctrlfix/`. Each toggle does a
+**read-modify-write** on whatever's currently staged (falling back to the
+pristine asset if nothing's staged yet), patching only its own key line -
+so toggling Ctrl never disturbs SYM's state and vice versa. Magisk/APatch/
+FolkPatch only magic-mount modules at **boot**, so on this kernel generation
+toggling either fix stages the change and needs a reboot to take effect -
+check `requiresReboot()` before showing/hiding a "reboot needed" prompt.
+
+Status display for both toggles reads back the live keylayout file for
+whichever mode/path applies, separately from whether the change is
+persisted/staged.
+
+### Play Store Tagger (`PlayStoreTaggerManager`)
+Retags (or untags) already-installed apps as Play Store-installed, for apps
+that check their own install source and refuse to run/update otherwise.
+Extracted from a standalone app of the same name
+([kgr17/PlayStoreTagger](https://github.com/kgr17/PlayStoreTagger)), with
+changes mirrored back manually between the two.
+- **Tag / Untag mode**: switching to Untag flips the default filter from
+  "Non-Play" to "All" so already-tagged apps are visible to reverse.
+- Resolves each app's APK path(s) via `pm path`; a single APK goes through
+  a plain `pm install -i com.android.vending --dont-kill -r`, while
+  split/multi-APK installs go through the full session flow
+  (`pm install-create` → `pm install-write` per split, sized via `stat`, →
+  `pm install-commit`, with `pm install-abandon` on any failed write).
+  Untagging re-runs the same flow with no `-i` flag.
+- Filter chips: **Non-Play** (default) / **All**, plus a **System** toggle
+  to include system packages. Search box, per-app checkboxes, running app
+  count, and a scrollable log panel that streams each `pm` command's output
+  live during a batch operation.
+
+### Wireless ADB (`WirelessAdbController`)
+- User enters a port; **persist** installs `assets/adb_wireless_template.sh`
+  (with `__PORT__` substituted) to `/data/adb/service.d/adb_wireless.sh`,
+  which sets `adb_wifi_enabled` and pins `persist.adb.tcp.port` /
+  `service.adb.tcp.port` at boot.
+- **Live apply** sets the same properties immediately.
+- The screen also shows the device's current WLAN IP (via `ip route get`,
+  checked against a `wlan*`-named interface so it doesn't report a cellular
+  IP when WiFi is down) and the live port, so you can confirm the
+  `adb connect <ip>:<port>` target at a glance.
+- If you previously had a separate static-port script, remove it once this
+  module's persistence is confirmed working, so two boot scripts aren't
+  racing to set the same property.
+
+### ZRAM (`ZramController`)
+- **Compression algorithm**: read dynamically from
+  `/sys/block/zram0/comp_algorithm`, so the screen only offers algorithms
+  this kernel actually supports (confirmed: `lzo`, `lz4`, `zstd`, `deflate`).
+- **Size**: Off / 2GB / 3GB / 4GB.
+- **Persist**: installs `assets/zram_template.sh` (with `__ALGO__` and
+  `__SIZE_MB__` substituted) to `/data/adb/service.d/zram_size.sh`. Selecting
+  "Off" removes the script.
+- **Live apply** (behind a confirmation dialog): `swapoff` → reset → set
+  `comp_algorithm` → set `disksize` → `mkswap` → `swapon`. This briefly
+  disables swap and can cause background apps to be killed - the dialog
+  warns about this, default is reboot-to-apply.
 
 ## ⚠ Known risk: writing to `/data/adb/service.d/` from the app
 
