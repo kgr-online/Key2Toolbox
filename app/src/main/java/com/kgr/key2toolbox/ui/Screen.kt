@@ -40,6 +40,10 @@ sealed class Screen(
         "AdBlock", "Systemless hosts-based ad & tracker blocking",
         listOf(AccessType.ROOT)
     )
+    data object DenylistManager : Screen(
+        "Denylist Manager", "Manage Magisk DenyList and Zygisk-Hide together",
+        listOf(AccessType.ROOT)
+    )
     data object Zram : Screen(
         "ZRAM", "Compression algorithm and size",
         listOf(AccessType.ROOT)

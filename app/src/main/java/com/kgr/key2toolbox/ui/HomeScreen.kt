@@ -47,6 +47,7 @@ val keyboardScreens = listOf(
 val systemScreens = listOf(
     Screen.Wifi5g,
     Screen.AdBlock,
+    Screen.DenylistManager,
     Screen.Dt2w,
     Screen.K2PF,
     Screen.LedNotify,
@@ -122,6 +123,7 @@ private fun DetailHost(screen: Screen, onBack: () -> Unit) {
         Screen.K2PF -> K2PFScreen(onBack)
         Screen.LedNotify -> LedNotifyScreen(onBack)
         Screen.AdBlock -> AdBlockScreen(onBack)
+        Screen.DenylistManager -> DenylistScreen(onBack)
         Screen.Home -> Unit
     }
 }

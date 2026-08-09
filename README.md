@@ -24,6 +24,9 @@ accessibility-service status
   works (EU regdomains expose no 5GHz AP channels on this build)
 - **AdBlock** - systemless-hosts ad/tracker blocking, with search, add/remove,
   whitelist, and remote source list management
+- **Denylist Manager** - optional, opt-in unified control for Magisk's
+  DenyList and the Zygisk-Hide module's own per-app config, plus a shortcut
+  into HMA-OSS's manager app
 - **Double-Tap to Wake** - (DT2W) Primarily needed for the 4.19 kernel. Setting in Gestures must also be toggled on
 - **K2ProdFix Settings** - companion page for the `bb-prodfix` Magisk
   module's `system.prop`/`service.sh` tweaks
@@ -126,6 +129,37 @@ native Compose screen.
 - All user-supplied domains/URLs going into `hosts_ctl.sh` shell commands
   are escaped (`'` → `'\''`) before being wrapped in single quotes, since
   this module - unlike most others here - takes free-text user input.
+
+### Denylist Manager (`DenylistController`)
+Unified control for the two hide-lists K2TB can own end-to-end: Magisk's
+DenyList (`magisk --denylist ls/add/rm/status`) and the Zygisk-Hide module's
+own `config.json` (a flat `{ "pkg": true }` map at
+`/data/adb/modules/zygisk-hide/config.json`, read fresh by its companion on
+every app launch - toggling an app off *removes* its key rather than setting
+it `false`).
+- **Master toggle, defaults OFF**: this module only understands Magisk +
+  Zygisk-Hide, not every root/hide combination (FolkPatch, APatch, HMA's own
+  denylist, etc.), so it never touches either backend's state until
+  explicitly enabled. Screens for people using those other setups
+  independently are unaffected either way.
+- **Adding an app denies its full process set**, not just the base package:
+  `declaredProcesses()` enumerates every `android:process` an app declares
+  across its activities/services/providers/receivers via `PackageManager`
+  (requires `QUERY_ALL_PACKAGES`, already granted for Play Store Tagger) and
+  adds all of them to Magisk's DenyList in one toggle. Trimming back to a
+  subset of an app's sub-processes is left to Magisk's own DenyList UI.
+- **HMA-OSS is intentionally NOT integrated directly.** Its live config
+  lives at a randomized `/data/misc/hide_my_applist_<suffix>/config.json`
+  path with a real nested schema (hook items, templates) and is designed to
+  be written through a Binder IPC interface rather than as a stable on-disk
+  format - too fragile to build against directly. Instead this screen just
+  launches HMA-OSS's own manager app
+  (`org.frknkrc44.hma_oss/...ui.activity.MainActivity`) for that piece.
+- Warns inline if Magisk isn't detected, if Magisk's DenyList *enforcement*
+  is globally off (edits would silently do nothing), or if Zygisk-Hide isn't
+  installed, rather than assuming a particular root setup is present.
+- Enabled apps (denied on either backend) sort to the top of the list,
+  re-sorting live on toggle rather than waiting for the next full refresh.
 
 ### Double-Tap to Wake (`Dt2wController`)
 - Toggles the `wake_gesture` sysfs node on the main touchscreen
@@ -392,6 +426,15 @@ you'll see immediately if a persist operation silently failed.
   *outside* the module dir so reinstalls don't lose it, and detect whether
   the overlay is actually active via a content check rather than the mount
   table.
+- For anything that manages another root tool's own state rather than the
+  device directly, follow `DenylistController`: prefer that tool's
+  documented CLI (`magisk --denylist ...`) over parsing its internal storage
+  format where one exists, read/write flat on-disk config directly only when
+  the format is genuinely stable (Zygisk-Hide's own `config.json`, since
+  it's this project's own format), and fall back to just launching the other
+  app when its config is neither documented nor stable (HMA-OSS). Gate
+  anything that writes to state you don't fully control behind an
+  explicit, defaulted-off master toggle.
 - For features that need to observe ongoing state (window/IME visibility,
   key events) rather than just fire a command, that observation has to
   happen inside `Key2AccessibilityService` - root has no API for "tell me
