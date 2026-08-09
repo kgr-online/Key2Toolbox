@@ -2,6 +2,7 @@ package com.kgr.key2toolbox.settings
 
 import android.content.Context
 import android.net.Uri
+import com.kgr.key2toolbox.modules.AdBlockController
 import com.kgr.key2toolbox.modules.ZramController
 import com.kgr.key2toolbox.service.Key2AccessibilityService
 import org.json.JSONArray
@@ -32,7 +33,15 @@ import java.util.Locale
  *     "key2tweaks": { "someKey": {"type": "boolean", "value": true}, ... },
  *     "led_notify": { "otherKey": {"type": "int", "value": 42}, ... }
  *   },
- *   "zram": { "size_mb": 3072, "algorithm": "zstd", "swappiness": 60 }
+ *   "zram": { "size_mb": 3072, "algorithm": "zstd", "swappiness": 60 },
+ *   "adblock": {
+ *     "enabled": true,
+ *     "sources": ["https://..."],
+ *     "user_added": ["127.0.0.1 ads.example.com"],
+ *     "wildcard_added": ["*.doubleclick.net"],
+ *     "user_removed": ["reddit.com"],
+ *     "whitelist": ["*.reddit.com"]
+ *   }
  * }
  *
  * K2ProdFix and Play Store Tagger are intentionally NOT supported here
@@ -46,7 +55,8 @@ object SettingsBackup {
         NAV_LOCK("Nav Lock"),
         IME_BLOCK("ImeBlock"),
         LED_NOTIFY("LED Notify"),
-        ZRAM("ZRAM")
+        ZRAM("ZRAM"),
+        AD_BLOCK("AdBlock")
     }
 
     /** Which BackupModule owns each key in the shared "key2tweaks" prefs file. */
@@ -62,6 +72,15 @@ object SettingsBackup {
 
     private const val KEY2TWEAKS_PREFS = "key2tweaks"
     private const val LED_NOTIFY_PREFS = "led_notify"
+
+    // AdBlockController.PERSISTED_DATA_FILES entries, mapped to their JSON key names.
+    private val ADBLOCK_FILE_TO_JSON_KEY = mapOf(
+        "sources.txt" to "sources",
+        "user_added.txt" to "user_added",
+        "wildcard_added.txt" to "wildcard_added",
+        "user_removed.txt" to "user_removed",
+        "whitelist.txt" to "whitelist"
+    )
 
     private fun prefValueToJson(value: Any?): JSONObject? {
         val entry = JSONObject()
@@ -133,6 +152,21 @@ object SettingsBackup {
                 zramJson.put("swappiness", swappiness)
                 root.put("zram", zramJson)
             }
+        }
+
+        // AdBlock: only include if selected AND the module has actually been installed
+        // (nothing persisted to back up otherwise). Blob files are stored as line arrays
+        // rather than raw strings so the JSON stays diffable/readable.
+        if (BackupModule.AD_BLOCK in modules && AdBlockController.isInstalled()) {
+            val adBlockJson = JSONObject()
+            adBlockJson.put("enabled", AdBlockController.isEnabled())
+            for ((fileName, jsonKey) in ADBLOCK_FILE_TO_JSON_KEY) {
+                val lines = AdBlockController.readPersistedFile(fileName)
+                    .split("\n")
+                    .filter { it.isNotBlank() }
+                adBlockJson.put(jsonKey, JSONArray(lines))
+            }
+            root.put("adblock", adBlockJson)
         }
 
         return root
@@ -214,7 +248,38 @@ object SettingsBackup {
             }
         }
 
-        return ImportResult.Success(restoredKeys, zramRestored)
+        // AdBlock: only touch it if selected AND the backup has an "adblock" section.
+        // Installs the module first if it isn't present on this device yet (a fresh
+        // flash won't have it) - in that case the caller should tell the user a
+        // reboot is needed, same as a manual install from the AdBlock screen.
+        var adBlockRestored = false
+        var adBlockNeedsReboot = false
+        if (BackupModule.AD_BLOCK in modules) {
+            val adBlockJson = root.optJSONObject("adblock")
+            if (adBlockJson != null) {
+                try {
+                    if (!AdBlockController.isInstalled()) {
+                        val install = AdBlockController.install(context)
+                        if (!install.success) throw RuntimeException(install.outString)
+                        adBlockNeedsReboot = true
+                    }
+                    for ((fileName, jsonKey) in ADBLOCK_FILE_TO_JSON_KEY) {
+                        val arr = adBlockJson.optJSONArray(jsonKey) ?: continue
+                        val content = (0 until arr.length()).joinToString("\n") { arr.getString(it) }
+                        val write = AdBlockController.writePersistedFileRaw(context, fileName, content)
+                        if (!write.success) throw RuntimeException(write.outString)
+                    }
+                    val recompile = AdBlockController.recompile()
+                    if (!recompile.success) throw RuntimeException(recompile.outString)
+                    AdBlockController.setEnabled(adBlockJson.optBoolean("enabled", true))
+                    adBlockRestored = true
+                } catch (e: Exception) {
+                    adBlockRestored = false
+                }
+            }
+        }
+
+        return ImportResult.Success(restoredKeys, zramRestored, adBlockRestored, adBlockNeedsReboot)
     }
 
     /** Applies one {"type", "value"} entry to the editor. Returns true if applied. */
@@ -251,7 +316,9 @@ object SettingsBackup {
     sealed class ImportResult {
         data class Success(
             val restoredKeys: Int,
-            val zramRestored: Boolean = false
+            val zramRestored: Boolean = false,
+            val adBlockRestored: Boolean = false,
+            val adBlockNeedsReboot: Boolean = false
         ) : ImportResult()
         data class Failure(val message: String) : ImportResult()
     }

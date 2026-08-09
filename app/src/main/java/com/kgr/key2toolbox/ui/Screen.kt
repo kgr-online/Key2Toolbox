@@ -36,6 +36,10 @@ sealed class Screen(
     )
 
     // System tab
+    data object AdBlock : Screen(
+        "AdBlock", "Systemless hosts-based ad & tracker blocking",
+        listOf(AccessType.ROOT)
+    )
     data object Zram : Screen(
         "ZRAM", "Compression algorithm and size",
         listOf(AccessType.ROOT)
