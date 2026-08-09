@@ -22,6 +22,8 @@ accessibility-service status
 **System**
 - **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
   works (EU regdomains expose no 5GHz AP channels on this build)
+- **AdBlock** - systemless-hosts ad/tracker blocking, with search, add/remove,
+  whitelist, and remote source list management
 - **Double-Tap to Wake** - (DT2W) Primarily needed for the 4.19 kernel. Setting in Gestures must also be toggled on
 - **K2ProdFix Settings** - companion page for the `bb-prodfix` Magisk
   module's `system.prop`/`service.sh` tweaks
@@ -49,7 +51,11 @@ from a one-shot root command. Their settings live in a `key2tweaks`
 SharedPreferences file rather than going through `AssetInstaller`. LED
 Notify Colors follows a similar but separate pattern: it depends on a
 `NotificationListenerService` rather than the accessibility service, with
-its own `led_notify` SharedPreferences file.
+its own `led_notify` SharedPreferences file. AdBlock and the newer-kernel
+path of Physical Keyboard Fixes are different again: since `/system` can't
+be remounted RW on this build, both deploy a full Magisk-style module to
+`/data/adb/modules/` instead of a `service.d` script, so their edits only
+take effect once that module's mount is active (see each section below).
 
 The accessibility-service modules only work once **Key2 Toolbox** is enabled
 under Settings → Accessibility - each of their screens shows a banner with a
@@ -80,6 +86,46 @@ surfaced on the screen: it also applies to WiFi as a client (you lose 2.4GHz
 ch 12-13 and EU-only 5GHz channels) and enables the upper US channels
 (149-165) that aren't EU-licensed. Also note SoftAP only starts with **WPA2**
 on this build - WPA3/SAE fails with `UNSUPPORTED_CONFIGURATION`.
+
+### AdBlock (`AdBlockController`)
+Systemless-hosts ad/tracker blocking, ported from the standalone
+[systemless-hosts](https://github.com/kgr-online/systemless-hosts) module
+(itself based on gloeyisk/systemless-hosts) into a `k2tb_adblock`-namespaced
+module driven by a bundled `hosts_ctl.sh`, with its WebUI replaced by a
+native Compose screen.
+- **Two path roots**: `/data/adb/modules/k2tb_adblock` is the mounted module
+  itself (wiped and redeployed on every install), while
+  `/data/adb/k2tb_adblock` holds the persistent sources/edits/whitelist -
+  the same install-vs-persist split as `k2tb_ctrlfix`, so re-installing the
+  module never loses user edits.
+- **Install**: seeds the persist dir with the bundled default blacklist
+  (~273k entries, `assets/adblock_default_hosts.txt`) and empty edit files
+  if not already present, stages `hosts_ctl.sh` + `post-fs-data.sh` into the
+  module dir, compiles once, then writes `module.prop` last so a
+  half-deployed module is never picked up mid-write.
+- **Reboot requirement**: like Physical Keyboard Fixes' newer-kernel path,
+  the module's overlay onto `/system/etc/hosts` only activates at boot.
+  Rather than trusting the mount table (some root implementations, e.g.
+  APatch/FolkPatch on this device, show the overlay as a plain block-device
+  mount with no reference to the module path at all), `requiresReboot()`
+  checks for a content marker `hosts_ctl.sh`'s `rebuild()` writes on a
+  successful mirror - a much more reliable signal across root
+  implementations than parsing `mount` output.
+- **Live edits, no reboot** (once installed): add/remove/whitelist domains
+  and glob patterns, add/remove remote source URLs, trigger a source update,
+  and enable/disable filtering all shell out to `hosts_ctl.sh`, which
+  recompiles and mirrors straight onto the live `/system/etc/hosts`.
+- **Source updates run in the background** on the shell side and can take
+  longer than a couple of seconds with ~270k+ entries; the screen polls
+  `hosts_ctl.sh update_status` in a loop rather than a single delayed check,
+  since the status string doesn't change while still running.
+- **Backup/Restore**: `sources.txt`, `user_added.txt`, `wildcard_added.txt`,
+  `user_removed.txt`, and `whitelist.txt` round-trip as line arrays under an
+  `"adblock"` key; restoring installs the module first if it isn't already
+  present on the device.
+- All user-supplied domains/URLs going into `hosts_ctl.sh` shell commands
+  are escaped (`'` → `'\''`) before being wrapped in single quotes, since
+  this module - unlike most others here - takes free-text user input.
 
 ### Double-Tap to Wake (`Dt2wController`)
 - Toggles the `wake_gesture` sysfs node on the main touchscreen
@@ -339,6 +385,13 @@ you'll see immediately if a persist operation silently failed.
   `ZramController` / `KbdLightController` / `WirelessAdbController` /
   `Dt2wController` (persist via `AssetInstaller`, live-apply via
   `RootShell.run`).
+- For anything that needs to overlay a read-only `/system` path rather than
+  just persist a `service.d` script, follow `AdBlockController` (or
+  `CtrlKeyController`'s newer-kernel path) instead: deploy a full
+  Magisk-style module to `/data/adb/modules/`, keep persistent state
+  *outside* the module dir so reinstalls don't lose it, and detect whether
+  the overlay is actually active via a content check rather than the mount
+  table.
 - For features that need to observe ongoing state (window/IME visibility,
   key events) rather than just fire a command, that observation has to
   happen inside `Key2AccessibilityService` - root has no API for "tell me
