@@ -2,7 +2,7 @@
 
 A root app for the BlackBerry Key2 'Athena' (FolkPatch/APatch/Magisk, LineageOS 22.2, 4.4 and 4.19
 kernels) that bundles a set of previously-separate tweaks into one UI,
-organized into three bottom-bar sections:
+organized into four bottom-bar sections:
 
 **Info**
 - **Device status landing page**: build (model, Android, LineageOS,
