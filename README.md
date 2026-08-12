@@ -23,7 +23,7 @@ accessibility-service status
 - **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
   works (EU regdomains expose no 5GHz AP channels on this build)
 - **AdBlock** - systemless-hosts ad/tracker blocking, with search, add/remove,
-  whitelist, and remote source list management
+  whitelist, and remote source list management. Prompts user to install a Magisk/Apatch module
 - **Denylist Manager** - optional, opt-in unified control for Magisk's
   DenyList and the Zygisk-Hide module's own per-app config, plus a shortcut
   into HMA-OSS's manager app
