@@ -17,7 +17,7 @@ accessibility-service status
 - **Per-App Keyboard Block** - in chosen apps, route physical keys straight
   to the app (for games) by switching to a passthrough IME
 - **Physical Keyboard Fixes** - remap Convenience key to Ctrl (key 110) and
-  fix the SYM key (key 100), auto-detected per device/kernel
+  fix the SYM key (key 100), auto-detected per device/kernel. May prompt user to install a Magisk/Apatch module
 
 **System**
 - **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
