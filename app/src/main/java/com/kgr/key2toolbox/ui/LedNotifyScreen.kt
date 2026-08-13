@@ -105,6 +105,14 @@ fun LedNotifyScreen(onBack: () -> Unit) {
     var cycleMode by remember {
         mutableStateOf(prefs.getBoolean(LedNotifyListenerService.KEY_CYCLE_MODE, false))
     }
+    var respectDnd by remember {
+        mutableStateOf(
+            prefs.getBoolean(
+                LedNotifyListenerService.KEY_RESPECT_DND,
+                LedNotifyListenerService.DEFAULT_RESPECT_DND
+            )
+        )
+    }
     var apps by remember { mutableStateOf<List<LedAppEntry>?>(null) }
     var query by remember { mutableStateOf("") }
     // Bump this to force color-row recomposition after a prefs write.
@@ -209,6 +217,33 @@ fun LedNotifyScreen(onBack: () -> Unit) {
                     flashWhileScreenOn = checked
                     prefs.edit()
                         .putBoolean(LedNotifyListenerService.KEY_FLASH_WHILE_SCREEN_ON, checked)
+                        .apply()
+                }
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                Text("Respect Do Not Disturb")
+                Text(
+                    "On by default - suppresses the LED whenever the system " +
+                        "is in DND, however it was triggered (manual toggle, " +
+                        "schedule, or a LOS Mode). Turn off if you want the " +
+                        "LED to keep flashing during DND.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = respectDnd,
+                onCheckedChange = { checked ->
+                    respectDnd = checked
+                    prefs.edit()
+                        .putBoolean(LedNotifyListenerService.KEY_RESPECT_DND, checked)
                         .apply()
                 }
             )

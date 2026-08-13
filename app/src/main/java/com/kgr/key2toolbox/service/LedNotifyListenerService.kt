@@ -1,6 +1,7 @@
 package com.kgr.key2toolbox.service
 
 import android.content.BroadcastReceiver
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -75,6 +76,19 @@ import java.util.concurrent.Executors
  * By default the LED is suppressed while the screen is on (it's only useful
  * when you're not already looking at the screen); [KEY_FLASH_WHILE_SCREEN_ON]
  * overrides that.
+ *
+ * **DND / LOS Modes:** because this feature drives the LED directly via root
+ * sysfs writes, it never passes through LineageOS's own per-app light-color
+ * pipeline - which also means it never automatically inherits any
+ * suppression a LOS Mode applies through that pipeline. What every DND-style
+ * mode *does* reliably do, however it's triggered (manual toggle, schedule,
+ * or a LOS Mode configured to enable DND), is move the system's
+ * [NotificationManager.getCurrentInterruptionFilter] away from
+ * [NotificationManager.INTERRUPTION_FILTER_ALL]. [respectDnd] checks that
+ * value directly in [recompute] so the LED honors DND state regardless of
+ * what triggered it. [KEY_RESPECT_DND] lets a user opt out, since wanting
+ * the LED to *still* flash during DND (silent-but-still-visible) is a
+ * legitimate use case too - it defaults to on.
  */
 class LedNotifyListenerService : NotificationListenerService() {
 
@@ -85,6 +99,8 @@ class LedNotifyListenerService : NotificationListenerService() {
         const val KEY_FLASH_LENGTH_MS = "flash_length_ms"
         const val DEFAULT_FLASH_LENGTH_MS = 500
         const val KEY_CYCLE_MODE = "cycle_mode"
+        const val KEY_RESPECT_DND = "respect_dnd"
+        const val DEFAULT_RESPECT_DND = true
         const val COLOR_KEY_PREFIX = "color_"
 
         // Safety ceiling on the wake lock so a coroutine leak (bug elsewhere)
@@ -108,6 +124,7 @@ class LedNotifyListenerService : NotificationListenerService() {
     private var wakeLock: PowerManager.WakeLock? = null
     @Volatile private var screenOn = true
     private var screenReceiver: BroadcastReceiver? = null
+    private var dndReceiver: BroadcastReceiver? = null
 
     override fun onListenerConnected() {
         super.onListenerConnected()
@@ -131,6 +148,27 @@ class LedNotifyListenerService : NotificationListenerService() {
             screenReceiver = rx
         } catch (_: Exception) {
             // Screen-state toggle just won't update live; feature still works.
+        }
+
+        // Recompute immediately when DND is toggled - otherwise a blink
+        // already in progress would keep running until the next
+        // notification post/remove event happened to trigger recompute().
+        val dndRx = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                scope.launch { recompute() }
+            }
+        }
+        try {
+            ContextCompat.registerReceiver(
+                this,
+                dndRx,
+                IntentFilter(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            dndReceiver = dndRx
+        } catch (_: Exception) {
+            // DND toggles just won't update live until the next notification
+            // event; feature still works.
         }
 
         scope.launch { recompute() }
@@ -166,6 +204,10 @@ class LedNotifyListenerService : NotificationListenerService() {
             try { unregisterReceiver(it) } catch (_: Exception) {}
         }
         screenReceiver = null
+        dndReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+        }
+        dndReceiver = null
     }
 
     private fun enabled(): Boolean = prefs?.getBoolean(KEY_ENABLED, false) ?: false
@@ -174,6 +216,17 @@ class LedNotifyListenerService : NotificationListenerService() {
     private fun flashLengthMs(): Long =
         (prefs?.getInt(KEY_FLASH_LENGTH_MS, DEFAULT_FLASH_LENGTH_MS) ?: DEFAULT_FLASH_LENGTH_MS).toLong()
     private fun cycleModeEnabled(): Boolean = prefs?.getBoolean(KEY_CYCLE_MODE, false) ?: false
+    private fun respectDnd(): Boolean = prefs?.getBoolean(KEY_RESPECT_DND, DEFAULT_RESPECT_DND) ?: DEFAULT_RESPECT_DND
+
+    /**
+     * True if the system is currently in any DND-style state - manual toggle,
+     * schedule, or a LOS Mode configured to enable it - regardless of which
+     * of those triggered it. See class doc "DND / LOS Modes".
+     */
+    private fun dndActive(): Boolean {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
+        return nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
+    }
 
     private fun colorFor(packageName: String): Int? {
         val value = prefs?.getInt(colorKey(packageName), Int.MIN_VALUE) ?: Int.MIN_VALUE
@@ -183,6 +236,11 @@ class LedNotifyListenerService : NotificationListenerService() {
     /** Re-derives what the LED should show from the current set of active notifications. */
     private fun recompute() {
         if (!enabled()) {
+            stopBlink()
+            LedNotifyManager.off()
+            return
+        }
+        if (respectDnd() && dndActive()) {
             stopBlink()
             LedNotifyManager.off()
             return
