@@ -245,26 +245,55 @@ and come out correct, which is the same path this module takes.
   combined "multicolor" layout (`/sys/class/leds/rgb/multi_intensity`),
   caching whichever is found; if neither exists, the screen shows a warning
   instead of silently no-opping every write.
-- **Blinking** uses the kernel's `timer` trigger (`delay_on`/`delay_off`)
-  rather than a software loop, so the pattern survives the app process being
-  killed by doze/battery optimization. Write order matters: the color has to
-  be set *before* switching `trigger` to `timer`, since the trigger snapshots
-  whatever brightness is currently set as its "on" level at the moment of
-  activation - doing it in the other order silently produces a solid color
-  instead of a blink.
+- **Blinking is done in software**, not via the kernel's `timer` trigger:
+  this device's LED driver doesn't register a generic Linux `timer` trigger
+  at all (confirmed via `cat /sys/class/leds/red/trigger`, whose available
+  list is entirely fixed hardware triggers - `rfkill-*`, `flash*_trigger`,
+  `battery-*`, etc. - with no `timer` among them), so writing `timer` to
+  that node is silently rejected. `LedNotifyListenerService` instead
+  alternates `LedNotifyManager.setColor()`/`off()` on a coroutine timer,
+  scheduled against a fixed-rate clock (`nextTick += period`) rather than a
+  plain `delay(period)` after each write, so root-shell latency doesn't
+  compound into drift over time. **Every write - blink phases, one-shot UI
+  test-previews, `recompute()` itself - is serialized through a single
+  dedicated thread**, since `LedNotifyManager`'s writes are blocking, not
+  suspending; on a multi-threaded dispatcher, cancelling an old blink loop
+  couldn't interrupt it mid-write, so two loops could briefly race on the
+  same LED (this produced the intermittent stuck-on/stuck-off/flicker
+  pattern seen in earlier betas). **A partial wake lock is held for the
+  duration of an active blink**, since Doze mode suspends CPU timing
+  precision once the screen is off, the device is on battery, and it's
+  been idle a while - which was independently causing the same
+  stuck/flicker symptoms even after the concurrency fix.
 - **`LedNotifyListenerService`** (a `NotificationListenerService`, requires
   Settings → Notifications → Notification access) recomputes the LED state
   from scratch on every notification post/remove rather than tracking deltas,
   so it self-corrects if an event is ever missed.
 - **Multiple active notifications**: "Show only the most recent" (default)
   lets whichever managed notification posted last own the LED outright;
-  "Cycle through colors" walks through every distinct active color in turn
-  (2s each) via a dedicated coroutine loop, since sysfs timer triggers can't
-  natively chain more than one color.
+  "Cycle through colors" walks through every distinct active color in turn,
+  each getting its own on/off blink (green, off, blue, off, ...) at the
+  configured flash length, since software blinking can't natively chain
+  more than one color the way a hardware trigger might.
+- **Flash length** is configurable (250ms/500ms/1s/2s, default 500ms) and
+  governs both the on/off blink phases and how long each color holds during
+  cycling.
 - **Screen-on suppression**: off by default (the LED only fires while the
   screen is off), overridable per the "Flash while screen is on" toggle,
   tracked via a `BroadcastReceiver` on `ACTION_SCREEN_ON`/`ACTION_SCREEN_OFF`
   registered in `onListenerConnected`.
+- **Respects Do Not Disturb** (on by default, "Respect Do Not Disturb"
+  toggle to opt out): since this module bypasses LineageOS's own
+  notification-light pipeline entirely, it never automatically inherited any
+  suppression applied through that pipeline - including a LOS Mode
+  configured to enable DND. `recompute()` now checks
+  `NotificationManager.getCurrentInterruptionFilter()` directly instead, so
+  the LED honors DND regardless of what triggered it (manual toggle,
+  schedule, or a LOS Mode). A `BroadcastReceiver` on
+  `ACTION_INTERRUPTION_FILTER_CHANGED` stops an in-progress blink as soon as
+  DND engages, rather than waiting for the next notification event - the
+  LED goes dark within one flash-length interval (default 500ms) of DND
+  turning on, not instantly.
 - Per-app colors and all of the above settings live in their own
   `led_notify` SharedPreferences file, keyed by `color_<packageName>`.
 - For any app managed here, its own in-app LED color setting (and/or
