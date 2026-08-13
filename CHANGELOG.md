@@ -2,6 +2,193 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [4.8-beta3] - 2026-08-13
+
+### Added
+- **LED Notify Colors now respects Do Not Disturb**: `recompute()` checks
+  `NotificationManager.getCurrentInterruptionFilter()` before blinking, so
+  any DND-style suppression - manual toggle, schedule, or a LOS Mode
+  configured to enable DND - stops the LED, regardless of what triggered it.
+  A `BroadcastReceiver` on `ACTION_INTERRUPTION_FILTER_CHANGED` stops an
+  in-progress blink as soon as DND engages rather than waiting for the next
+  notification event. New "Respect Do Not Disturb" toggle (on by default)
+  lets users opt out if they want the LED to keep flashing during DND.
+
+## [4.8-beta2] - 2026-08-09
+
+### Added
+- **Denylist Manager**: unified, opt-in control for Magisk's DenyList and
+  Zygisk-Hide's `config.json`, plus a launch shortcut into HMA-OSS. Adding
+  an app denies its full declared process set via `PackageManager`, not
+  just the base package. Master toggle defaults off so setups already using
+  FolkPatch/APatch/HMA independently are left untouched.
+
+## [4.7-beta1] - 2026-08-09
+
+### Added
+- **AdBlock module**: ports the standalone systemless-hosts module into
+  K2TB as `k2tb_adblock`, replacing its WebUI with a native Compose screen.
+  `AdBlockController` deploys and drives the module via `hosts_ctl.sh`
+  (install, enable/disable, add/remove entries, whitelist, sources, update,
+  reset); live edits apply immediately post-install via `rebuild()`, with
+  only the initial install requiring a reboot. Bundles a default blacklist
+  as an asset for offline-ready filtering out of the box.
+- AdBlock added to selective settings backup/restore, round-tripping
+  sources/user-added/wildcard-added/user-removed/whitelist entries;
+  restoring installs the module if it isn't already present.
+
+## [4.6-beta7] - 2026-08-02
+
+### Added
+- **Independent SYM key fix**: SYM and Ctrl are now independent toggles on
+  one shared Magisk module file (read-modify-write instead of a pre-patched
+  asset), so toggling one no longer disturbs the other. Hidden/no-op on
+  older-kernel devices where SYM already works natively.
+
+### Changed
+- Renamed the "Convenience Key → Ctrl" card to **Physical Keyboard Fixes**
+  to reflect it now covers both keys.
+
+## [4.6-beta5] - 2026-08-02
+
+### Added
+- **Device auto-detection for the Ctrl key fix**: routes 4.19-kernel devices
+  through the old sed+boot-script path and 4.4-kernel devices through a
+  Magisk module, auto-detected via `/proc/bus/input/devices`; surfaces a
+  reboot-required message on the newer path.
+- **Selective module backup/restore**: `SettingsBackup` gains a
+  `BackupModule` enum so individual modules (PinKeyboard, NavLock,
+  ImeBlock, LedNotify, ZRAM) can be included or excluded per backup instead
+  of all-or-nothing.
+
+## [4.6-beta3] / [4.6-beta2] - 2026-07-18
+
+### Added
+- **Settings backup/restore**: export/import of `key2tweaks` and
+  `led_notify` preferences to/from JSON via the Storage Access Framework,
+  with typed values for a safe round-trip.
+- **Live status indicators** on the Settings screen: Accessibility,
+  Notification, and Root rows now show live green/red status, refreshing
+  on resume.
+
+### Changed
+- Updated the repo remote reference.
+
+### Fixed
+- Settings screen wasn't scrollable; content below Quick Access was
+  clipped.
+
+## [4.5-beta3] - 2026-07-14
+
+### Added
+- **Settings tab**: GitHub Releases update checker with in-app
+  download-and-root-install via libsu, a live contributors list, and
+  quick-access shortcuts to Accessibility and Notification Listener
+  settings. Version comparison correctly handles beta suffixes (e.g.
+  4.5-beta2 vs 4.4-beta4).
+
+### Fixed
+- Contributors fetch was running on the main thread
+  (`NetworkOnMainThreadException`); now wrapped in `Dispatchers.IO`.
+
+## [4.4-beta4] - 2026-07-11
+
+### Fixed
+- **Uneven LED blink timing**: root-shell write latency was confirmed fast
+  and steady via new per-write timing logs, ruling it out as the cause -
+  the actual culprit was Doze mode. Screen off + on battery + idle
+  suspends CPU timing precision, so the blink loop's `delay()` calls fired
+  late and in bursts once Doze kicked in (and Doze explicitly doesn't
+  engage while charging, which is why the bug was invisible plugged in). A
+  partial wake lock is now held for the duration of an active blink,
+  released the moment blinking stops, with a 10-minute safety timeout that
+  renews every 5 minutes so a long-unread notification doesn't lose it
+  partway through.
+
+## [4.4-beta2] - 2026-07-06
+
+### Fixed
+- **LED blink concurrency race** causing intermittent stuck-on/stuck-off/
+  flicker patterns: the blink loop ran on a multi-threaded dispatcher while
+  LED writes are blocking, not suspending, so cancelling an old blink job
+  couldn't interrupt it mid-write and two loops could briefly race on the
+  same LED. Every LED write now funnels through one dedicated
+  single-thread executor regardless of caller, and the listener service
+  uses one unified single-thread dispatcher for both `recompute()` and the
+  blink loop.
+- **Cycle mode** was swapping directly between colors with no gap; each
+  color now gets its own on/off blink in turn, matching single-color
+  behavior.
+
+### Changed
+- The "already running" check for the blink loop now compares colors as a
+  set instead of an ordered list, so notification reordering alone doesn't
+  needlessly restart the loop and reopen the race window.
+
+## [4.3-beta7] - 2026-07-05
+
+### Added
+- Access-type tags (`[root]`/`[accessibility]`/`[notification]`) on module
+  cards.
+
+## [4.3-beta6] - 2026-07-05
+
+### Fixed
+- **LED blink didn't actually blink**: this device's LED driver has no
+  kernel `timer` trigger - only fixed hardware triggers are listed, and
+  every `echo timer > trigger` was silently rejected. Blinking is now done
+  in software instead: `LedNotifyListenerService` alternates `setColor()`/
+  `off()` via a coroutine, for both the single-color and cycle-mode cases.
+
+## [4.3-beta5] - 2026-07-04
+
+### Added
+- **LED Notify Colors module**: per-app notification LED colors driven via
+  root sysfs writes, bypassing LineageOS's own per-app light-color picker
+  (whose color quantization doesn't match this device's LED hardware).
+  Configurable flash length, screen-on suppression toggle, and a
+  cycle-through-colors option for multiple active notifications.
+
+## [4.3-beta1] - 2026-06-28
+
+### Added
+- **BBProdFix** companion page.
+
+## [4.2-beta2] - 2026-06-25
+
+### Added
+- Untag mode for Play Store Tagger.
+
+## [4.2-beta1] - 2026-06-25
+
+### Added
+- **Play Store Tagger module**: retags (or untags) installed apps as Play
+  Store-installed.
+
+## [4.1-beta5] - 2026-06-22
+
+### Added
+- **Bottom navigation** restructured into Info / Keyboard / System tabs,
+  with Info as the landing page (device + battery + access status).
+- **Per-App Keyboard Block** reworked to switch to a bundled do-nothing
+  passthrough IME (`Key2PassthroughIme`) while a selected app is
+  foreground, so physical keys reach the app raw instead of being
+  intercepted by the BlackBerry IME - replaces the previous (ineffective)
+  `show_ime_with_hard_keyboard` toggle.
+- **5GHz Hotspot Workaround**: forces the WiFi region to US (live +
+  persisted boot script) so 5GHz SoftAP works, since every EU regdomain on
+  this build exposes zero 5GHz AP channels.
+- Full **Material You** theming that follows the system light/dark
+  setting (previously forced pure-black).
+
+### Changed
+- Fixed scrolling glitches by letting the `Scaffold` own the system-bar
+  insets instead of each screen re-applying them.
+
+### Removed
+- **Audio FX** (system-wide EQ/BassBoost/LoudnessEnhancer) in favor of
+  NLSound.
+
 ## [4.1-beta4] - 2026-06-22
 
 ### Added
