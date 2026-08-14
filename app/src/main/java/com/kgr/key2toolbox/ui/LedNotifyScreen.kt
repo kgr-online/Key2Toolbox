@@ -1,5 +1,6 @@
 package com.kgr.key2toolbox.ui
 
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -57,6 +59,18 @@ private data class LedAppEntry(val label: String, val pkg: String)
 
 /** Preset on/off blink durations offered for "Flash length". */
 private val FLASH_LENGTH_OPTIONS_MS = listOf(250, 500, 1000, 2000)
+
+/**
+ * Presets offered for the minimum-importance LED filter. "Any importance"
+ * uses NONE(0) as the threshold, which passes every real importance value
+ * a notification can have - i.e. no filtering, not a special sentinel.
+ */
+private val IMPORTANCE_THRESHOLD_OPTIONS: List<Pair<String, Int>> = listOf(
+    "Any importance" to NotificationManager.IMPORTANCE_NONE,
+    "Low and above" to NotificationManager.IMPORTANCE_LOW,
+    "Default and above" to NotificationManager.IMPORTANCE_DEFAULT,
+    "High only" to NotificationManager.IMPORTANCE_HIGH
+)
 
 /** Swatches offered per app. "None" (null) clears the assignment. */
 private val PALETTE: List<Pair<String, Color?>> = listOf(
@@ -110,6 +124,14 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             prefs.getBoolean(
                 LedNotifyListenerService.KEY_RESPECT_DND,
                 LedNotifyListenerService.DEFAULT_RESPECT_DND
+            )
+        )
+    }
+    var minImportance by remember {
+        mutableStateOf(
+            prefs.getInt(
+                LedNotifyListenerService.KEY_MIN_IMPORTANCE,
+                LedNotifyListenerService.DEFAULT_MIN_IMPORTANCE
             )
         )
     }
@@ -247,6 +269,36 @@ fun LedNotifyScreen(onBack: () -> Unit) {
                         .apply()
                 }
             )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Minimum importance to light the LED")
+            Text(
+                "Some apps post a notification on a low-importance channel and " +
+                    "retract it themselves a couple seconds later - often a sign " +
+                    "of a muted conversation. Raise this to skip those instead " +
+                    "of flashing briefly for something that's about to " +
+                    "disappear anyway.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.horizontalScroll(rememberScrollState())
+            ) {
+                IMPORTANCE_THRESHOLD_OPTIONS.forEach { (label, value) ->
+                    SelectableChip(
+                        label = label,
+                        selected = minImportance == value,
+                        onClick = {
+                            minImportance = value
+                            prefs.edit()
+                                .putInt(LedNotifyListenerService.KEY_MIN_IMPORTANCE, value)
+                                .apply()
+                        }
+                    )
+                }
+            }
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -435,7 +487,7 @@ private fun SelectableChip(label: String, selected: Boolean, onClick: () -> Unit
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
-        Text(label, style = MaterialTheme.typography.bodySmall)
+        Text(label, style = MaterialTheme.typography.bodySmall, maxLines = 1, softWrap = false)
     }
 }
 

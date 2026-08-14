@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.PowerManager
 import android.service.notification.NotificationListenerService
+import android.service.notification.NotificationListenerService.Ranking
 import android.service.notification.StatusBarNotification
 import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.modules.LedNotifyManager
@@ -89,6 +90,19 @@ import java.util.concurrent.Executors
  * what triggered it. [KEY_RESPECT_DND] lets a user opt out, since wanting
  * the LED to *still* flash during DND (silent-but-still-visible) is a
  * legitimate use case too - it defaults to on.
+ *
+ * **Minimum importance threshold:** some apps post-then-immediately-retract
+ * their own notifications for low-importance channels - observed with a
+ * WhatsApp Business conversation whose notifications consistently lived
+ * ~2.5s before an app-initiated `REASON_APP_CANCEL`, always on a
+ * `IMPORTANCE_LOW` channel. That's a real, deterministic app behavior
+ * (likely tied to a muted-in-app conversation), not a timing race, so
+ * debouncing wouldn't help - the notification simply doesn't live long
+ * enough to be worth lighting for in the first place. [KEY_MIN_IMPORTANCE]
+ * (default [NotificationManager.IMPORTANCE_DEFAULT], adjustable in Settings)
+ * filters these out in [recompute] before a color is ever assigned. An
+ * unknown/unavailable importance always passes the filter rather than
+ * silently suppressing the LED.
  */
 class LedNotifyListenerService : NotificationListenerService() {
 
@@ -101,6 +115,8 @@ class LedNotifyListenerService : NotificationListenerService() {
         const val KEY_CYCLE_MODE = "cycle_mode"
         const val KEY_RESPECT_DND = "respect_dnd"
         const val DEFAULT_RESPECT_DND = true
+        const val KEY_MIN_IMPORTANCE = "min_importance"
+        const val DEFAULT_MIN_IMPORTANCE = NotificationManager.IMPORTANCE_DEFAULT
         const val COLOR_KEY_PREFIX = "color_"
 
         // Safety ceiling on the wake lock so a coroutine leak (bug elsewhere)
@@ -217,6 +233,19 @@ class LedNotifyListenerService : NotificationListenerService() {
         (prefs?.getInt(KEY_FLASH_LENGTH_MS, DEFAULT_FLASH_LENGTH_MS) ?: DEFAULT_FLASH_LENGTH_MS).toLong()
     private fun cycleModeEnabled(): Boolean = prefs?.getBoolean(KEY_CYCLE_MODE, false) ?: false
     private fun respectDnd(): Boolean = prefs?.getBoolean(KEY_RESPECT_DND, DEFAULT_RESPECT_DND) ?: DEFAULT_RESPECT_DND
+    private fun minImportance(): Int =
+        prefs?.getInt(KEY_MIN_IMPORTANCE, DEFAULT_MIN_IMPORTANCE) ?: DEFAULT_MIN_IMPORTANCE
+
+    /**
+     * Ranking-derived importance for [sbn], or null if it can't be determined
+     * (e.g. ranking data not yet available). Null is treated as "allow" by
+     * callers - an unknown importance shouldn't silently suppress the LED.
+     */
+    private fun importanceOf(sbn: StatusBarNotification): Int? {
+        val rm = currentRanking ?: return null
+        val out = Ranking()
+        return if (rm.getRanking(sbn.key, out)) out.importance else null
+    }
 
     /**
      * True if the system is currently in any DND-style state - manual toggle,
@@ -260,7 +289,11 @@ class LedNotifyListenerService : NotificationListenerService() {
         // Most-recent-first, then dedupe by color so a cycle never repeats a
         // shade just because two apps happen to share it.
         val distinctColors = LinkedHashSet<Int>()
+        val threshold = minImportance()
         actives.sortedByDescending { it.postTime }.forEach { sbn ->
+            val importance = importanceOf(sbn)
+            // Unknown importance (null) always passes - see importanceOf().
+            if (importance != null && importance < threshold) return@forEach
             colorFor(sbn.packageName)?.let { distinctColors.add(it) }
         }
 
