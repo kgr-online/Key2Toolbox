@@ -11,6 +11,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.NotificationListenerService.Ranking
 import android.service.notification.StatusBarNotification
 import androidx.core.content.ContextCompat
+import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.modules.LedNotifyManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -103,6 +104,24 @@ import java.util.concurrent.Executors
  * filters these out in [recompute] before a color is ever assigned. An
  * unknown/unavailable importance always passes the filter rather than
  * silently suppressing the LED.
+ *
+ * **Battery saver:** [respectBatterySaver] checks [PowerManager.isPowerSaveMode]
+ * directly in [recompute], same shape as the DND check above - it doesn't
+ * matter whether battery saver was turned on manually, on a schedule, or
+ * automatically at a low-battery threshold. [KEY_RESPECT_BATTERY_SAVER]
+ * defaults to on; a user who wants the LED to keep working even under
+ * battery saver can opt out.
+ *
+ * **Notification Acknowledgement:** replicates factory 8.1 KEY2 behavior -
+ * once you've turned the screen on, seen a notification on the lock screen,
+ * and turned the screen back off with the power button, that notification's
+ * LED doesn't re-trigger. A screen timeout (walked away without checking)
+ * does *not* count as acknowledgement, and neither does an update to the
+ * notification's content afterward or an unrelated new notification that
+ * happens to reuse the same key - see [acknowledgedKeys],
+ * [lastSleepReason], and the suppression check in [recompute].
+ * [KEY_ACK_ON_SCREEN_OFF] defaults to off, since it changes existing blink
+ * behavior.
  */
 class LedNotifyListenerService : NotificationListenerService() {
 
@@ -115,6 +134,11 @@ class LedNotifyListenerService : NotificationListenerService() {
         const val KEY_CYCLE_MODE = "cycle_mode"
         const val KEY_RESPECT_DND = "respect_dnd"
         const val DEFAULT_RESPECT_DND = true
+        const val KEY_RESPECT_BATTERY_SAVER = "respect_battery_saver"
+        const val DEFAULT_RESPECT_BATTERY_SAVER = true
+        const val KEY_ACK_ON_SCREEN_OFF = "ack_on_screen_off"
+        const val DEFAULT_ACK_ON_SCREEN_OFF = false
+        private const val SLEEP_REASON_POWER_BUTTON = "power_button"
         const val KEY_MIN_IMPORTANCE = "min_importance"
         const val DEFAULT_MIN_IMPORTANCE = NotificationManager.IMPORTANCE_DEFAULT
         const val COLOR_KEY_PREFIX = "color_"
@@ -141,6 +165,18 @@ class LedNotifyListenerService : NotificationListenerService() {
     @Volatile private var screenOn = true
     private var screenReceiver: BroadcastReceiver? = null
     private var dndReceiver: BroadcastReceiver? = null
+    private var batterySaverReceiver: BroadcastReceiver? = null
+
+    // Notification Acknowledgement: key -> postTime, snapshotted from
+    // activeNotifications the moment the screen turns off via a power-button
+    // press (never via timeout - see lastSleepReason()). A notification is
+    // only suppressed from the LED while its key AND postTime both still
+    // match the snapshot; an app-side update or a genuinely new notification
+    // that happens to reuse the same key naturally falls out of suppression.
+    // Pruned against current actives on every recompute() so it never grows
+    // unbounded and self-corrects if an event is ever missed - same
+    // philosophy as the rest of this class.
+    private val acknowledgedKeys = mutableMapOf<String, Long>()
 
     override fun onListenerConnected() {
         super.onListenerConnected()
@@ -151,8 +187,21 @@ class LedNotifyListenerService : NotificationListenerService() {
 
         val rx = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                screenOn = intent?.action == Intent.ACTION_SCREEN_ON
-                scope.launch { recompute() }
+                val turningOn = intent?.action == Intent.ACTION_SCREEN_ON
+                screenOn = turningOn
+                if (!turningOn && ackOnScreenOff()) {
+                    // Root shell call, so keep it off the main thread - runs
+                    // on the same single-thread executor as everything else
+                    // here, ahead of the recompute() it gates.
+                    scope.launch {
+                        if (lastSleepReason() == SLEEP_REASON_POWER_BUTTON) {
+                            acknowledgeActiveNotifications()
+                        }
+                        recompute()
+                    }
+                } else {
+                    scope.launch { recompute() }
+                }
             }
         }
         val filter = IntentFilter().apply {
@@ -187,6 +236,26 @@ class LedNotifyListenerService : NotificationListenerService() {
             // event; feature still works.
         }
 
+        // Recompute immediately when battery saver is toggled - same
+        // reasoning as the DND receiver above.
+        val batterySaverRx = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                scope.launch { recompute() }
+            }
+        }
+        try {
+            ContextCompat.registerReceiver(
+                this,
+                batterySaverRx,
+                IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            batterySaverReceiver = batterySaverRx
+        } catch (_: Exception) {
+            // Battery saver toggles just won't update live until the next
+            // notification event; feature still works.
+        }
+
         scope.launch { recompute() }
     }
 
@@ -202,6 +271,7 @@ class LedNotifyListenerService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         stopBlink()
+        acknowledgedKeys.clear()
         scope.launch { LedNotifyManager.off() }
         unregisterScreenReceiver()
         super.onListenerDisconnected()
@@ -209,6 +279,7 @@ class LedNotifyListenerService : NotificationListenerService() {
 
     override fun onDestroy() {
         stopBlink()
+        acknowledgedKeys.clear()
         scope.cancel()
         executor.shutdownNow()
         unregisterScreenReceiver()
@@ -224,6 +295,10 @@ class LedNotifyListenerService : NotificationListenerService() {
             try { unregisterReceiver(it) } catch (_: Exception) {}
         }
         dndReceiver = null
+        batterySaverReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+        }
+        batterySaverReceiver = null
     }
 
     private fun enabled(): Boolean = prefs?.getBoolean(KEY_ENABLED, false) ?: false
@@ -233,6 +308,10 @@ class LedNotifyListenerService : NotificationListenerService() {
         (prefs?.getInt(KEY_FLASH_LENGTH_MS, DEFAULT_FLASH_LENGTH_MS) ?: DEFAULT_FLASH_LENGTH_MS).toLong()
     private fun cycleModeEnabled(): Boolean = prefs?.getBoolean(KEY_CYCLE_MODE, false) ?: false
     private fun respectDnd(): Boolean = prefs?.getBoolean(KEY_RESPECT_DND, DEFAULT_RESPECT_DND) ?: DEFAULT_RESPECT_DND
+    private fun respectBatterySaver(): Boolean =
+        prefs?.getBoolean(KEY_RESPECT_BATTERY_SAVER, DEFAULT_RESPECT_BATTERY_SAVER) ?: DEFAULT_RESPECT_BATTERY_SAVER
+    private fun ackOnScreenOff(): Boolean =
+        prefs?.getBoolean(KEY_ACK_ON_SCREEN_OFF, DEFAULT_ACK_ON_SCREEN_OFF) ?: DEFAULT_ACK_ON_SCREEN_OFF
     private fun minImportance(): Int =
         prefs?.getInt(KEY_MIN_IMPORTANCE, DEFAULT_MIN_IMPORTANCE) ?: DEFAULT_MIN_IMPORTANCE
 
@@ -257,6 +336,37 @@ class LedNotifyListenerService : NotificationListenerService() {
         return nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL
     }
 
+    /** True if the system is currently in battery saver / power save mode. */
+    private fun powerSaveActive(): Boolean {
+        val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
+        return pm.isPowerSaveMode
+    }
+
+    /**
+     * The system's recorded reason for the most recent screen-off, read via
+     * root shell since `dumpsys` isn't accessible to a normal app process -
+     * same approach as the DND fallback mentioned in the class doc. Confirmed
+     * against real device output: `mLastSleepReason=power_button` vs
+     * `mLastSleepReason=timeout` are both plain, stable field values in the
+     * top-level "Power Manager State:" block. Returns null if the field
+     * can't be found (older/different ROM) - callers treat that as "not a
+     * power button press" rather than guessing.
+     */
+    private fun lastSleepReason(): String? {
+        val out = RootShell.run("dumpsys power | grep mLastSleepReason").outString
+        return Regex("""mLastSleepReason=(\S+)""").find(out)?.groupValues?.get(1)
+    }
+
+    /** Snapshots every currently-active notification's key+postTime as acknowledged. */
+    private fun acknowledgeActiveNotifications() {
+        val actives = try {
+            activeNotifications
+        } catch (_: Exception) {
+            return // not connected yet
+        }
+        actives.forEach { sbn -> acknowledgedKeys[sbn.key] = sbn.postTime }
+    }
+
     private fun colorFor(packageName: String): Int? {
         val value = prefs?.getInt(colorKey(packageName), Int.MIN_VALUE) ?: Int.MIN_VALUE
         return if (value == Int.MIN_VALUE) null else value
@@ -274,6 +384,11 @@ class LedNotifyListenerService : NotificationListenerService() {
             LedNotifyManager.off()
             return
         }
+        if (respectBatterySaver() && powerSaveActive()) {
+            stopBlink()
+            LedNotifyManager.off()
+            return
+        }
         if (screenOn && !flashWhileScreenOn()) {
             stopBlink()
             LedNotifyManager.off()
@@ -286,6 +401,10 @@ class LedNotifyListenerService : NotificationListenerService() {
             return // not connected yet
         }
 
+        // Self-correcting: drop any acknowledged entry whose notification is
+        // no longer active, so the map never grows unbounded.
+        acknowledgedKeys.keys.retainAll(actives.map { it.key }.toSet())
+
         // Most-recent-first, then dedupe by color so a cycle never repeats a
         // shade just because two apps happen to share it.
         val distinctColors = LinkedHashSet<Int>()
@@ -294,6 +413,10 @@ class LedNotifyListenerService : NotificationListenerService() {
             val importance = importanceOf(sbn)
             // Unknown importance (null) always passes - see importanceOf().
             if (importance != null && importance < threshold) return@forEach
+            // Already seen on the lock screen and acknowledged with the
+            // power button - same key AND same postTime as the snapshot
+            // (an update or a reused key on a new notification isn't this).
+            if (acknowledgedKeys[sbn.key] == sbn.postTime) return@forEach
             colorFor(sbn.packageName)?.let { distinctColors.add(it) }
         }
 

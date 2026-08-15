@@ -127,6 +127,22 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             )
         )
     }
+    var respectBatterySaver by remember {
+        mutableStateOf(
+            prefs.getBoolean(
+                LedNotifyListenerService.KEY_RESPECT_BATTERY_SAVER,
+                LedNotifyListenerService.DEFAULT_RESPECT_BATTERY_SAVER
+            )
+        )
+    }
+    var ackOnScreenOff by remember {
+        mutableStateOf(
+            prefs.getBoolean(
+                LedNotifyListenerService.KEY_ACK_ON_SCREEN_OFF,
+                LedNotifyListenerService.DEFAULT_ACK_ON_SCREEN_OFF
+            )
+        )
+    }
     var minImportance by remember {
         mutableStateOf(
             prefs.getInt(
@@ -227,8 +243,7 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Flash while screen is on")
                 Text(
-                    "Off by default - the LED already suppresses itself once " +
-                        "the screen is on, since you're looking at it anyway.",
+                    "Off by default.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -252,10 +267,7 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Respect Do Not Disturb")
                 Text(
-                    "On by default - suppresses the LED whenever the system " +
-                        "is in DND, however it was triggered (manual toggle, " +
-                        "schedule, or a LOS Mode). Turn off if you want the " +
-                        "LED to keep flashing during DND.",
+                    "On by default. Suppresses the LED whenever DND is enabled.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -271,14 +283,60 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             )
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                Text("Respect Battery Saver")
+                Text(
+                    "On by default. Suppresses the LED whenever battery saver is active.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = respectBatterySaver,
+                onCheckedChange = { checked ->
+                    respectBatterySaver = checked
+                    prefs.edit()
+                        .putBoolean(LedNotifyListenerService.KEY_RESPECT_BATTERY_SAVER, checked)
+                        .apply()
+                }
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                Text("Notification Acknowledgement")
+                Text(
+                    "Off by default. Skips re-blinking notifications you've " +
+                        "already seen on the lock screen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = ackOnScreenOff,
+                onCheckedChange = { checked ->
+                    ackOnScreenOff = checked
+                    prefs.edit()
+                        .putBoolean(LedNotifyListenerService.KEY_ACK_ON_SCREEN_OFF, checked)
+                        .apply()
+                }
+            )
+        }
+
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Minimum importance to light the LED")
             Text(
-                "Some apps post a notification on a low-importance channel and " +
-                    "retract it themselves a couple seconds later - often a sign " +
-                    "of a muted conversation. Raise this to skip those instead " +
-                    "of flashing briefly for something that's about to " +
-                    "disappear anyway.",
+                "Change this setting if you are having phantom LED light " +
+                    "ups - likely due to muted chats.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
