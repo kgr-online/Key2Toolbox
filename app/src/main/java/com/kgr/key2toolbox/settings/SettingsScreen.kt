@@ -1,6 +1,5 @@
 package com.kgr.key2toolbox.settings
 
-import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -412,20 +411,15 @@ private fun RootStatusRow(rootEnabled: Boolean?) {
 
 /** Checks whether Key2AccessibilityService is currently enabled via the
  *  system's ENABLED_ACCESSIBILITY_SERVICES setting. */
+/**
+ * Whether Key2AccessibilityService is currently connected and running.
+ * Reads the service's own self-reported state rather than Settings.Secure,
+ * which was confirmed (via temporary logging) to return an empty string
+ * in-process on this device even while `adb shell settings get secure
+ * enabled_accessibility_services` showed the entry correctly from shell.
+ */
 private fun isAccessibilityServiceEnabled(context: android.content.Context): Boolean {
-    val expected = ComponentName(context, Key2AccessibilityService::class.java)
-    val enabledServicesSetting = Settings.Secure.getString(
-        context.contentResolver,
-        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-    ) ?: return false
-
-    val splitter = android.text.TextUtils.SimpleStringSplitter(':')
-    splitter.setString(enabledServicesSetting)
-    while (splitter.hasNext()) {
-        val enabled = ComponentName.unflattenFromString(splitter.next())
-        if (enabled == expected) return true
-    }
-    return false
+    return Key2AccessibilityService.isRunning
 }
 
 @Composable

@@ -1,14 +1,21 @@
 package com.kgr.key2toolbox.service
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
-import android.view.accessibility.AccessibilityManager
 
-/** Whether Key2AccessibilityService is currently enabled in system Accessibility settings. */
-fun isKey2AccessibilityServiceEnabled(context: Context): Boolean {
-    val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
-        ?: return false
-    val services = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-    val pkg = context.packageName
-    return services.any { it.resolveInfo?.serviceInfo?.packageName == pkg }
+/**
+ * Whether Key2AccessibilityService is currently connected and running.
+ *
+ * Previously this read back AccessibilityManager's enabled-service list,
+ * which on at least one ROM state silently returned an empty result even
+ * though the service was genuinely enabled and bound (confirmed via
+ * `dumpsys accessibility` and `settings get secure
+ * enabled_accessibility_services` from shell). Rather than depend on that
+ * read succeeding, ask the service directly - it's ground truth and can't
+ * be silently withheld.
+ *
+ * `context` is kept in the signature (unused) so existing call sites don't
+ * need to change.
+ */
+fun isKey2AccessibilityServiceEnabled(@Suppress("UNUSED_PARAMETER") context: Context): Boolean {
+    return Key2AccessibilityService.isRunning
 }

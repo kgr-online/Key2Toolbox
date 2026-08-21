@@ -50,6 +50,17 @@ import java.util.concurrent.Executors
 class Key2AccessibilityService : AccessibilityService() {
 
     companion object {
+        /**
+         * True while this service instance is actually connected and bound.
+         * Ground truth for "is accessibility enabled" - unlike reading
+         * ENABLED_ACCESSIBILITY_SERVICES back from Settings.Secure, this
+         * can't be silently withheld by the system/ROM; it's set directly
+         * by the lifecycle callbacks below.
+         */
+        @Volatile
+        var isRunning: Boolean = false
+            private set
+
         const val PREFS = "key2tweaks"
         const val KEY_NAV_LOCK = "nav_lock_enabled"
         const val KEY_NAV_GESTURE = "nav_gesture_mode" // false=disable buttons, true=double-tap gate (Back)
@@ -112,6 +123,7 @@ class Key2AccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        isRunning = true
         val p = getSharedPreferences(PREFS, MODE_PRIVATE)
         prefs = p
         p.registerOnSharedPreferenceChangeListener(prefListener)
@@ -528,6 +540,7 @@ class Key2AccessibilityService : AccessibilityService() {
     override fun onInterrupt() {}
 
     override fun onUnbind(intent: Intent?): Boolean {
+        isRunning = false
         writeNodeBlocking(true) // never leave nav buttons dead
         restoreImeBlock()       // never leave the soft keyboard globally suppressed
         return super.onUnbind(intent)
@@ -541,6 +554,7 @@ class Key2AccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         writeNodeBlocking(true)
         restoreImeBlock()
         prefs?.unregisterOnSharedPreferenceChangeListener(prefListener)
