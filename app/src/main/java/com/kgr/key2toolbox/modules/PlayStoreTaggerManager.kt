@@ -94,10 +94,51 @@ object PlayStoreTaggerManager {
         }
     }
 
+    /**
+     * Reads the real installer package for one app via `dumpsys package`.
+     *
+     * Two things drove this away from the previous approach:
+     *  - `cmd package get-install-source` doesn't exist on this ROM
+     *    ("Unknown command"), so it always silently returned null.
+     *  - PackageManager.getInstallSourceInfo(), called in-process from the
+     *    app itself, was independently confirmed (via logging) to return
+     *    incorrect data on this ROM even when the equivalent root-shell
+     *    read is correct - the same in-process-vs-shell read discrepancy
+     *    already hit with the accessibility-service status check.
+     *
+     * `dumpsys package <pkg> | grep installerPackageName=` was verified
+     * directly against known F-Droid/Aurora installs and matches reality.
+     */
     fun getInstaller(packageName: String): String? {
-        val result = Shell.cmd("cmd package get-install-source $packageName 2>/dev/null").exec()
+        val result = Shell.cmd("dumpsys package $packageName | grep -m1 installerPackageName=").exec()
         if (!result.isSuccess) return null
-        val line = result.out.firstOrNull { it.contains("installingPackageName") } ?: return null
-        return line.substringAfter(":").trim().takeIf { it.isNotBlank() && it != "null" }
+        val line = result.out.firstOrNull() ?: return null
+        val value = line.substringAfter("installerPackageName=").trim()
+        return value.takeIf { it.isNotBlank() && it != "null" }
+    }
+
+    /**
+     * Bulk version of [getInstaller] for populating the full app list without
+     * spawning one root shell call per app. `dumpsys package -a` includes
+     * every package's block in one dump; this walks it once and records the
+     * installerPackageName seen under each `Package [pkg]` header.
+     */
+    fun getAllInstallers(): Map<String, String?> {
+        val result = Shell.cmd("dumpsys package -a").exec()
+        if (!result.isSuccess) return emptyMap()
+
+        val installers = mutableMapOf<String, String?>()
+        var currentPkg: String? = null
+        val pkgHeader = Regex("""Package \[([^]]+)]""")
+
+        for (line in result.out) {
+            pkgHeader.find(line)?.let { currentPkg = it.groupValues[1] }
+            val trimmed = line.trim()
+            if (currentPkg != null && trimmed.startsWith("installerPackageName=")) {
+                val value = trimmed.substringAfter("installerPackageName=").trim()
+                installers[currentPkg!!] = value.takeIf { it.isNotBlank() && it != "null" }
+            }
+        }
+        return installers
     }
 }

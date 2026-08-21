@@ -221,6 +221,11 @@ class PlayStoreTaggerViewModel : ViewModel() {
         val packages = if (flags != null) pm.getInstalledApplications(flags)
         else @Suppress("DEPRECATION") pm.getInstalledApplications(PackageManager.GET_META_DATA)
 
+        // Read every installer in one root-shell pass rather than one
+        // PackageManager call per app - see PlayStoreTaggerManager.getAllInstallers
+        // for why the in-process PackageManager read isn't used here.
+        val installers = PlayStoreTaggerManager.getAllInstallers()
+
         return packages
             .filter { it.packageName != context.packageName }
             .mapNotNull { appInfo ->
@@ -228,11 +233,7 @@ class PlayStoreTaggerViewModel : ViewModel() {
                     val label = pm.getApplicationLabel(appInfo).toString()
                     val icon = pm.getApplicationIcon(appInfo)
                     val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                    val installer = try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
-                            pm.getInstallSourceInfo(appInfo.packageName).installingPackageName
-                        else @Suppress("DEPRECATION") pm.getInstallerPackageName(appInfo.packageName)
-                    } catch (_: Exception) { null }
+                    val installer = installers[appInfo.packageName]
                     AppInfo(
                         packageName = appInfo.packageName,
                         label = label,
