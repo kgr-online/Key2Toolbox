@@ -18,6 +18,7 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
+import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -69,6 +70,7 @@ class Key2AccessibilityService : AccessibilityService() {
         const val KEY_IME_BLOCK = "ime_block_enabled"     // bypass IME in selected apps
         const val KEY_IME_BLOCK_APPS = "ime_block_apps"   // StringSet of package names
         const val KEY_IME_SAVED = "ime_block_saved_ime"   // IME to restore when leaving a blocked app
+        const val KEY_CHAT_COMPOSER = "chat_composer_enabled" // Enter -> send in chat apps
 
         // Our do-nothing IME: while it's active, physical key presses go straight
         // to the app instead of being intercepted/translated by the normal keyboard.
@@ -85,6 +87,10 @@ class Key2AccessibilityService : AccessibilityService() {
     }
 
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
+    private val composerHandler = ComposerEnterKeyHandler(
+        ComposerEnterKeyHandler.defaultSupportedPackages(),
+        ComposerEnterKeyHandler.defaultSendButtonMatchers()
+    )
     @Volatile private var navDisabled = false // last state pushed to kernel
     @Volatile private var imeActive = false   // keyboard currently showing
     @Volatile private var imeBlockApplied = false // last show_ime value we pushed (true = suppressed)
@@ -198,6 +204,7 @@ class Key2AccessibilityService : AccessibilityService() {
     private fun gestureMode() = prefs?.getBoolean(KEY_NAV_GESTURE, false) ?: false
     private fun alwaysOff() = prefs?.getBoolean(KEY_NAV_ALWAYS_OFF, false) ?: false
     private fun pinInputEnabled() = prefs?.getBoolean(KEY_PIN_INPUT, true) ?: true
+    private fun chatComposerEnabled() = prefs?.getBoolean(KEY_CHAT_COMPOSER, false) ?: false
     private fun imeBlockEnabled() = prefs?.getBoolean(KEY_IME_BLOCK, false) ?: false
     private fun imeBlockApps(): Set<String> =
         prefs?.getStringSet(KEY_IME_BLOCK_APPS, emptySet()) ?: emptySet()
@@ -360,6 +367,15 @@ class Key2AccessibilityService : AccessibilityService() {
             kc == KeyEvent.KEYCODE_BACK && !isDeviceLocked()
         ) {
             return handleNavGesture(event, kc)
+        }
+
+        // Chat Enter-to-Send: in a supported chat app, a plain Enter clicks the send
+        // button instead of inserting a newline (Alt/Shift+Enter still newlines).
+        // Pre-gated on the tracked foreground package so it costs nothing elsewhere.
+        if (chatComposerEnabled() && composerHandler.supportsPackage(foregroundPkg) &&
+            composerHandler.onKeyEvent(this, event)
+        ) {
+            return true
         }
 
         // PIN Input: map physical keys to the lockscreen PIN pad.

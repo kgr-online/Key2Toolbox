@@ -34,6 +34,10 @@ sealed class Screen(
         "Per-App Keyboard Block", "Route keys straight to chosen apps",
         listOf(AccessType.ACCESSIBILITY)
     )
+    data object ChatComposer : Screen(
+        "Chat Enter-to-Send", "Enter sends, Alt+Enter newline in chat apps",
+        listOf(AccessType.ACCESSIBILITY)
+    )
 
     // System tab
     data object AdBlock : Screen(
