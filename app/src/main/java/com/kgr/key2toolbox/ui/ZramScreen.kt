@@ -44,10 +44,14 @@ fun ZramScreen(onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var showApplyWarning by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
+    var romDefaults by remember { mutableStateOf<ZramController.RomDefaults?>(null) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            selectedSize = ZramController.persistedSize() ?: ZramController.Size.OFF
+            romDefaults = ZramController.romDefaults()
+            selectedSize = ZramController.persistedSize()
+                ?: ZramController.currentLiveSize()
+                ?: ZramController.Size.OFF
             availableAlgorithms = ZramController.availableAlgorithms()
             selectedAlgorithm = ZramController.persistedAlgorithm()
                 ?: ZramController.currentAlgorithm()
@@ -98,7 +102,11 @@ fun ZramScreen(onBack: () -> Unit) {
                                 }
                             }
                         )
-                        Text(algo)
+                        Text(
+                            if (algo == romDefaults?.algorithm) "$algo  (ROM default)" else algo,
+                            color = if (algo == romDefaults?.algorithm) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
@@ -126,7 +134,11 @@ fun ZramScreen(onBack: () -> Unit) {
                                 }
                             }
                         )
-                        Text(size.label)
+                        Text(
+                            if (size == romDefaults?.size) "${size.label}  (ROM default)" else size.label,
+                            color = if (size == romDefaults?.size) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
@@ -144,6 +156,13 @@ fun ZramScreen(onBack: () -> Unit) {
                         "Requires ZRAM to be enabled (not Off).",
                     style = MaterialTheme.typography.bodySmall
                 )
+                romDefaults?.swappiness?.let {
+                    Text(
+                        "ROM default: $it",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

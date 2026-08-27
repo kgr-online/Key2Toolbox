@@ -24,9 +24,55 @@ object ZramController {
 
     enum class Size(val mb: Int, val label: String) {
         OFF(0, "Off"),
+        GB1_5(1536, "1.5 GB"),
         GB2(2048, "2 GB"),
         GB3(3072, "3 GB"),
-        GB4(4096, "4 GB")
+        GB4(4096, "4 GB");
+
+        companion object {
+            /** The bucket closest to [mb] (within ~64 MB), or null if nothing lines up. */
+            fun nearest(mb: Int): Size? {
+                if (mb <= 0) return OFF
+                return entries.filter { it.mb > 0 }
+                    .minByOrNull { kotlin.math.abs(it.mb - mb) }
+                    ?.takeIf { kotlin.math.abs(it.mb - mb) <= 64 }
+            }
+        }
+    }
+
+    /**
+     * The ZRAM config the ROM itself ships, read live via root: the fstab `zramsize=`, the
+     * `comp_algorithm` write in an init .rc, and the last `swappiness` write in the Qualcomm
+     * post-boot script. Each field is null when it can't be parsed. This is *not* the app's
+     * persisted config - it's what you get if the app leaves ZRAM alone.
+     */
+    data class RomDefaults(val sizeMb: Int?, val algorithm: String?, val swappiness: Int?) {
+        val size: Size? get() = sizeMb?.let { Size.nearest(it) }
+    }
+
+    fun romDefaults(): RomDefaults {
+        val fstab = RootShell.run(
+            "cat /vendor/etc/fstab.* /odm/etc/fstab.* /system/etc/fstab.* 2>/dev/null"
+        ).outString
+        val sizeMb = Regex("""zramsize=(\d+)""").find(fstab)
+            ?.groupValues?.get(1)?.toLongOrNull()
+            ?.let { (it / 1024 / 1024).toInt() }
+
+        // Match only a real `write ... comp_algorithm <algo>` line, not the "read-only"
+        // in an adjacent comment.
+        val algorithm = RootShell.run(
+            "grep -hoE 'comp_algorithm[[:space:]]+(lzo-rle|lzo|lz4hc|lz4|zstd|deflate|842)' " +
+                "/vendor/etc/init/hw/*.rc /odm/etc/init/hw/*.rc /system/etc/init/hw/*.rc 2>/dev/null"
+        ).outString.trim().lines().lastOrNull { it.isNotBlank() }
+            ?.substringAfterLast(' ')?.takeIf { it.isNotBlank() }
+
+        val swappiness = RootShell.run(
+            "grep -hoE 'echo[[:space:]]+[0-9]+[[:space:]]*>[[:space:]]*/proc/sys/vm/swappiness' " +
+                "/vendor/bin/init.qcom.post_boot.sh /vendor/bin/*.sh 2>/dev/null"
+        ).outString.trim().lines().lastOrNull { it.isNotBlank() }
+            ?.let { Regex("""(\d+)""").find(it)?.value?.toIntOrNull() }
+
+        return RomDefaults(sizeMb, algorithm, swappiness)
     }
 
     fun isPersisted(): Boolean = AssetInstaller.fileExists(TARGET)
@@ -62,6 +108,16 @@ object ZramController {
     fun currentLiveSizeBytes(): Long? {
         val out = RootShell.run("cat /sys/block/zram0/disksize 2>/dev/null").outString.trim()
         return out.toLongOrNull()
+    }
+
+    /**
+     * The live zram0 size as the closest [Size] bucket, or null if zram0 isn't active or
+     * doesn't line up with any bucket. Used to seed the UI when the app hasn't persisted
+     * anything.
+     */
+    fun currentLiveSize(): Size? {
+        val mb = (currentLiveSizeBytes() ?: return null) / 1024 / 1024
+        return Size.nearest(mb.toInt())
     }
 
     /**
