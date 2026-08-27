@@ -63,6 +63,17 @@ class Key2AccessibilityService : AccessibilityService() {
         var isRunning: Boolean = false
             private set
 
+        /**
+         * The live service instance, so in-process code that needs a running
+         * AccessibilityService's own Context can reach it - specifically
+         * [com.kgr.key2toolbox.service.TickerOverlayController], whose
+         * TYPE_ACCESSIBILITY_OVERLAY window can only be added via a WindowManager
+         * obtained from such a Context, not a plain app Context.
+         */
+        @Volatile
+        var instance: Key2AccessibilityService? = null
+            private set
+
         const val PREFS = "key2tweaks"
         const val KEY_NAV_LOCK = "nav_lock_enabled"
         const val KEY_NAV_GESTURE = "nav_gesture_mode" // false=disable buttons, true=double-tap gate (Back)
@@ -132,6 +143,7 @@ class Key2AccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         isRunning = true
+        instance = this
         val p = getSharedPreferences(PREFS, MODE_PRIVATE)
         prefs = p
         p.registerOnSharedPreferenceChangeListener(prefListener)
@@ -652,6 +664,7 @@ class Key2AccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         isRunning = false
+        instance = null
         writeNodeBlocking(true)
         restoreImeBlock()
         prefs?.unregisterOnSharedPreferenceChangeListener(prefListener)

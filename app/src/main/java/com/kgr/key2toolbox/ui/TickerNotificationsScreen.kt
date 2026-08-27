@@ -1,0 +1,379 @@
+package com.kgr.key2toolbox.ui
+
+import android.app.PendingIntent
+import android.content.Intent
+import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.MainActivity
+import com.kgr.key2toolbox.R
+import com.kgr.key2toolbox.modules.TickerColorResolver
+import com.kgr.key2toolbox.modules.TickerController
+import com.kgr.key2toolbox.modules.TickerSettings
+import com.kgr.key2toolbox.service.TickerOverlayController
+import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * "Super Status Bar"-style ticker: a scrolling banner across the top of the screen
+ * instead of a heads-up popup, with the same customization knobs that app offered
+ * (per-app/category blacklist, minimum priority, lines shown, scroll speed/delay,
+ * tap-to-open). See [TickerController] for how the master switch grants permissions
+ * and kills heads-up, and [com.kgr.key2toolbox.service.TickerOverlayController] for
+ * how the banner itself is drawn.
+ */
+@Composable
+fun TickerNotificationsScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var showAppPicker by remember { mutableStateOf(false) }
+
+    if (showAppPicker) {
+        TickerBlockedAppsScreen(onBack = { showAppPicker = false })
+        return
+    }
+
+    var enabled by remember { mutableStateOf(TickerSettings.isEnabled(context)) }
+    var busy by remember { mutableStateOf(false) }
+    var notifAccessGranted by remember { mutableStateOf(TickerController.isNotificationAccessGranted(context)) }
+    var serviceEnabled by remember { mutableStateOf(isKey2AccessibilityServiceEnabled(context)) }
+
+    var tapToOpen by remember { mutableStateOf(TickerSettings.isTapToOpen(context)) }
+    var minImportance by remember { mutableIntStateOf(TickerSettings.minImportance(context)) }
+    var includeOngoing by remember { mutableStateOf(TickerSettings.includeOngoing(context)) }
+    var maxBodyLines by remember { mutableIntStateOf(TickerSettings.maxBodyLines(context)) }
+    var scrollSpeed by remember { mutableFloatStateOf(TickerSettings.scrollSpeedDpPerSec(context).toFloat()) }
+    var startDelay by remember { mutableFloatStateOf(TickerSettings.startDelayMs(context).toFloat()) }
+    var blockedCategories by remember { mutableStateOf(TickerSettings.blockedCategories(context)) }
+    var blockedAppCount by remember { mutableStateOf(TickerSettings.blockedApps(context).size) }
+    var colorMode by remember { mutableStateOf(TickerSettings.colorMode(context)) }
+    var fixedColor by remember { mutableIntStateOf(TickerSettings.fixedColor(context)) }
+
+    LaunchedEffect(Unit) {
+        notifAccessGranted = TickerController.isNotificationAccessGranted(context)
+        serviceEnabled = isKey2AccessibilityServiceEnabled(context)
+        blockedAppCount = TickerSettings.blockedApps(context).size
+    }
+
+    ScreenScaffold(title = Screen.TickerNotifications.title, onBack = onBack) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.ticker_enable_label), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Switch(
+                checked = enabled,
+                enabled = !busy,
+                onCheckedChange = { checked ->
+                    busy = true
+                    scope.launch(Dispatchers.IO) {
+                        TickerController.setEnabled(context, checked)
+                        enabled = TickerSettings.isEnabled(context)
+                        // On this device's ROM, enabled_notification_listeners has been observed
+                        // to take a moment to propagate to other processes after the root
+                        // `cmd notification allow_listener` call returns - retry briefly rather
+                        // than flash a false "missing" permission banner on every enable.
+                        var notifGranted = TickerController.isNotificationAccessGranted(context)
+                        var attempts = 0
+                        while (checked && !notifGranted && attempts < 5) {
+                            delay(300)
+                            notifGranted = TickerController.isNotificationAccessGranted(context)
+                            attempts++
+                        }
+                        val serviceNowEnabled = isKey2AccessibilityServiceEnabled(context)
+                        withContext(Dispatchers.Main) {
+                            notifAccessGranted = notifGranted
+                            serviceEnabled = serviceNowEnabled
+                        }
+                        busy = false
+                    }
+                }
+            )
+        }
+
+        if (enabled) {
+            TickerPermissionStatus(notifAccessGranted)
+        }
+        AccessibilityServiceBanner(serviceEnabled)
+
+        Text(stringResource(R.string.ticker_headsup_disabled_notice), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val testMessage = stringResource(R.string.ticker_test_message)
+            Button(
+                enabled = serviceEnabled,
+                onClick = {
+                    val openAppIntent = PendingIntent.getActivity(
+                        context,
+                        0,
+                        Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                    )
+                    TickerOverlayController.show(
+                        context = context,
+                        icon = context.applicationInfo.loadIcon(context.packageManager),
+                        text = testMessage,
+                        contentIntent = if (tapToOpen) openAppIntent else null,
+                        backgroundColor = TickerColorResolver.resolveBackgroundColor(context, context.packageName),
+                    )
+                }
+            ) {
+                Text(stringResource(R.string.ticker_test_button))
+            }
+            if (!serviceEnabled) {
+                Text(
+                    stringResource(R.string.ticker_test_needs_service),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.ticker_tap_to_open_label), modifier = Modifier.weight(1f))
+            Switch(
+                checked = tapToOpen,
+                onCheckedChange = {
+                    tapToOpen = it
+                    TickerSettings.setTapToOpen(context, it)
+                }
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.ticker_include_ongoing_label), modifier = Modifier.weight(1f))
+            Switch(
+                checked = includeOngoing,
+                onCheckedChange = {
+                    includeOngoing = it
+                    TickerSettings.setIncludeOngoing(context, it)
+                }
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.ticker_min_priority_label), style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TickerSettings.IMPORTANCE_OPTIONS.forEach { (value, labelRes) ->
+                    FilterChip(
+                        selected = minImportance == value,
+                        onClick = {
+                            minImportance = value
+                            TickerSettings.setMinImportance(context, value)
+                        },
+                        label = { Text(stringResource(labelRes)) }
+                    )
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.ticker_lines_label), style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TickerSettings.BODY_LINES_OPTIONS.forEach { opt ->
+                    FilterChip(
+                        selected = maxBodyLines == opt,
+                        onClick = {
+                            maxBodyLines = opt
+                            TickerSettings.setMaxBodyLines(context, opt)
+                        },
+                        label = { Text("$opt") }
+                    )
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.ticker_scroll_speed_label, scrollSpeed.toInt()), style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = scrollSpeed,
+                valueRange = TickerSettings.SCROLL_SPEED_RANGE,
+                onValueChange = { scrollSpeed = it },
+                onValueChangeFinished = { TickerSettings.setScrollSpeedDpPerSec(context, scrollSpeed.toInt()) }
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(R.string.ticker_start_delay_label, startDelay.toInt()), style = MaterialTheme.typography.titleSmall)
+            Slider(
+                value = startDelay,
+                valueRange = TickerSettings.START_DELAY_RANGE,
+                onValueChange = { startDelay = it },
+                onValueChangeFinished = { TickerSettings.setStartDelayMs(context, startDelay.toInt()) }
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.ticker_color_label), style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = colorMode == TickerSettings.ColorMode.FIXED,
+                    onClick = {
+                        colorMode = TickerSettings.ColorMode.FIXED
+                        TickerSettings.setColorMode(context, TickerSettings.ColorMode.FIXED)
+                    },
+                    label = { Text(stringResource(R.string.ticker_color_fixed)) }
+                )
+                FilterChip(
+                    selected = colorMode == TickerSettings.ColorMode.APP_ICON,
+                    onClick = {
+                        colorMode = TickerSettings.ColorMode.APP_ICON
+                        TickerSettings.setColorMode(context, TickerSettings.ColorMode.APP_ICON)
+                    },
+                    label = { Text(stringResource(R.string.ticker_color_app_icon)) }
+                )
+                FilterChip(
+                    selected = colorMode == TickerSettings.ColorMode.MONET,
+                    enabled = Build.VERSION.SDK_INT >= 31,
+                    onClick = {
+                        colorMode = TickerSettings.ColorMode.MONET
+                        TickerSettings.setColorMode(context, TickerSettings.ColorMode.MONET)
+                    },
+                    label = { Text(stringResource(R.string.ticker_color_monet)) }
+                )
+            }
+            if (colorMode == TickerSettings.ColorMode.APP_ICON) {
+                Text(
+                    stringResource(R.string.ticker_color_app_icon_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (colorMode == TickerSettings.ColorMode.MONET && Build.VERSION.SDK_INT < 31) {
+                Text(
+                    stringResource(R.string.ticker_color_monet_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (colorMode == TickerSettings.ColorMode.FIXED) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(TickerSettings.PRESET_COLORS) { swatch ->
+                        val selected = swatch == fixedColor
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(swatch))
+                                .border(
+                                    width = if (selected) 2.dp else 0.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = CircleShape
+                                )
+                                .clickable {
+                                    fixedColor = swatch
+                                    TickerSettings.setFixedColor(context, swatch)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (selected) {
+                                Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(value = false, onValueChange = { showAppPicker = true })
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(stringResource(R.string.ticker_blocked_apps_label))
+                Text(stringResource(R.string.ticker_blocked_apps_count, blockedAppCount), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            Text(stringResource(R.string.ticker_blocked_categories_label), style = MaterialTheme.typography.titleSmall)
+            TickerSettings.CATEGORY_OPTIONS.forEach { (category, labelRes) ->
+                val checked = category in blockedCategories
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .toggleable(
+                            value = checked,
+                            onValueChange = { on ->
+                                val newSet = if (on) blockedCategories + category else blockedCategories - category
+                                blockedCategories = newSet
+                                TickerSettings.setBlockedCategories(context, newSet)
+                            }
+                        )
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Checkbox(checked = checked, onCheckedChange = null)
+                    Text(stringResource(labelRes))
+                }
+            }
+        }
+
+        DescriptionDivider()
+        Text(
+            stringResource(R.string.ticker_desc),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun TickerPermissionStatus(notifAccessGranted: Boolean) {
+    if (notifAccessGranted) {
+        Text(stringResource(R.string.ticker_notif_access_granted), color = Color(0xFF81C784), style = MaterialTheme.typography.bodySmall)
+    } else {
+        Text(
+            stringResource(R.string.ticker_notif_access_missing),
+            color = Color(0xFFE57373),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
