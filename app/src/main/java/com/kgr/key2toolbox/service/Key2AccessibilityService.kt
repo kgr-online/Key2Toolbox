@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -69,6 +70,7 @@ class Key2AccessibilityService : AccessibilityService() {
         const val KEY_IME_BLOCK = "ime_block_enabled"     // bypass IME in selected apps
         const val KEY_IME_BLOCK_APPS = "ime_block_apps"   // StringSet of package names
         const val KEY_IME_SAVED = "ime_block_saved_ime"   // IME to restore when leaving a blocked app
+        const val KEY_IN_CALL_SHORTCUTS = "in_call_shortcuts_enabled" // M=mute, Speed/$=speaker, letters=dialpad in-call
 
         // Our do-nothing IME: while it's active, physical key presses go straight
         // to the app instead of being intercepted/translated by the normal keyboard.
@@ -76,6 +78,15 @@ class Key2AccessibilityService : AccessibilityService() {
         // Key2 stock keyboard - the default to fall back to if we have nothing saved.
         private const val DEFAULT_IME_FALLBACK =
             "com.blackberry.keyboard/com.blackberry.inputmethod.core.BlackBerryIME"
+
+        // Every localized label Google Dialer uses for the three in-call action-bar buttons
+        // (incall_label_speaker / _mute / _dialpad), pulled from the Dialer APK's own
+        // resources across its shipped locales. Matching English substrings ("speaker"/"mute")
+        // silently no-ops on a non-English dialer (e.g. Catalan "Altaveu"/"Silenciar"/"Teclat").
+        // Exact trimmed, lowercased match against these sets.
+        private val SPEAKER_LABELS = setOf("altaveu", "altavoz", "altifalante", "alto-falante", "altofalante", "altoparlanti", "bocina", "bozgorailua", "difuzor", "dinamik", "garsiakalbis", "głośnik", "hangszóró", "haut-parleur", "hoparlör", "hátalari", "högtalare", "højttaler", "høyttaler", "isipikha", "kaiutin", "karnay", "kõlar", "lautsprecher", "loa", "luidspreker", "pmbsr suara", "reproduktor", "skaļrunis", "speaker", "spika", "vivavoce", "zvočnik", "zvučnik", "ηχείο", "високогов.", "динамик", "динамік", "дынамік", "звучник", "катуу сүйлөткүч", "чанга яригч", "բարձրախոս", "רמקול", "اسپیکر", "بلندگو", "مكبر الصوت", "स्पिकर", "स्पीकर", "स्‍पीकर", "স্পিকার", "স্পীকাৰ", "ਸਪੀਕਰ", "સ્પીકર", "ସ୍ପିକର୍‌", "ஸ்பீக்கர்", "స్పీకర్", "ಸ್ಪೀಕರ್‌", "സ്പീക്കർ", "ස්පීකරය", "ลำโพง", "ລຳໂພງ", "စပီကာ", "სპიკერი", "የድምጽ ማጉያ", "ឧបករណ៍​បំពង​សំឡេង", "スピーカー", "免提", "喇叭", "擴音", "스피커")
+        private val MUTE_LABELS = setOf("bisukan", "couper le son", "couper micro", "demp", "dempen", "desakt. audioa", "desativ. som", "hiqi zërin", "hljóð af", "i-mute", "isklj. zvuk", "isključi zvuk", "izklopi zvok", "izslēgt", "kutt lyden", "ljud av", "mute", "mykistä", "nutildyti", "némítás", "ovozsiz", "redam", "sesi kapat", "silencia", "silenciar", "silenzia", "silențios", "sluk mikrofon", "stumm", "susdurun", "thulisa", "tắt tiếng", "vaigista", "vypnúť zvuk", "wycisz", "zima maikrofoni", "ztlumit", "σίγαση", "без звука", "выкл. гук", "дууг хаах", "дыбысын өшіру", "заглушаване", "исклучи звук", "искључи звук", "мікрофон", "үнүн өчүрүү", "անջատել", "השתקה", "خاموش کریں", "صامت کردن", "كتم", "म्युट गर्नुहोस्", "म्यूट करा", "म्यूट करें", "মিউট করুন", "মিউট কৰক", "ਮਿਊਟ ਕਰੋ", "મ્યૂટ કરો", "ମ୍ୟୁଟ୍ କର", "ஒலியடக்கு", "మ్యూట్", "ಮ್ಯೂಟ್‌", "മ്യൂട്ടുചെയ്യുക", "නිහඬ කරන්න", "ปิดเสียง", "ປີດສຽງ", "အသံပိတ်ရန်", "დადუმება", "ድምፀ-ከል አድርግ", "បិទ​សំឡេង", "ミュート", "静音", "靜音", "음소거")
+        private val DIALPAD_LABELS = setOf("billentyűzet", "blloku i tasteve", "bàn phím", "cipartast.", "clavier", "ikhiphedi", "keypad", "klaviatura", "klaviatuur", "klaviatūra", "klawiatura", "klávesnice", "knappsats", "nommerblad", "näppäimistö", "pad kekunci", "talnaborð", "tastatur", "tastatura", "tastatură", "tastenfeld", "tastierino", "teclado", "teclat", "teklatua", "telefonska tastatura", "tipkovnica", "toetsenblok", "tuş takımı", "vitufe vya simu", "číselník", "πληκτρολόγιο", "клавиа­тура", "клавиатура", "клавіатура", "клавіятура", "ном. тергич", "пернетақта", "тастатура", "товчлуур", "թվաշար", "לוח חיוג", "صفحه کلید", "لوحة المفاتيح", "کی پیڈ", "किप्याड", "कीपॅड", "कीपैड", "কীপেড", "কীপ্যাড", "ਕੀਪੈਡ", "કીપેડ", "କୀ’ପେଡ", "கீபேட்", "కీప్యాడ్", "ಕೀಪ್ಯಾಡ್‌", "കീപാഡ്", "යතුරු පුවරුව", "ปุ่มกด", "ແປ້ນກົດ", "ခလုတ်ခုံ", "კლავიატურა", "ቁልፍ ሰሌዳ", "ផ្ទាំងចុចលេខ", "キーパッド", "拨号键盘", "撥號鍵盤", "키패드")
 
         private const val LONG_PRESS_MS = 350L
         private const val DOUBLE_TAP_MS = 300L
@@ -212,6 +223,140 @@ class Key2AccessibilityService : AccessibilityService() {
         if (pkg != null && pkg != foregroundPkg) {
             foregroundPkg = pkg
             reconcileImeBlock()
+        }
+
+        // In-Call Shortcuts: open the dialpad tab the moment the in-call screen appears, so
+        // the very first digit key has a field to type into.
+        if (inCallShortcutsEnabled() && isGoogleDialerForeground() &&
+            event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        ) {
+            autoOpenDialpad()
+        }
+    }
+
+    // ------------------------------------------------------------ In-Call Shortcuts
+
+    private fun inCallShortcutsEnabled() = prefs?.getBoolean(KEY_IN_CALL_SHORTCUTS, false) ?: false
+
+    private fun isGoogleDialerForeground(): Boolean {
+        val pkg = foregroundPkg ?: return false
+        return pkg == "com.google.android.dialer" || pkg == "com.google.android.apps.dialer"
+    }
+
+    /** W/E/R/S/D/F/Z/X/C/0 -> phone-keypad keycode, or null for any other key. */
+    private fun getDialerKeycode(kc: Int): Int? = when (kc) {
+        KeyEvent.KEYCODE_W -> KeyEvent.KEYCODE_1
+        KeyEvent.KEYCODE_E -> KeyEvent.KEYCODE_2
+        KeyEvent.KEYCODE_R -> KeyEvent.KEYCODE_3
+        KeyEvent.KEYCODE_S -> KeyEvent.KEYCODE_4
+        KeyEvent.KEYCODE_D -> KeyEvent.KEYCODE_5
+        KeyEvent.KEYCODE_F -> KeyEvent.KEYCODE_6
+        KeyEvent.KEYCODE_Z -> KeyEvent.KEYCODE_7
+        KeyEvent.KEYCODE_X -> KeyEvent.KEYCODE_8
+        KeyEvent.KEYCODE_C -> KeyEvent.KEYCODE_9
+        KeyEvent.KEYCODE_0 -> KeyEvent.KEYCODE_0
+        else -> null
+    }
+
+    private fun dialerDigitChar(kc: Int): Char? = when (getDialerKeycode(kc)) {
+        KeyEvent.KEYCODE_0 -> '0'
+        KeyEvent.KEYCODE_1 -> '1'
+        KeyEvent.KEYCODE_2 -> '2'
+        KeyEvent.KEYCODE_3 -> '3'
+        KeyEvent.KEYCODE_4 -> '4'
+        KeyEvent.KEYCODE_5 -> '5'
+        KeyEvent.KEYCODE_6 -> '6'
+        KeyEvent.KEYCODE_7 -> '7'
+        KeyEvent.KEYCODE_8 -> '8'
+        KeyEvent.KEYCODE_9 -> '9'
+        else -> null
+    }
+
+    private fun findCheckables(node: AccessibilityNodeInfo, list: MutableList<AccessibilityNodeInfo>) {
+        if (node.isCheckable) list.add(AccessibilityNodeInfo.obtain(node))
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findCheckables(child, list)
+            child.recycle()
+        }
+    }
+
+    /**
+     * The checkable whose subtree carries one of [labels] as (trimmed, lowercased) text or
+     * content-description - matched by label rather than a fixed index, since the in-call
+     * action bar's button order isn't guaranteed across dialer builds / OEM tweaks (a
+     * fixed-index click was reported to hit an unrelated toggle). Subtree, not just the
+     * node: the checkable container often carries neither text nor description, only its
+     * icon + label children do.
+     */
+    private fun findCheckableByLabel(
+        checkables: List<AccessibilityNodeInfo>,
+        labels: Set<String>
+    ): AccessibilityNodeInfo? = checkables.firstOrNull { nodeSubtreeContainsLabel(it, labels) }
+
+    private fun nodeSubtreeContainsLabel(node: AccessibilityNodeInfo, labels: Set<String>): Boolean {
+        if (node.contentDescription?.toString()?.trim()?.lowercase() in labels ||
+            node.text?.toString()?.trim()?.lowercase() in labels
+        ) {
+            return true
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                if (nodeSubtreeContainsLabel(child, labels)) return true
+            } finally {
+                child.recycle()
+            }
+        }
+        return false
+    }
+
+    /** The in-call dialpad's phone-number EditText (Dialer's `id/digits`). Caller recycles. */
+    private fun findDialerDigitsField(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        for (id in arrayOf("com.google.android.dialer:id/digits", "com.google.android.apps.dialer:id/digits")) {
+            val nodes = root.findAccessibilityNodeInfosByViewId(id)
+            if (nodes != null && nodes.isNotEmpty()) {
+                for (i in 1 until nodes.size) nodes[i].recycle()
+                return nodes[0]
+            }
+        }
+        return null
+    }
+
+    /** Appends [kc]'s mapped digit to the dialpad number field via ACTION_SET_TEXT; recycles [target]. */
+    private fun insertDialerDigit(target: AccessibilityNodeInfo, kc: Int) {
+        try {
+            val digit = dialerDigitChar(kc) ?: return
+            val current = if (target.isShowingHintText) "" else (target.text?.toString() ?: "")
+            val args = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, current + digit)
+            }
+            target.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        } finally {
+            target.recycle()
+        }
+    }
+
+    /** Opens the in-call dialpad tab if the in-call action bar is up and it isn't open yet. */
+    private fun autoOpenDialpad() {
+        val root = rootInActiveWindow ?: return
+        try {
+            val checkables = mutableListOf<AccessibilityNodeInfo>()
+            findCheckables(root, checkables)
+            try {
+                // Only the real in-call screen has the full keypad+mute+speaker toggle set,
+                // so this can't misfire on the pre-call dial-a-number screen.
+                if (checkables.size >= 3) {
+                    val keypadNode = findCheckableByLabel(checkables, DIALPAD_LABELS)
+                    if (keypadNode != null && !keypadNode.isChecked) {
+                        keypadNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    }
+                }
+            } finally {
+                checkables.forEach { it.recycle() }
+            }
+        } finally {
+            root.recycle()
         }
     }
 
@@ -360,6 +505,85 @@ class Key2AccessibilityService : AccessibilityService() {
             kc == KeyEvent.KEYCODE_BACK && !isDeviceLocked()
         ) {
             return handleNavGesture(event, kc)
+        }
+
+        // In-Call Shortcuts: on the Google Dialer in-call screen, Speed key / $ -> Speaker,
+        // M -> Mute, letter keys -> dialpad digits. Scoped tightly to the real in-call action
+        // bar (>= 3 checkable toggles), so it no-ops on other dialer screens. Must run before
+        // any auto-focus block (both gate only on the dialer package, and M / digits / the
+        // currency key are all printable).
+        if (inCallShortcutsEnabled() && isGoogleDialerForeground()) {
+            val root = rootInActiveWindow
+            if (root != null) {
+                try {
+                    val checkables = mutableListOf<AccessibilityNodeInfo>()
+                    findCheckables(root, checkables)
+                    try {
+                        if (checkables.size >= 3) {
+                            val isSpeakerKey = kc == KeyEvent.KEYCODE_CTRL_LEFT || kc == KeyEvent.KEYCODE_4
+                            val isMuteKey = kc == KeyEvent.KEYCODE_M
+
+                            if (isSpeakerKey) {
+                                if (event.action == KeyEvent.ACTION_UP) {
+                                    findCheckableByLabel(checkables, SPEAKER_LABELS)
+                                        ?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                }
+                                return true
+                            }
+
+                            if (isMuteKey) {
+                                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                                    findCheckableByLabel(checkables, MUTE_LABELS)
+                                        ?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                }
+                                return true
+                            }
+
+                            if (getDialerKeycode(kc) != null) {
+                                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                                    val keypadNode = findCheckableByLabel(checkables, DIALPAD_LABELS)
+                                    when {
+                                        keypadNode == null -> {
+                                            // Couldn't identify the keypad toggle - do nothing
+                                            // rather than guess at a differently-ordered button.
+                                        }
+                                        keypadNode.isChecked -> {
+                                            // Dialpad already open (autoOpenDialpad ran, or user opened it).
+                                            findDialerDigitsField(root)?.let { insertDialerDigit(it, kc) }
+                                        }
+                                        else -> {
+                                            // Not open yet - autoOpenDialpad's click is async and can
+                                            // lose the race for the first digit. Open it, then poll for
+                                            // the digits field rather than guess a fixed delay.
+                                            keypadNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                            worker.execute {
+                                                var digits: AccessibilityNodeInfo? = null
+                                                for (attempt in 1..10) {
+                                                    Thread.sleep(50)
+                                                    digits = rootInActiveWindow?.let { r ->
+                                                        try {
+                                                            findDialerDigitsField(r)
+                                                        } finally {
+                                                            r.recycle()
+                                                        }
+                                                    }
+                                                    if (digits != null) break
+                                                }
+                                                digits?.let { insertDialerDigit(it, kc) }
+                                            }
+                                        }
+                                    }
+                                }
+                                return true
+                            }
+                        }
+                    } finally {
+                        checkables.forEach { it.recycle() }
+                    }
+                } finally {
+                    root.recycle()
+                }
+            }
         }
 
         // PIN Input: map physical keys to the lockscreen PIN pad.
