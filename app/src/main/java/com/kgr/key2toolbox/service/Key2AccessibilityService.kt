@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -69,6 +70,7 @@ class Key2AccessibilityService : AccessibilityService() {
         const val KEY_IME_BLOCK = "ime_block_enabled"     // bypass IME in selected apps
         const val KEY_IME_BLOCK_APPS = "ime_block_apps"   // StringSet of package names
         const val KEY_IME_SAVED = "ime_block_saved_ime"   // IME to restore when leaving a blocked app
+        const val KEY_IME_SUGGESTIONS = "ime_suggestions_enabled" // Ctrl+W/E/R picks IME suggestion 1/2/3
 
         // Our do-nothing IME: while it's active, physical key presses go straight
         // to the app instead of being intercepted/translated by the normal keyboard.
@@ -198,6 +200,67 @@ class Key2AccessibilityService : AccessibilityService() {
     private fun gestureMode() = prefs?.getBoolean(KEY_NAV_GESTURE, false) ?: false
     private fun alwaysOff() = prefs?.getBoolean(KEY_NAV_ALWAYS_OFF, false) ?: false
     private fun pinInputEnabled() = prefs?.getBoolean(KEY_PIN_INPUT, true) ?: true
+    private fun imeSuggestionsEnabled() = prefs?.getBoolean(KEY_IME_SUGGESTIONS, false) ?: false
+
+    /**
+     * Clicks the Nth word in the IME window's candidate strip. On the BlackBerry
+     * Keyboard (5.x) each word is a non-clickable TextView wrapped in a clickable
+     * FrameLayout, laid out in a horizontal RecyclerView. Match "clickable node
+     * whose subtree holds exactly one TextView with non-blank text", ordered
+     * left-to-right by screen position - that picks only the word slots and skips
+     * the strip's quick-modes ImageButton and the back / switch-IME ImageViews
+     * (none of which carry text). If a keyboard doesn't use this shape, nothing
+     * matches and the key falls through unconsumed.
+     */
+    private fun clickImeSuggestion(index: Int): Boolean {
+        val imeRoot = windows?.firstOrNull { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }?.root
+            ?: return false
+        try {
+            val slots = mutableListOf<Pair<Int, AccessibilityNodeInfo>>()
+            collectSuggestionSlots(imeRoot, slots)
+            val ordered = slots.sortedBy { it.first }.map { it.second }
+            try {
+                if (ordered.size <= index) return false
+                return ordered[index].performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            } finally {
+                ordered.forEach { it.recycle() }
+            }
+        } finally {
+            imeRoot.recycle()
+        }
+    }
+
+    private fun collectSuggestionSlots(node: AccessibilityNodeInfo, out: MutableList<Pair<Int, AccessibilityNodeInfo>>) {
+        if (node.isClickable && !singleTextViewText(node).isNullOrBlank()) {
+            val b = Rect().also { node.getBoundsInScreen(it) }
+            out.add(b.left to AccessibilityNodeInfo.obtain(node))
+            return // a matched slot is a leaf for our purposes; don't descend into it
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            collectSuggestionSlots(child, out)
+            child.recycle()
+        }
+    }
+
+    /** Text of the single TextView in [node]'s subtree, or null if there are zero or several. */
+    private fun singleTextViewText(node: AccessibilityNodeInfo): String? {
+        var text: String? = null
+        var count = 0
+        fun rec(n: AccessibilityNodeInfo) {
+            if (n.className?.contains("TextView") == true) {
+                count++
+                text = n.text?.toString()
+            }
+            for (i in 0 until n.childCount) {
+                val c = n.getChild(i) ?: continue
+                rec(c)
+                c.recycle()
+            }
+        }
+        rec(node)
+        return if (count == 1) text else null
+    }
     private fun imeBlockEnabled() = prefs?.getBoolean(KEY_IME_BLOCK, false) ?: false
     private fun imeBlockApps(): Set<String> =
         prefs?.getStringSet(KEY_IME_BLOCK_APPS, emptySet()) ?: emptySet()
@@ -352,6 +415,24 @@ class Key2AccessibilityService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent?): Boolean {
         if (event == null) return false
         val kc = event.keyCode
+
+        // IME suggestion shortcuts: Ctrl+W/E/R picks suggestion 1/2/3 from the keyboard's
+        // candidate strip. Only consumes the key if a suggestion was actually found and
+        // clicked, so Ctrl+W/E/R still behaves normally (e.g. closing a browser tab) when
+        // no suggestions are showing.
+        if (imeSuggestionsEnabled() && event.isCtrlPressed &&
+            event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0
+        ) {
+            val suggestionIndex = when (kc) {
+                KeyEvent.KEYCODE_W -> 0
+                KeyEvent.KEYCODE_E -> 1
+                KeyEvent.KEYCODE_R -> 2
+                else -> -1
+            }
+            if (suggestionIndex >= 0 && clickImeSuggestion(suggestionIndex)) {
+                return true
+            }
+        }
 
         // Nav gesture-gate (Back only): while typing, swallow a quick tap on Back
         // and fire it only on a double-tap. Home/Recents can't be gated - Android's

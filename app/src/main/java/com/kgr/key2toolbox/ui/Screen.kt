@@ -34,6 +34,10 @@ sealed class Screen(
         "Per-App Keyboard Block", "Route keys straight to chosen apps",
         listOf(AccessType.ACCESSIBILITY)
     )
+    data object ImeSuggestions : Screen(
+        "IME Suggestion Shortcuts", "Ctrl+W/E/R picks keyboard suggestion 1/2/3",
+        listOf(AccessType.ACCESSIBILITY)
+    )
 
     // System tab
     data object AdBlock : Screen(
