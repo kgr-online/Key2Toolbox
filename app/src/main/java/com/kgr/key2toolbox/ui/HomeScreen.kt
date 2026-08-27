@@ -51,6 +51,7 @@ val keyboardScreens = listOf(
     Screen.NavLock,
     Screen.PinKeyboard,
     Screen.ImeBlock,
+    Screen.ImeSuggestions,
     Screen.CtrlKey
 )
 
@@ -96,7 +97,7 @@ fun HomeScreen() {
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             val current = detail
             if (current != null) {
-                DetailHost(current) { detail = null }
+                DetailHost(current, onNavigate = { detail = it }) { detail = null }
             } else when (tab) {
                 AppTab.Info -> InfoScreen()
                 AppTab.Keyboard -> CategoryMenu("Keyboard", keyboardScreens) { detail = it }
@@ -110,13 +111,14 @@ fun HomeScreen() {
 }
 
 @Composable
-private fun DetailHost(screen: Screen, onBack: () -> Unit) {
+private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () -> Unit) {
     when (screen) {
         Screen.CtrlKey -> CtrlKeyScreen(onBack)
         Screen.KbdLight -> KbdLightScreen(onBack)
         Screen.NavLock -> NavLockScreen(onBack)
         Screen.PinKeyboard -> PinKeyboardScreen(onBack)
         Screen.ImeBlock -> ImeBlockScreen(onBack)
+        Screen.ImeSuggestions -> ImeSuggestionsScreen(onBack, onNavigateToCtrlKey = { onNavigate(Screen.CtrlKey) })
         Screen.Zram -> ZramScreen(onBack)
         Screen.WirelessAdb -> WirelessAdbScreen(onBack)
         Screen.Dt2w -> Dt2wScreen(onBack)

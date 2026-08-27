@@ -48,3 +48,24 @@ fun AccessibilityServiceBanner(serviceEnabled: Boolean) {
         }
     }
 }
+
+/**
+ * Generic "this feature depends on that other toggle" warning, e.g. IME
+ * Suggestions needing a key remapped to Ctrl.
+ */
+@Composable
+fun RequirementBanner(message: String, actionLabel: String, onAction: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                message,
+                color = androidx.compose.ui.graphics.Color(0xFFFFB74D),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Button(onClick = onAction) { Text(actionLabel) }
+        }
+    }
+}
