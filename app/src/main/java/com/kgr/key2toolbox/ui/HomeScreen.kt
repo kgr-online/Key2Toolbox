@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
@@ -183,12 +184,13 @@ private fun MenuEntry(screen: Screen, onClick: () -> Unit) {
         ) {
             Text(screen.title, style = MaterialTheme.typography.titleMedium)
             if (screen.subtitle.isNotEmpty() || screen.access.isNotEmpty()) {
-                Row {
+                Row(verticalAlignment = Alignment.Top) {
                     if (screen.subtitle.isNotEmpty()) {
                         Text(
                             screen.subtitle,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                     }
                     if (screen.access.isNotEmpty()) {
@@ -198,7 +200,9 @@ private fun MenuEntry(screen: Screen, onClick: () -> Unit) {
                                 Text(
                                     "[" + stringResource(at.labelRes) + "]",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                         }
