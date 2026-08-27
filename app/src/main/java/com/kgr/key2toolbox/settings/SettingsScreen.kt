@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -30,6 +31,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage // swap for your existing image loader if K2TB uses a different one
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.service.Key2AccessibilityService // adjust package if this lives elsewhere
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
@@ -72,10 +74,12 @@ fun SettingsScreen(
                     SettingsBackup.writeToUri(context, uri, json)
                 }
                 backupError = null
-                backupMessage = "Settings exported successfully."
+                backupMessage = context.getString(R.string.settings_export_success)
             } catch (e: Exception) {
                 backupMessage = null
-                backupError = "Export failed: ${e.javaClass.simpleName}: ${e.message}"
+                backupError = context.getString(
+                    R.string.settings_export_failed, e.javaClass.simpleName, e.message ?: ""
+                )
             }
         }
     }
@@ -118,13 +122,9 @@ fun SettingsScreen(
     pendingImportUri?.let { uri ->
         AlertDialog(
             onDismissRequest = { pendingImportUri = null },
-            title = { Text("Import settings?") },
+            title = { Text(stringResource(R.string.settings_import_dialog_title)) },
             text = {
-                Text(
-                    "This will overwrite your current settings for the selected module(s) " +
-                    "(keys present in the backup file) with the values from the selected " +
-                    "file. Unselected modules are left untouched. This can't be undone."
-                )
+                Text(stringResource(R.string.settings_import_dialog_desc))
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -138,8 +138,8 @@ fun SettingsScreen(
                             when (result) {
                                 is SettingsBackup.ImportResult.Success -> {
                                     backupError = null
-                                    backupMessage = "Restored ${result.restoredKeys} setting(s)." +
-                                        (if (result.zramRestored) " ZRAM config restored — reboot to apply." else "")
+                                    backupMessage = context.getString(R.string.settings_import_restored, result.restoredKeys) +
+                                        (if (result.zramRestored) context.getString(R.string.settings_import_zram_restored) else "")
                                 }
                                 is SettingsBackup.ImportResult.Failure -> {
                                     backupMessage = null
@@ -148,13 +148,15 @@ fun SettingsScreen(
                             }
                         } catch (e: Exception) {
                             backupMessage = null
-                            backupError = "Import failed: ${e.javaClass.simpleName}: ${e.message}"
+                            backupError = context.getString(
+                                R.string.settings_import_failed, e.javaClass.simpleName, e.message ?: ""
+                            )
                         }
                     }
-                }) { Text("Import") }
+                }) { Text(stringResource(R.string.settings_import)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingImportUri = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingImportUri = null }) { Text(stringResource(R.string.generic_cancel)) }
             }
         )
     }
@@ -166,13 +168,13 @@ fun SettingsScreen(
             .padding(16.dp)
     ) {
         Text(
-            "Settings",
+            stringResource(R.string.tab_settings),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        SectionHeader("Updates")
+        SectionHeader(stringResource(R.string.settings_updates))
         UpdateCard(
             currentVersion = currentVersionName,
             state = updateState,
@@ -197,10 +199,10 @@ fun SettingsScreen(
                         updateState = if (success) {
                             UpdateState.Installed(release.tagName)
                         } else {
-                            UpdateState.Failed("pm install failed — check logcat tag K2TB-Updater")
+                            UpdateState.Failed(context.getString(R.string.settings_install_failed))
                         }
                     } catch (e: Exception) {
-                        updateState = UpdateState.Failed(e.message ?: "Unknown error during update")
+                        updateState = UpdateState.Failed(e.message ?: context.getString(R.string.settings_update_unknown_error))
                     }
                 }
             }
@@ -208,18 +210,18 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        SectionHeader("Quick Access")
+        SectionHeader(stringResource(R.string.settings_quick_access))
         StatusSettingsRow(
-            title = "Accessibility Service",
-            subtitle = "Enable K2TB's accessibility features",
+            title = stringResource(R.string.settings_accessibility_service),
+            subtitle = stringResource(R.string.settings_accessibility_service_subtitle),
             icon = Icons.Default.Accessibility,
             enabled = accessibilityEnabled
         ) {
             context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         StatusSettingsRow(
-            title = "Notification Access",
-            subtitle = "Enable notification listener",
+            title = stringResource(R.string.settings_notification_access),
+            subtitle = stringResource(R.string.settings_notification_access_subtitle),
             icon = Icons.Default.Notifications,
             enabled = notificationEnabled
         ) {
@@ -229,12 +231,11 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        SectionHeader("Backup & Restore")
+        SectionHeader(stringResource(R.string.settings_backup_restore))
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
                 Text(
-                    "Export your module settings (keyboard, LED, etc.) to a JSON file, " +
-                    "or restore from a previous backup. Pick which modules to include below.",
+                    stringResource(R.string.settings_backup_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -254,7 +255,7 @@ fun SettingsScreen(
                                 }
                             }
                         )
-                        Text(module.label, style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(module.labelRes), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -266,7 +267,7 @@ fun SettingsScreen(
                             exportLauncher.launch("key2toolbox_backup_$timestamp.json")
                         }
                     ) {
-                        Text("Export")
+                        Text(stringResource(R.string.settings_export))
                     }
                     OutlinedButton(
                         enabled = selectedModules.isNotEmpty(),
@@ -274,13 +275,13 @@ fun SettingsScreen(
                             importLauncher.launch(arrayOf("application/json"))
                         }
                     ) {
-                        Text("Import")
+                        Text(stringResource(R.string.settings_import))
                     }
                 }
                 if (selectedModules.isEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Select at least one module above.",
+                        stringResource(R.string.settings_select_module),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -298,7 +299,7 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        SectionHeader("Contributors")
+        SectionHeader(stringResource(R.string.settings_contributors))
         ContributorsSection(
             contributors = contributors,
             error = contributorsError,
@@ -308,14 +309,14 @@ fun SettingsScreen(
         )
 
         Spacer(Modifier.height(24.dp))
-        SectionHeader("About")
+        SectionHeader(stringResource(R.string.settings_about))
         Text(
-            "Key2Toolbox v$currentVersionName",
+            stringResource(R.string.settings_version, currentVersionName),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            "github.com/kgr-online/Key2Toolbox",
+            stringResource(R.string.settings_github_label),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
@@ -364,7 +365,7 @@ private fun StatusSettingsRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                if (enabled) "Enabled" else "Not enabled",
+                if (enabled) stringResource(R.string.generic_enabled) else stringResource(R.string.settings_status_not_enabled),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
                 color = if (enabled) Color(0xFF4CAF50) else Color(0xFFE57373)
@@ -385,17 +386,17 @@ private fun RootStatusRow(rootEnabled: Boolean?) {
     ) {
         Icon(Icons.Default.Security, contentDescription = null, modifier = Modifier.padding(end = 16.dp))
         Column {
-            Text("Root Access", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.settings_root_access), style = MaterialTheme.typography.bodyLarge)
             Text(
-                "Required for system-level modules",
+                stringResource(R.string.settings_root_access_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 when (rootEnabled) {
-                    true -> "Enabled"
-                    false -> "Not enabled"
-                    null -> "Checking…"
+                    true -> stringResource(R.string.generic_enabled)
+                    false -> stringResource(R.string.settings_status_not_enabled)
+                    null -> stringResource(R.string.info_status_checking)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
@@ -437,12 +438,12 @@ private fun UpdateCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Current version", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_current_version), style = MaterialTheme.typography.bodySmall)
                     Text(currentVersion, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 }
                 if (state !is UpdateState.Downloading && state !is UpdateState.Installing) {
                     Button(onClick = onCheckNow) {
-                        Text("Check now")
+                        Text(stringResource(R.string.settings_check_now))
                     }
                 }
             }
@@ -455,18 +456,18 @@ private fun UpdateCard(
                 is UpdateState.Checking -> Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Checking for updates…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_checking_updates), style = MaterialTheme.typography.bodySmall)
                 }
 
                 is UpdateState.UpToDate -> Text(
-                    "You're up to date.",
+                    stringResource(R.string.settings_up_to_date),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 is UpdateState.UpdateAvailable -> Column {
                     Text(
-                        "Update available: ${state.release.tagName}",
+                        stringResource(R.string.settings_update_available, state.release.tagName),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -480,12 +481,12 @@ private fun UpdateCard(
                     }
                     Spacer(Modifier.height(8.dp))
                     Button(onClick = { onInstall(state.release) }) {
-                        Text("Download & install")
+                        Text(stringResource(R.string.settings_download_install))
                     }
                 }
 
                 is UpdateState.Downloading -> Column {
-                    Text("Downloading update…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_downloading), style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.height(4.dp))
                     if (state.progress >= 0) {
                         LinearProgressIndicator(
@@ -500,11 +501,11 @@ private fun UpdateCard(
                 is UpdateState.Installing -> Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
-                    Text("Installing…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_installing), style = MaterialTheme.typography.bodySmall)
                 }
 
                 is UpdateState.Installed -> Text(
-                    "Installed ${state.version}. Restart the app to finish.",
+                    stringResource(R.string.settings_installed, state.version),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -527,7 +528,7 @@ private fun ContributorsSection(
 ) {
     when {
         error != null -> Text(
-            "Couldn't load contributors: $error",
+            stringResource(R.string.settings_contributors_error, error),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -535,11 +536,11 @@ private fun ContributorsSection(
         contributors == null -> Row(verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
             Spacer(Modifier.width(8.dp))
-            Text("Loading contributors…", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.settings_loading_contributors), style = MaterialTheme.typography.bodySmall)
         }
 
         contributors.isEmpty() -> Text(
-            "No contributor data available.",
+            stringResource(R.string.settings_no_contributors),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -574,7 +575,7 @@ private fun ContributorChip(contributor: GitHubContributor, onClick: () -> Unit)
             maxLines = 1
         )
         Text(
-            "${contributor.contributions} commits",
+            stringResource(R.string.settings_commits, contributor.contributions),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1

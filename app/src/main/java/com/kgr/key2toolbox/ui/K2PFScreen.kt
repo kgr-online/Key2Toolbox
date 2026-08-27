@@ -19,7 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.K2PFController
 import com.kgr.key2toolbox.modules.ZramController
 import kotlinx.coroutines.Dispatchers
@@ -57,34 +59,29 @@ fun K2PFScreen(onBack: () -> Unit) {
 
     ScreenScaffold(title = Screen.K2PF.title, onBack = onBack) {
         when (installed) {
-            null -> Text("Checking for bb-prodfix module…")
+            null -> Text(stringResource(R.string.k2pf_checking))
 
             false -> {
                 Text(
-                    "The bb-prodfix (BBProdFix) module is not installed.",
+                    stringResource(R.string.k2pf_not_installed),
                     color = Color(0xFFE57373)
                 )
                 Text(
-                    "Install the BBProdFix Magisk/APatch module to access these settings. " +
-                        "Once installed, return here to manage its tweaks.",
+                    stringResource(R.string.k2pf_install_instructions),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
             true -> {
                 Text(
-                    "Manage BBProdFix module settings here. Changes to system props " +
-                        "require a reboot to take effect.",
+                    stringResource(R.string.k2pf_intro),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 K2PFToggle(
-                    title = "BlackBerry Device Identity",
-                    description = "Forces ro.product.* props to BlackBerry values " +
-                        "(brand=blackberry, model=KEY2, manufacturer=BlackBerry). " +
-                        "Required by some BB-specific apps to verify they're running " +
-                        "on a Key2. Your ROM may already set these correctly.",
+                    title = stringResource(R.string.k2pf_identity_title),
+                    description = stringResource(R.string.k2pf_identity_desc),
                     checked = productProps,
                     busy = busy,
                     rebootRequired = true
@@ -98,10 +95,8 @@ fun K2PFScreen(onBack: () -> Unit) {
                 }
 
                 K2PFToggle(
-                    title = "Bluetooth A2DP Offload",
-                    description = "Moves Bluetooth audio processing to the DSP. " +
-                        "Improves audio quality and battery life on BT headphones. " +
-                        "Persist props apply live; audio stack restart may be needed.",
+                    title = stringResource(R.string.k2pf_a2dp_title),
+                    description = stringResource(R.string.k2pf_a2dp_desc),
                     checked = a2dp,
                     busy = busy,
                     rebootRequired = false
@@ -115,9 +110,8 @@ fun K2PFScreen(onBack: () -> Unit) {
                 }
 
                 K2PFToggle(
-                    title = "Extended Volume Steps",
-                    description = "14 call volume steps and 30 media volume steps " +
-                        "instead of the Android defaults (7 and 15).",
+                    title = stringResource(R.string.k2pf_volume_steps_title),
+                    description = stringResource(R.string.k2pf_volume_steps_desc),
                     checked = volumeSteps,
                     busy = busy,
                     rebootRequired = true
@@ -131,9 +125,8 @@ fun K2PFScreen(onBack: () -> Unit) {
                 }
 
                 K2PFToggle(
-                    title = "SurfaceFlinger Triple Buffering",
-                    description = "Allows SurfaceFlinger to hold 3 frame buffers " +
-                        "instead of 2. Can reduce jank under GPU load.",
+                    title = stringResource(R.string.k2pf_triple_buffer_title),
+                    description = stringResource(R.string.k2pf_triple_buffer_desc),
                     checked = tripleBuffer,
                     busy = busy,
                     rebootRequired = true
@@ -147,10 +140,8 @@ fun K2PFScreen(onBack: () -> Unit) {
                 }
 
                 K2PFToggle(
-                    title = "Background App Limit (60)",
-                    description = "Tells the Qualcomm process manager to allow up to " +
-                        "60 background apps before killing them. Stock Android is " +
-                        "much more aggressive.",
+                    title = stringResource(R.string.k2pf_bg_app_limit_title),
+                    description = stringResource(R.string.k2pf_bg_app_limit_desc),
                     checked = bgAppLimit,
                     busy = busy,
                     rebootRequired = true
@@ -169,27 +160,28 @@ fun K2PFScreen(onBack: () -> Unit) {
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text("Swappiness", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.zram_swappiness), style = MaterialTheme.typography.titleMedium)
 
                         if (k2tbOwnsSwappiness) {
                             Text(
-                                "Key2 Toolbox is managing swappiness via the ZRAM module. " +
-                                    "BBProdFix swappiness is disabled — configure it in the ZRAM screen.",
+                                stringResource(R.string.k2pf_swappiness_owned_by_zram),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
                             Text(
-                                "Current value in BBProdFix service.sh: ${swappiness ?: "not set"}. " +
-                                    "Changes apply on next boot.",
+                                stringResource(
+                                    R.string.k2pf_swappiness_current,
+                                    swappiness?.toString() ?: stringResource(R.string.generic_not_set)
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
                             listOf(
-                                60 to "60 — Conservative (recommended)",
-                                80 to "80 — Balanced",
-                                100 to "100 — Aggressive"
+                                60 to stringResource(R.string.k2pf_swappiness_conservative),
+                                80 to stringResource(R.string.k2pf_swappiness_balanced),
+                                100 to stringResource(R.string.k2pf_swappiness_aggressive)
                             ).forEach { (value, label) ->
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -238,7 +230,7 @@ private fun K2PFToggle(
                 Text(description, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (rebootRequired) {
-                    Text("Reboot required", style = MaterialTheme.typography.labelSmall,
+                    Text(stringResource(R.string.k2pf_reboot_required), style = MaterialTheme.typography.labelSmall,
                         color = Color(0xFFFFB74D))
                 }
             }

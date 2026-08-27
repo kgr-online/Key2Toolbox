@@ -16,7 +16,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.LocationIdleController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,8 +43,8 @@ fun LocationIdleScreen(onBack: () -> Unit) {
             running = LocationIdleController.isRunning()
             busy = false
             statusMessage = if (newEnabled)
-                "Location will turn off after $newMinutes min with no active GPS fix."
-            else "Auto-disable off. Location stays as you set it."
+                context.getString(R.string.location_idle_status_enabled, newMinutes)
+            else context.getString(R.string.location_idle_status_disabled)
         }
     }
 
@@ -62,12 +64,15 @@ fun LocationIdleScreen(onBack: () -> Unit) {
     }
 
     ScreenScaffold(title = Screen.LocationIdle.title, onBack = onBack) {
-        val state = (if (enabled) "On" else "Off") +
-            if (enabled && !running) " (starts at next boot)" else ""
-        Text("State: $state")
+        val onOff = stringResource(if (enabled) R.string.generic_state_on else R.string.generic_state_off)
+        Text(
+            if (enabled && !running)
+                stringResource(R.string.generic_state_pending_boot, onOff)
+            else stringResource(R.string.generic_state, onOff)
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text(stringResource(R.string.generic_enabled))
             Switch(
                 checked = enabled,
                 enabled = !busy,
@@ -75,7 +80,7 @@ fun LocationIdleScreen(onBack: () -> Unit) {
             )
         }
 
-        Text("Turn off after", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.bt_idle_turn_off_after), style = MaterialTheme.typography.titleSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LocationIdleController.TIMEOUT_OPTIONS.forEach { opt ->
                 FilterChip(
@@ -85,7 +90,12 @@ fun LocationIdleScreen(onBack: () -> Unit) {
                         minutes = opt
                         if (enabled) apply(true, opt)
                     },
-                    label = { Text(if (opt >= 60) "${opt / 60} h" else "$opt min") }
+                    label = {
+                        Text(
+                            if (opt >= 60) stringResource(R.string.generic_hours, opt / 60)
+                            else stringResource(R.string.generic_minutes, opt)
+                        )
+                    }
                 )
             }
         }
@@ -96,9 +106,7 @@ fun LocationIdleScreen(onBack: () -> Unit) {
 
         DescriptionDivider()
         Text(
-            "Turns Location off after a period with no active GPS fix (navigation, ride-hailing " +
-                "pickup, camera geotag...). Background low-power location checks from Google Play " +
-                "services don't count as \"active\" and won't keep resetting the timer.",
+            stringResource(R.string.desc_location_idle),
             style = MaterialTheme.typography.bodySmall
         )
     }

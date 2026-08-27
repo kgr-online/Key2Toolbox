@@ -30,8 +30,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.AutoFocusController
 import com.kgr.key2toolbox.service.Key2AccessibilityService
 import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
@@ -86,22 +88,19 @@ fun AutoFocusScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Back") }
+            TextButton(onClick = onBack) { Text(stringResource(R.string.generic_back)) }
         }
         Text(Screen.AutoFocus.title, style = MaterialTheme.typography.headlineSmall)
 
         AccessibilityServiceBanner(serviceEnabled)
 
         Text(
-            "In the selected apps, the first physical keypress on a screen with nothing " +
-                "focused finds the first editable text field, focuses it, and replays the key " +
-                "into it - handy for dialers and messaging apps that otherwise need a tap " +
-                "first. Uses the accessibility service only, no root.",
+            stringResource(R.string.desc_auto_focus),
             style = MaterialTheme.typography.bodySmall
         )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enable Auto-Focus")
+            Text(stringResource(R.string.enable_auto_focus))
             Switch(
                 checked = enabled,
                 onCheckedChange = { checked ->
@@ -116,7 +115,7 @@ fun AutoFocusScreen(onBack: () -> Unit) {
             onValueChange = { query = it },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            label = { Text("Search apps") }
+            label = { Text(stringResource(R.string.generic_search_apps)) }
         )
 
         when (val list = apps) {
@@ -127,7 +126,7 @@ fun AutoFocusScreen(onBack: () -> Unit) {
 
             else -> {
                 Text(
-                    "${selected.size} selected of ${list.size} apps",
+                    stringResource(R.string.generic_selected_of_apps, selected.size, list.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

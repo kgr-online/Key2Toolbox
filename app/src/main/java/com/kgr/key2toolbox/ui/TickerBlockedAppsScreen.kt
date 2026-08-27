@@ -29,8 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.TickerSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -75,16 +77,16 @@ fun TickerBlockedAppsScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Back") }
+            TextButton(onClick = onBack) { Text(stringResource(R.string.generic_back)) }
         }
-        Text("Blocked apps", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.ticker_blocked_apps_label), style = MaterialTheme.typography.headlineSmall)
 
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            label = { Text("Search apps") }
+            label = { Text(stringResource(R.string.generic_search_apps)) }
         )
 
         when (val list = apps) {
@@ -95,7 +97,7 @@ fun TickerBlockedAppsScreen(onBack: () -> Unit) {
 
             else -> {
                 Text(
-                    "${selected.size} blocked of ${list.size} apps",
+                    stringResource(R.string.ticker_blocked_apps_of_total, selected.size, list.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

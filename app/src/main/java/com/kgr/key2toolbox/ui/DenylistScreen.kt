@@ -26,7 +26,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.DenylistController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -139,12 +141,9 @@ fun DenylistScreen(onBack: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Manage from K2TB", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.denylist_manage_title), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Adds/removes apps from Magisk's DenyList and Zygisk-Hide's " +
-                                "config together. Leave off if you manage these " +
-                                "independently (FolkPatch, APatch, HMA, etc.) - K2TB " +
-                                "won't touch either list unless this is on.",
+                            stringResource(R.string.denylist_manage_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -162,22 +161,20 @@ fun DenylistScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(8.dp))
                     if (!magiskAvailable) {
                         Text(
-                            "Magisk not detected - only Zygisk-Hide will be managed here.",
+                            stringResource(R.string.denylist_no_magisk),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
                     } else if (!magiskEnforced) {
                         Text(
-                            "Magisk's DenyList enforcement is currently OFF globally - " +
-                                "toggles below will still add/remove entries, but they " +
-                                "won't take effect until enforcement is turned on in Magisk.",
+                            stringResource(R.string.denylist_magisk_not_enforced),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
                     }
                     if (!zygiskHideInstalled) {
                         Text(
-                            "Zygisk-Hide not detected - only Magisk's DenyList will be managed here.",
+                            stringResource(R.string.denylist_no_zygisk_hide),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
@@ -193,15 +190,14 @@ fun DenylistScreen(onBack: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("HMA-OSS", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.denylist_hma_title), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "App-list hiding, settings hiding, and install-source " +
-                                "spoofing are managed separately in HMA-OSS's own app.",
+                            stringResource(R.string.denylist_hma_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    TextButton(onClick = ::openHmaOss) { Text("Open") }
+                    TextButton(onClick = ::openHmaOss) { Text(stringResource(R.string.denylist_open)) }
                 }
             }
         }
@@ -210,7 +206,7 @@ fun DenylistScreen(onBack: () -> Unit) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Search apps") },
+                label = { Text(stringResource(R.string.generic_search_apps)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -218,12 +214,12 @@ fun DenylistScreen(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Show system apps", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.battery_usage_show_system), style = MaterialTheme.typography.bodyMedium)
                 Switch(checked = showSystemApps, onCheckedChange = { showSystemApps = it })
             }
 
             if (loading) {
-                Text("Loading apps...", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.tagger_loading_apps), style = MaterialTheme.typography.bodyMedium)
             } else {
                 val filtered = apps.filter {
                     searchQuery.isBlank() ||
@@ -231,7 +227,7 @@ fun DenylistScreen(onBack: () -> Unit) {
                         it.packageName.contains(searchQuery, ignoreCase = true)
                 }
                 Text(
-                    "${filtered.size} apps",
+                    stringResource(R.string.tagger_count, filtered.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -247,7 +243,7 @@ fun DenylistScreen(onBack: () -> Unit) {
             }
         } else {
             Text(
-                "Turn on \"Manage from K2TB\" above to see and edit your app list.",
+                stringResource(R.string.denylist_disabled_hint, stringResource(R.string.denylist_manage_title)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -275,13 +271,13 @@ private fun AppRowCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 if (showMagisk) {
                     Row {
-                        Text("Magisk", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.denylist_magisk_label), style = MaterialTheme.typography.bodySmall)
                         Switch(checked = app.magiskDenied, onCheckedChange = onMagiskToggle)
                     }
                 }
                 if (showZygiskHide) {
                     Row {
-                        Text("Zygisk-Hide", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.denylist_zygisk_hide_label), style = MaterialTheme.typography.bodySmall)
                         Switch(checked = app.zygiskHideHidden, onCheckedChange = onZygiskHideToggle)
                     }
                 }

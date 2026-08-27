@@ -399,4 +399,129 @@
     <string name="info_status_granted">Granted</string>
     <string name="info_status_not_granted">Not granted</string>
     <string name="battery_status_unknown">Unknown</string>
+
+    <!-- ===== Localization Wave 2 ===== -->
+    <!-- Physical Keyboard Fixes (Ctrl / SYM key) -->
+    <string name="ctrl_key_live_ctrl_keymap">Live Ctrl keymap: %1$s</string>
+    <string name="ctrl_key_ctrl_persisted">Ctrl persisted: %1$s</string>
+    <string name="ctrl_key_enable_ctrl_remap">Enable Ctrl remap</string>
+    <string name="ctrl_key_status_ctrl_enable_failed">Failed to enable Ctrl remap: %1$s</string>
+    <string name="ctrl_key_status_ctrl_disable_failed">Failed to disable Ctrl remap: %1$s</string>
+    <string name="ctrl_key_status_ctrl_staged">Ctrl remap staged. Reboot your device for this to take effect.</string>
+    <string name="ctrl_key_status_ctrl_unstaged">Ctrl remap un-staged. Reboot your device for this to take effect.</string>
+    <string name="ctrl_key_status_ctrl_enabled">Ctrl remap enabled. Persisted: %1$s.</string>
+    <string name="ctrl_key_status_ctrl_disabled">Ctrl remap disabled. Persisted: %1$s.</string>
+    <string name="ctrl_key_persist_ok">yes</string>
+    <string name="ctrl_key_persist_fail">NO - check service.d write permissions</string>
+    <string name="ctrl_key_sym_desc">Fixes the physical SYM key, which some ROM builds map incorrectly (the symbol picker won\'t open until this is fixed).</string>
+    <string name="ctrl_key_live_sym_keymap">Live SYM keymap: %1$s</string>
+    <string name="ctrl_key_sym_fix_persisted">SYM fix persisted: %1$s</string>
+    <string name="ctrl_key_enable_sym_fix">Enable SYM fix</string>
+    <string name="ctrl_key_status_sym_enable_failed">Failed to enable SYM fix: %1$s</string>
+    <string name="ctrl_key_status_sym_disable_failed">Failed to disable SYM fix: %1$s</string>
+    <string name="ctrl_key_status_sym_staged">SYM fix staged. Reboot your device for this to take effect.</string>
+    <string name="ctrl_key_status_sym_unstaged">SYM fix un-staged. Reboot your device for this to take effect.</string>
+    <string name="ctrl_key_status_sym_enabled">SYM fix enabled.</string>
+    <string name="ctrl_key_status_sym_disabled">SYM fix disabled.</string>
+    <string name="ctrl_key_sym_native">SYM already works natively on this device - no fix needed.</string>
+
+    <!-- IME Suggestions -->
+    <string name="ime_suggestions_requires_ctrl_key">Needs a physical key remapped to Ctrl - there\'s no Ctrl key otherwise.</string>
+    <string name="ime_suggestions_open_ctrl_key">Open Physical Keyboard Fixes</string>
+
+    <!-- Chat Enter-to-Send -->
+    <string name="chat_composer_desc">In supported chat and messaging apps, press Enter to send the message and Alt+Enter (or Shift+Enter) to add a new line - so a physical Enter posts instead of inserting a linebreak. Works in Messages, WhatsApp, Telegram, Signal, Element/Matrix, Mattermost, Wallapop, ChatGPT and Perplexity. No root needed - uses the accessibility service only.</string>
+
+    <!-- ZRAM (localization wave 2: display) -->
+    <string name="zram_persisted_summary">%1$s, %2$s, swappiness=%3$d</string>
+    <string name="zram_rom_default">%1$s  (ROM default)</string>
+    <string name="zram_rom_default_value">ROM default: %1$d</string>
+
+    <!-- Auto-disable Location -->
+    <string name="location_idle_status_enabled">Location will turn off after %1$d min with no active GPS fix.</string>
+    <string name="location_idle_status_disabled">Auto-disable off. Location stays as you set it.</string>
+    <string name="desc_location_idle">Turns Location off after a period with no active GPS fix (navigation, ride-hailing pickup, camera geotag...). Background low-power location checks from Google Play services don\'t count as \"active\" and won\'t keep resetting the timer.</string>
+
+    <!-- AdBlock -->
+    <string name="adblock_command_failed">Command failed</string>
+    <string name="adblock_cd_back">Back</string>
+    <string name="adblock_cd_remove">Remove</string>
+    <string name="adblock_cd_remove_source">Remove source</string>
+    <string name="adblock_reset_dialog_title">Reset to defaults?</string>
+    <string name="adblock_reset_dialog_desc">Removes all sources, added/removed/whitelisted domains, and reverts to the bundled default blacklist. This can\'t be undone.</string>
+    <string name="adblock_reset_confirm">Reset</string>
+    <string name="adblock_reset_done">Reset to defaults.</string>
+    <string name="adblock_reset_button">Reset to defaults</string>
+    <string name="adblock_not_installed_desc">AdBlock isn\'t installed yet. This deploys a systemless-hosts module that overlays /system/etc/hosts with a compiled blacklist.</string>
+    <string name="adblock_install">Install</string>
+    <string name="adblock_installed_message">Installed. Reboot to activate filtering.</string>
+    <string name="adblock_reboot_required">Reboot required to activate the hosts overlay. Content edits below will apply automatically once you\'ve rebooted.</string>
+    <string name="adblock_filtering_title">Filtering</string>
+    <string name="adblock_blocked_entries">%1$d blocked entries</string>
+    <string name="adblock_section_manage_entries">Manage Entries</string>
+    <string name="adblock_search_label">Search blocked domains</string>
+    <string name="adblock_add_domain_label">Add domain or *.glob</string>
+    <string name="adblock_add">Add</string>
+    <string name="adblock_section_whitelist">Whitelist</string>
+    <string name="adblock_whitelist_desc">Domains here are never blocked, even if a source or manual entry includes them.</string>
+    <string name="adblock_whitelist_input_label">Whitelist domain or *.glob</string>
+    <string name="adblock_section_sources">Sources</string>
+    <string name="adblock_source_url_label">Source URL (hosts or domain list)</string>
+    <string name="adblock_update_sources_now">Update sources now</string>
+    <string name="adblock_section_danger_zone">Danger Zone</string>
+    <string name="adblock_update_status_updating">Updating…</string>
+    <string name="adblock_update_status_done">Up to date</string>
+    <string name="adblock_update_status_error">Error: %1$s</string>
+
+    <!-- Denylist Manager -->
+    <string name="denylist_manage_title">Manage from K2TB</string>
+    <string name="denylist_manage_desc">Adds/removes apps from Magisk\'s DenyList and Zygisk-Hide\'s config together. Leave off if you manage these independently (FolkPatch, APatch, HMA, etc.) - K2TB won\'t touch either list unless this is on.</string>
+    <string name="denylist_no_magisk">Magisk not detected - only Zygisk-Hide will be managed here.</string>
+    <string name="denylist_magisk_not_enforced">Magisk\'s DenyList enforcement is currently OFF globally - toggles below will still add/remove entries, but they won\'t take effect until enforcement is turned on in Magisk.</string>
+    <string name="denylist_no_zygisk_hide">Zygisk-Hide not detected - only Magisk\'s DenyList will be managed here.</string>
+    <string name="denylist_hma_title">HMA-OSS</string>
+    <string name="denylist_hma_desc">App-list hiding, settings hiding, and install-source spoofing are managed separately in HMA-OSS\'s own app.</string>
+    <string name="denylist_open">Open</string>
+    <string name="denylist_magisk_label">Magisk</string>
+    <string name="denylist_zygisk_hide_label">Zygisk-Hide</string>
+    <string name="denylist_disabled_hint">Turn on \"%1$s\" above to see and edit your app list.</string>
+
+    <!-- LED Notify Colors -->
+    <string name="led_notify_respect_dnd">Respect Do Not Disturb</string>
+    <string name="led_notify_respect_dnd_desc">On by default. Suppresses the LED whenever DND is enabled.</string>
+    <string name="led_notify_respect_battery_saver">Respect Battery Saver</string>
+    <string name="led_notify_respect_battery_saver_desc">On by default. Suppresses the LED whenever battery saver is active.</string>
+    <string name="led_notify_ack">Notification Acknowledgement</string>
+    <string name="led_notify_ack_desc">Off by default. Skips re-blinking notifications you\'ve already seen on the lock screen.</string>
+    <string name="led_notify_min_importance">Minimum importance to light the LED</string>
+    <string name="led_notify_min_importance_desc">Change this setting if you are having phantom LED light ups - likely due to muted chats.</string>
+    <string name="led_notify_importance_any">Any importance</string>
+    <string name="led_notify_importance_low">Low and above</string>
+    <string name="led_notify_importance_default">Default and above</string>
+    <string name="led_notify_importance_high">High only</string>
+
+    <!-- Settings tab (wave 2) -->
+    <string name="settings_backup_restore">Backup &amp; Restore</string>
+    <string name="settings_backup_desc">Export your module settings (keyboard, LED, etc.) to a JSON file, or restore from a previous backup. Pick which modules to include below.</string>
+    <string name="settings_export">Export</string>
+    <string name="settings_import">Import</string>
+    <string name="settings_select_module">Select at least one module above.</string>
+    <string name="settings_export_success">Settings exported successfully.</string>
+    <string name="settings_export_failed">Export failed: %1$s: %2$s</string>
+    <string name="settings_import_dialog_title">Import settings?</string>
+    <string name="settings_import_dialog_desc">This will overwrite your current settings for the selected module(s) (keys present in the backup file) with the values from the selected file. Unselected modules are left untouched. This can\'t be undone.</string>
+    <string name="settings_import_restored">Restored %1$d setting(s).</string>
+    <string name="settings_import_zram_restored"> ZRAM config restored — reboot to apply.</string>
+    <string name="settings_import_failed">Import failed: %1$s: %2$s</string>
+    <string name="settings_github_label">github.com/kgr-online/Key2Toolbox</string>
+    <string name="settings_status_not_enabled">Not enabled</string>
+    <string name="settings_root_access">Root Access</string>
+    <string name="settings_root_access_subtitle">Required for system-level modules</string>
+    <string name="settings_backup_module_pin_keyboard">PIN Keyboard</string>
+    <string name="settings_backup_module_nav_lock">Nav Lock</string>
+    <string name="settings_backup_module_ime_block">ImeBlock</string>
+    <string name="settings_backup_module_led_notify">LED Notify</string>
+    <string name="settings_backup_module_zram">ZRAM</string>
+    <string name="settings_backup_module_adblock">AdBlock</string>
+
 </resources>

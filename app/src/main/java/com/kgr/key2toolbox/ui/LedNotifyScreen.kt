@@ -43,8 +43,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.modules.LedNotifyManager
 import com.kgr.key2toolbox.service.LedNotifyListenerService
@@ -65,12 +67,20 @@ private val FLASH_LENGTH_OPTIONS_MS = listOf(250, 500, 1000, 2000)
  * uses NONE(0) as the threshold, which passes every real importance value
  * a notification can have - i.e. no filtering, not a special sentinel.
  */
-private val IMPORTANCE_THRESHOLD_OPTIONS: List<Pair<String, Int>> = listOf(
-    "Any importance" to NotificationManager.IMPORTANCE_NONE,
-    "Low and above" to NotificationManager.IMPORTANCE_LOW,
-    "Default and above" to NotificationManager.IMPORTANCE_DEFAULT,
-    "High only" to NotificationManager.IMPORTANCE_HIGH
+private val IMPORTANCE_THRESHOLD_OPTIONS: List<Int> = listOf(
+    NotificationManager.IMPORTANCE_NONE,
+    NotificationManager.IMPORTANCE_LOW,
+    NotificationManager.IMPORTANCE_DEFAULT,
+    NotificationManager.IMPORTANCE_HIGH
 )
+
+@Composable
+private fun importanceLabel(value: Int): String = when (value) {
+    NotificationManager.IMPORTANCE_LOW -> stringResource(R.string.led_notify_importance_low)
+    NotificationManager.IMPORTANCE_DEFAULT -> stringResource(R.string.led_notify_importance_default)
+    NotificationManager.IMPORTANCE_HIGH -> stringResource(R.string.led_notify_importance_high)
+    else -> stringResource(R.string.led_notify_importance_any)
+}
 
 /** Swatches offered per app. "None" (null) clears the assignment. */
 private val PALETTE: List<Pair<String, Color?>> = listOf(
@@ -198,15 +208,12 @@ fun LedNotifyScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Back") }
+            TextButton(onClick = onBack) { Text(stringResource(R.string.generic_back)) }
         }
         Text(Screen.LedNotify.title, style = MaterialTheme.typography.headlineSmall)
 
         Text(
-            "Assign a raw LED color per app, written straight to the LED " +
-                "hardware - this bypasses LineageOS's own notification light " +
-                "color picker, whose colors don't come out accurate on this " +
-                "device. Needs root and notification access.",
+            stringResource(R.string.desc_led_notify),
             style = MaterialTheme.typography.bodySmall
         )
 
@@ -214,15 +221,15 @@ fun LedNotifyScreen(onBack: () -> Unit) {
 
         when (rootAvailable) {
             null -> {}
-            false -> WarningLine("Root not available - LED writes will fail.")
+            false -> WarningLine(stringResource(R.string.led_notify_no_root))
             true -> when (ledAvailable) {
-                false -> WarningLine("No supported LED device found on this ROM/kernel.")
+                false -> WarningLine(stringResource(R.string.led_notify_no_led_device))
                 else -> {}
             }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enable LED Notify")
+            Text(stringResource(R.string.led_notify_enable))
             Switch(
                 checked = featureEnabled,
                 onCheckedChange = { checked ->
@@ -241,9 +248,9 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                Text("Flash while screen is on")
+                Text(stringResource(R.string.led_notify_flash_while_on))
                 Text(
-                    "Off by default.",
+                    stringResource(R.string.led_notify_flash_while_on_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -265,9 +272,9 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                Text("Respect Do Not Disturb")
+                Text(stringResource(R.string.led_notify_respect_dnd))
                 Text(
-                    "On by default. Suppresses the LED whenever DND is enabled.",
+                    stringResource(R.string.led_notify_respect_dnd_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -289,9 +296,9 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                Text("Respect Battery Saver")
+                Text(stringResource(R.string.led_notify_respect_battery_saver))
                 Text(
-                    "On by default. Suppresses the LED whenever battery saver is active.",
+                    stringResource(R.string.led_notify_respect_battery_saver_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -313,10 +320,9 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                Text("Notification Acknowledgement")
+                Text(stringResource(R.string.led_notify_ack))
                 Text(
-                    "Off by default. Skips re-blinking notifications you've " +
-                        "already seen on the lock screen.",
+                    stringResource(R.string.led_notify_ack_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -333,10 +339,9 @@ fun LedNotifyScreen(onBack: () -> Unit) {
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Minimum importance to light the LED")
+            Text(stringResource(R.string.led_notify_min_importance))
             Text(
-                "Change this setting if you are having phantom LED light " +
-                    "ups - likely due to muted chats.",
+                stringResource(R.string.led_notify_min_importance_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -344,9 +349,9 @@ fun LedNotifyScreen(onBack: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.horizontalScroll(rememberScrollState())
             ) {
-                IMPORTANCE_THRESHOLD_OPTIONS.forEach { (label, value) ->
+                IMPORTANCE_THRESHOLD_OPTIONS.forEach { value ->
                     SelectableChip(
-                        label = label,
+                        label = importanceLabel(value),
                         selected = minImportance == value,
                         onClick = {
                             minImportance = value
@@ -360,7 +365,7 @@ fun LedNotifyScreen(onBack: () -> Unit) {
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Flash length")
+            Text(stringResource(R.string.led_notify_flash_length))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FLASH_LENGTH_OPTIONS_MS.forEach { ms ->
                     FlashLengthChip(
@@ -376,10 +381,10 @@ fun LedNotifyScreen(onBack: () -> Unit) {
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("When multiple notifications are active")
+            Text(stringResource(R.string.led_notify_multiple_active))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SelectableChip(
-                    label = "Show only the most recent",
+                    label = stringResource(R.string.led_notify_most_recent),
                     selected = !cycleMode,
                     onClick = {
                         cycleMode = false
@@ -387,7 +392,7 @@ fun LedNotifyScreen(onBack: () -> Unit) {
                     }
                 )
                 SelectableChip(
-                    label = "Cycle through colors",
+                    label = stringResource(R.string.led_notify_cycle_colors),
                     selected = cycleMode,
                     onClick = {
                         cycleMode = true
@@ -402,7 +407,7 @@ fun LedNotifyScreen(onBack: () -> Unit) {
             onValueChange = { query = it },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            label = { Text("Search apps") }
+            label = { Text(stringResource(R.string.generic_search_apps)) }
         )
 
         when (val list = apps) {
@@ -413,7 +418,7 @@ fun LedNotifyScreen(onBack: () -> Unit) {
 
             else -> {
                 Text(
-                    "$assignedCount of ${list.size} apps have a color assigned",
+                    stringResource(R.string.led_notify_assigned_count, assignedCount, list.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -465,7 +470,7 @@ private fun WarningLine(message: String) {
 @Composable
 private fun NotificationAccessBanner(enabled: Boolean) {
     if (enabled) {
-        Text("Notification access: enabled", color = Color(0xFF81C784))
+        Text(stringResource(R.string.notification_access_enabled), color = Color(0xFF81C784))
         return
     }
     val context = LocalContext.current
@@ -475,14 +480,14 @@ private fun NotificationAccessBanner(enabled: Boolean) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "This feature needs notification access granted.",
+                stringResource(R.string.notification_access_required),
                 color = Color(0xFFE57373),
                 style = MaterialTheme.typography.bodyMedium
             )
             TextButton(onClick = {
                 context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             }) {
-                Text("Open Notification Access Settings")
+                Text(stringResource(R.string.notification_access_open_settings))
             }
         }
     }
@@ -530,7 +535,8 @@ private fun Swatch(name: String, color: Color?, isSelected: Boolean, onClick: ()
 
 @Composable
 private fun FlashLengthChip(ms: Int, selected: Boolean, onClick: () -> Unit) {
-    val label = if (ms >= 1000) "${ms / 1000}s" else "${ms}ms"
+    val label = if (ms >= 1000) stringResource(R.string.generic_seconds, ms / 1000)
+    else stringResource(R.string.generic_milliseconds, ms)
     SelectableChip(label = label, selected = selected, onClick = onClick)
 }
 

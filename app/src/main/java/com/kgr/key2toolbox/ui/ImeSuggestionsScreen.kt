@@ -14,7 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.CtrlKeyController
 import com.kgr.key2toolbox.service.Key2AccessibilityService
 import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
@@ -46,14 +48,14 @@ fun ImeSuggestionsScreen(onBack: () -> Unit, onNavigateToCtrlKey: () -> Unit) {
 
         if (!ctrlRemapped) {
             RequirementBanner(
-                message = "Needs a physical key remapped to Ctrl - there's no Ctrl key otherwise.",
-                actionLabel = "Open Physical Keyboard Fixes",
+                message = stringResource(R.string.ime_suggestions_requires_ctrl_key),
+                actionLabel = stringResource(R.string.ime_suggestions_open_ctrl_key),
                 onAction = onNavigateToCtrlKey
             )
         }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text(stringResource(R.string.generic_enabled))
             Switch(
                 checked = enabled,
                 onCheckedChange = { checked ->
@@ -65,10 +67,7 @@ fun ImeSuggestionsScreen(onBack: () -> Unit, onNavigateToCtrlKey: () -> Unit) {
 
         DescriptionDivider()
         Text(
-            "Press Ctrl+W, Ctrl+E, or Ctrl+R to pick suggestion 1, 2, or 3 from the physical " +
-                "keyboard's candidate strip (BlackBerry Keyboard, Harpocrat, and similar). Only " +
-                "acts when a suggestion is actually showing, so Ctrl+W/E/R still behave normally " +
-                "elsewhere (e.g. closing a browser tab). No root required.",
+            stringResource(R.string.desc_ime_suggestions),
             style = MaterialTheme.typography.bodySmall
         )
     }

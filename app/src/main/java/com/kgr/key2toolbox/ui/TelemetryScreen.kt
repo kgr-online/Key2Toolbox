@@ -21,7 +21,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.TelemetryController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -67,20 +69,20 @@ fun TelemetryScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Protection Status", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.telemetry_protection_status), style = MaterialTheme.typography.titleMedium)
                 Text(
                     text = when {
-                        blockedApps > 0 && blockedApps == totalApps -> "Status: Fully Protected"
-                        blockedApps > 0 -> "Status: Partially Protected"
-                        else -> "Status: Unprotected"
+                        blockedApps > 0 && blockedApps == totalApps -> stringResource(R.string.telemetry_status_fully_protected)
+                        blockedApps > 0 -> stringResource(R.string.telemetry_status_partially_protected)
+                        else -> stringResource(R.string.telemetry_status_unprotected)
                     },
                     color = if (blockedApps > 0 && blockedApps == totalApps)
                         MaterialTheme.colorScheme.primary
                     else
                         MaterialTheme.colorScheme.error
                 )
-                Text("Detected apps with telemetry: $totalApps")
-                Text("Blocked apps: $blockedApps")
+                Text(stringResource(R.string.telemetry_detected_apps, totalApps))
+                Text(stringResource(R.string.telemetry_blocked_apps, blockedApps))
             }
         }
 
@@ -89,7 +91,7 @@ fun TelemetryScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Enable at Boot")
+            Text(stringResource(R.string.enable_at_boot))
             Switch(
                 checked = enabled,
                 enabled = !busy,
@@ -100,9 +102,9 @@ fun TelemetryScreen(onBack: () -> Unit) {
                         TelemetryController.setEnabled(context, it)
                         busy = false
                         statusMessage = if (it)
-                            "Auto-block enabled. Will run on every boot."
+                            context.getString(R.string.status_telemetry_enabled)
                         else
-                            "Auto-block disabled."
+                            context.getString(R.string.status_telemetry_disabled)
                     }
                 }
             )
@@ -120,12 +122,12 @@ fun TelemetryScreen(onBack: () -> Unit) {
                         TelemetryController.applyLive()
                         refreshCounts()
                         busy = false
-                        statusMessage = "Toggled telemetry off for all detected apps."
+                        statusMessage = context.getString(R.string.status_telemetry_toggled)
                     }
                 },
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Block all telemetry now")
+                Text(stringResource(R.string.telemetry_block_now))
             }
         }
 
@@ -135,9 +137,7 @@ fun TelemetryScreen(onBack: () -> Unit) {
 
         DescriptionDivider()
         Text(
-            "Globally deactivates Firebase Crashlytics collection system-wide. This halts " +
-                "background crash-log packaging and upload triggers, saving mobile data, RAM, " +
-                "and wakeup cycles.",
+            stringResource(R.string.desc_telemetry),
             style = MaterialTheme.typography.bodySmall
         )
     }

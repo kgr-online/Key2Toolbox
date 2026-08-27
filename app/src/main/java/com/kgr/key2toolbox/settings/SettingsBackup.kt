@@ -50,13 +50,13 @@ import java.util.Locale
 object SettingsBackup {
 
     /** Modules the backup/restore UI lets the user select individually. */
-    enum class BackupModule(val label: String) {
-        PIN_KEYBOARD("PIN Keyboard"),
-        NAV_LOCK("Nav Lock"),
-        IME_BLOCK("ImeBlock"),
-        LED_NOTIFY("LED Notify"),
-        ZRAM("ZRAM"),
-        AD_BLOCK("AdBlock")
+    enum class BackupModule(@androidx.annotation.StringRes val labelRes: Int) {
+        PIN_KEYBOARD(com.kgr.key2toolbox.R.string.settings_backup_module_pin_keyboard),
+        NAV_LOCK(com.kgr.key2toolbox.R.string.settings_backup_module_nav_lock),
+        IME_BLOCK(com.kgr.key2toolbox.R.string.settings_backup_module_ime_block),
+        LED_NOTIFY(com.kgr.key2toolbox.R.string.settings_backup_module_led_notify),
+        ZRAM(com.kgr.key2toolbox.R.string.settings_backup_module_zram),
+        AD_BLOCK(com.kgr.key2toolbox.R.string.settings_backup_module_adblock)
     }
 
     /** Which BackupModule owns each key in the shared "key2tweaks" prefs file. */

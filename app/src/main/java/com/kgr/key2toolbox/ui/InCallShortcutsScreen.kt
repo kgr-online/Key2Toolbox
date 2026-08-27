@@ -14,7 +14,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.service.Key2AccessibilityService
 import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
 
@@ -38,7 +40,7 @@ fun InCallShortcutsScreen(onBack: () -> Unit) {
         AccessibilityServiceBanner(serviceEnabled)
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text(stringResource(R.string.generic_enabled))
             Switch(
                 checked = enabled,
                 onCheckedChange = { checked ->
@@ -50,11 +52,7 @@ fun InCallShortcutsScreen(onBack: () -> Unit) {
 
         DescriptionDivider()
         Text(
-            "On the Google Phone in-call screen: the Speed key or $ toggles the speaker, " +
-                "M toggles mute, and the letter keys (W E R / S D F / Z X C for 1-9, 0) type " +
-                "dialpad digits, opening the keypad first if needed. Buttons are matched by " +
-                "their on-screen label, so this works with a non-English dialer too. Uses the " +
-                "accessibility service only, no root.",
+            stringResource(R.string.desc_in_call_shortcuts),
             style = MaterialTheme.typography.bodySmall
         )
     }

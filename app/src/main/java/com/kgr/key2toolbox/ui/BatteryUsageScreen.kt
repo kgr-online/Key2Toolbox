@@ -43,8 +43,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.AppPowerUsage
 import com.kgr.key2toolbox.modules.BatteryUsageController
 import kotlinx.coroutines.Dispatchers
@@ -102,15 +104,15 @@ fun BatteryUsageScreen(onBack: () -> Unit) {
                     refreshToken++
                 }
             }) {
-                Icon(Icons.Filled.Refresh, contentDescription = "Reset stats")
+                Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.battery_usage_reset))
             }
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "More options")
+                    Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.battery_usage_more_options))
                 }
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("Set auto-reset threshold") },
+                        text = { Text(stringResource(R.string.battery_usage_set_threshold)) },
                         onClick = {
                             menuExpanded = false
                             editingThreshold = true
@@ -125,7 +127,7 @@ fun BatteryUsageScreen(onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Show system apps",
+                stringResource(R.string.battery_usage_show_system),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f)
             )
@@ -142,7 +144,7 @@ fun BatteryUsageScreen(onBack: () -> Unit) {
                 val totalMah = list.sumOf { it.mAh }
                 val visible = if (showSystemApps) list else list.filterNot { it.isSystemApp }
                 Text(
-                    "Total since last reset: ${formatMah(totalMah)}",
+                    stringResource(R.string.battery_usage_total, formatMah(totalMah)),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Row(
@@ -170,11 +172,7 @@ fun BatteryUsageScreen(onBack: () -> Unit) {
                             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 DescriptionDivider()
                                 Text(
-                                    "Estimated per-app share of battery use since the last reset, read from " +
-                                        "the same power model as Android's own Battery usage screen. Auto-resets " +
-                                        "when charging reaches the configured threshold, since this device's " +
-                                        "charging driver never reports a full-charge signal to trigger Android's " +
-                                        "own reset.",
+                                    stringResource(R.string.desc_battery_usage),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -208,17 +206,16 @@ private fun ResetThresholdDialog(
     var value by remember { mutableFloatStateOf(initial.toFloat()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set auto-reset threshold") },
+        title = { Text(stringResource(R.string.battery_usage_set_threshold)) },
         text = {
             Column {
                 Text(
-                    "Automatically resets battery usage stats once charging reaches this percentage, " +
-                        "since this device never reports a full-charge signal.",
+                    stringResource(R.string.battery_usage_threshold_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "${value.toInt()}%",
+                    stringResource(R.string.generic_percent, value.toInt()),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(top = 12.dp)
                 )
@@ -231,10 +228,10 @@ private fun ResetThresholdDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(value.toInt()) }) { Text("Apply") }
+            TextButton(onClick = { onConfirm(value.toInt()) }) { Text(stringResource(R.string.generic_apply)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.generic_cancel)) }
         }
     )
 }
