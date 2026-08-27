@@ -72,4 +72,8 @@ sealed class Screen(
         "LED Notify Colors", "Per-app notification LED colors",
         listOf(AccessType.ROOT, AccessType.NOTIFICATION)
     )
+    data object BtIdle : Screen(
+        "Auto-disable Bluetooth", "Turn off Bluetooth when idle",
+        listOf(AccessType.ROOT)
+    )
 }
