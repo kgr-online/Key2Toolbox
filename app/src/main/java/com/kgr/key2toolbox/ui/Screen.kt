@@ -72,4 +72,8 @@ sealed class Screen(
         "LED Notify Colors", "Per-app notification LED colors",
         listOf(AccessType.ROOT, AccessType.NOTIFICATION)
     )
+    data object Telemetry : Screen(
+        "Global Telemetry Block", "Disable Firebase Crashlytics system-wide",
+        listOf(AccessType.ROOT)
+    )
 }
