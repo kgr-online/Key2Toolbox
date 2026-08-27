@@ -18,6 +18,7 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
+import com.kgr.key2toolbox.inputfix.CalculatorInputFix
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -69,6 +70,7 @@ class Key2AccessibilityService : AccessibilityService() {
         const val KEY_IME_BLOCK = "ime_block_enabled"     // bypass IME in selected apps
         const val KEY_IME_BLOCK_APPS = "ime_block_apps"   // StringSet of package names
         const val KEY_IME_SAVED = "ime_block_saved_ime"   // IME to restore when leaving a blocked app
+        const val KEY_CALCULATOR = "calculator_enabled"   // route digit/operator keys to a foreground calculator
 
         // Our do-nothing IME: while it's active, physical key presses go straight
         // to the app instead of being intercepted/translated by the normal keyboard.
@@ -85,6 +87,7 @@ class Key2AccessibilityService : AccessibilityService() {
     }
 
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
+    private val calculatorFix = CalculatorInputFix()
     @Volatile private var navDisabled = false // last state pushed to kernel
     @Volatile private var imeActive = false   // keyboard currently showing
     @Volatile private var imeBlockApplied = false // last show_ime value we pushed (true = suppressed)
@@ -198,6 +201,7 @@ class Key2AccessibilityService : AccessibilityService() {
     private fun gestureMode() = prefs?.getBoolean(KEY_NAV_GESTURE, false) ?: false
     private fun alwaysOff() = prefs?.getBoolean(KEY_NAV_ALWAYS_OFF, false) ?: false
     private fun pinInputEnabled() = prefs?.getBoolean(KEY_PIN_INPUT, true) ?: true
+    private fun calculatorEnabled() = prefs?.getBoolean(KEY_CALCULATOR, false) ?: false
     private fun imeBlockEnabled() = prefs?.getBoolean(KEY_IME_BLOCK, false) ?: false
     private fun imeBlockApps(): Set<String> =
         prefs?.getStringSet(KEY_IME_BLOCK_APPS, emptySet()) ?: emptySet()
@@ -361,6 +365,14 @@ class Key2AccessibilityService : AccessibilityService() {
         ) {
             return handleNavGesture(event, kc)
         }
+
+        // Calculator Keys: route digit/operator keys to a foreground calculator app.
+        // Pre-filtered against the foreground package we already track - CalculatorInputFix's
+        // own package check reads it off getRootInActiveWindow(), so without this guard it
+        // costs a binder round-trip on the main thread for every key typed in any app.
+        if (calculatorEnabled() && CalculatorInputFix.isCalculatorPackage(foregroundPkg) &&
+            calculatorFix.onKeyEvent(this, event)
+        ) return true
 
         // PIN Input: map physical keys to the lockscreen PIN pad.
         if (!pinInputEnabled()) return false

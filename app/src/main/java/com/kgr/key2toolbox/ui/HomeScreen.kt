@@ -41,6 +41,7 @@ val keyboardScreens = listOf(
     Screen.NavLock,
     Screen.PinKeyboard,
     Screen.ImeBlock,
+    Screen.Calculator,
     Screen.CtrlKey
 )
 
@@ -115,6 +116,7 @@ private fun DetailHost(screen: Screen, onBack: () -> Unit) {
         Screen.NavLock -> NavLockScreen(onBack)
         Screen.PinKeyboard -> PinKeyboardScreen(onBack)
         Screen.ImeBlock -> ImeBlockScreen(onBack)
+        Screen.Calculator -> CalculatorScreen(onBack)
         Screen.Zram -> ZramScreen(onBack)
         Screen.WirelessAdb -> WirelessAdbScreen(onBack)
         Screen.Dt2w -> Dt2wScreen(onBack)
