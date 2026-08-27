@@ -2,13 +2,17 @@
 
 A root app for the BlackBerry Key2 'Athena' (FolkPatch/APatch/Magisk, LineageOS 22.2, 4.4 and 4.19
 kernels) that bundles a set of previously-separate tweaks into one UI,
-organized into four bottom-bar sections:
+organized into bottom-bar sections (Info / Keyboard / Display / System /
+Network / Settings). Localized into English, Catalan, German, Spanish,
+French, Italian, Dutch and Portuguese.
 
 **Info**
 - **Device status landing page**: build (model, Android, LineageOS,
 security patch, kernel), battery (level, health, temperature, voltage,
 technology, capacity-health % and charge cycles from sysfs), and root +
 accessibility-service status
+- **Battery Usage** - per-app battery estimate from the platform's native
+  power model
 
 **Keyboard**
 - **Adaptive keyboard backlight** daemon 
@@ -18,25 +22,48 @@ accessibility-service status
   to the app (for games) by switching to a passthrough IME
 - **Physical Keyboard Fixes** - remap Convenience key to Ctrl (key 110) and
   fix the SYM key (key 100), auto-detected per device/kernel. May prompt user to install a Magisk/Apatch module
+- **Calculator Keys** - route physical keys to the AOSP/Google Calculator
+  buttons (accessibility service, no root)
+- **IME Suggestion Shortcuts** - Ctrl+W/E/R pick candidate 1/2/3 from the
+  keyboard's candidate strip; needs a key remapped to Ctrl
+- **Chat Enter-to-Send** - Enter sends / Alt+Enter newline in ~15 messaging
+  apps (accessibility service, no root)
+- **Call Shortcuts** - mute, speaker and dialpad DTMF from the physical
+  keyboard on the Google Phone call screen
+- **Auto-Focus** - in chosen apps, focus and type into the first text field
+  on the first printable keypress
+
+**Display**
+- **Double-Tap to Wake** - (DT2W) Primarily needed for the 4.19 kernel. Setting in Gestures must also be toggled on
+- **Extra Dim** - dim below the system minimum brightness, with an optional
+  night schedule
 
 **System**
-- **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
-  works (EU regdomains expose no 5GHz AP channels on this build)
 - **AdBlock** - systemless-hosts ad/tracker blocking, with search, add/remove,
   whitelist, and remote source list management. Prompts user to install a Magisk/Apatch module
 - **Denylist Manager** - optional, opt-in unified control for Magisk's
   DenyList and the Zygisk-Hide module's own per-app config, plus a shortcut
   into HMA-OSS's manager app
-- **Double-Tap to Wake** - (DT2W) Primarily needed for the 4.19 kernel. Setting in Gestures must also be toggled on
 - **K2ProdFix Settings** - companion page for the `bb-prodfix` Magisk
   module's `system.prop`/`service.sh` tweaks
 - **LED Notify Colors** - per-app notification LED colors written straight
   to the LED hardware, bypassing LineageOS's own (inaccurate on this device)
   notification light color picker
-- **Persistent wireless ADB** - on a user-chosen static port
 - **Play Store Tagger** - retag (or untag) installed apps as Play
   Store-installed, so apps that check the install source stop complaining
+- **Ticker Notifications** - scrolling status-bar banner instead of heads-up
+  popups, with per-app / per-category blocklist
 - **ZRAM** - compression algorithm + size (Off / 2GB / 3GB / 4GB) + swappiness selector
+
+**Network**
+- **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
+  works (EU regdomains expose no 5GHz AP channels on this build)
+- **Persistent wireless ADB** - on a user-chosen static port
+- **Auto-disable Bluetooth** - turn Bluetooth off after an idle period with
+  nothing connected
+- **Auto-disable Location** - same, for Location, ignoring passive
+  low-power location checks
+- **Global Telemetry Block** - disable Firebase Crashlytics system-wide
 
 **Settings**
 - **Application Updater**
