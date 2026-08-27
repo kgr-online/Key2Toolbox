@@ -49,6 +49,7 @@ val systemScreens = listOf(
     Screen.AdBlock,
     Screen.DenylistManager,
     Screen.Dt2w,
+    Screen.ExtraDim,
     Screen.K2PF,
     Screen.LedNotify,
     Screen.WirelessAdb,
@@ -118,6 +119,7 @@ private fun DetailHost(screen: Screen, onBack: () -> Unit) {
         Screen.Zram -> ZramScreen(onBack)
         Screen.WirelessAdb -> WirelessAdbScreen(onBack)
         Screen.Dt2w -> Dt2wScreen(onBack)
+        Screen.ExtraDim -> ExtraDimScreen(onBack)
         Screen.Wifi5g -> Wifi5gScreen(onBack)
         Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
         Screen.K2PF -> K2PFScreen(onBack)

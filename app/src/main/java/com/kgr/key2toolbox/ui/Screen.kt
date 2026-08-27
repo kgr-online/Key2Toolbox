@@ -56,6 +56,10 @@ sealed class Screen(
         "Double-Tap to Wake", "Wake screen with a double tap",
         listOf(AccessType.ROOT)
     )
+    data object ExtraDim : Screen(
+        "Extra Dim", "Dim below the system minimum, with an optional night schedule",
+        listOf(AccessType.ROOT)
+    )
     data object Wifi5g : Screen(
         "5GHz Hotspot Workaround", "Force US WiFi region for 5GHz SoftAP",
         listOf(AccessType.ROOT)
