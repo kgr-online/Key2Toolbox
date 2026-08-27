@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -18,6 +19,7 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
+import com.kgr.key2toolbox.modules.BatteryUsageController
 import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -92,6 +94,8 @@ class Key2AccessibilityService : AccessibilityService() {
     private val lastNavTap = HashMap<Int, Long>() // keycode -> last short-tap time
     private var prefs: SharedPreferences? = null
     private var screenReceiver: BroadcastReceiver? = null
+    private var batteryReceiver: BroadcastReceiver? = null
+    @Volatile private var batteryThresholdArmed = false // reset already fired for the current charge session
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
@@ -171,6 +175,40 @@ class Key2AccessibilityService : AccessibilityService() {
             Log.d("Key2Toolbox", "Successfully registered screenReceiver")
         } catch (e: Exception) {
             Log.e("Key2Toolbox", "Failed to register screenReceiver", e)
+        }
+
+        // Auto-resets battery usage stats once the level reaches the configured threshold while
+        // charging - a substitute for BATTERY_STATUS_FULL, which this device's charging driver
+        // never reports (see BatteryUsageController.resetStats doc).
+        val battery = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                intent ?: return
+                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                if (level < 0 || scale <= 0) return
+                val percent = level * 100 / scale
+                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL
+                val threshold = BatteryUsageController.getResetThreshold(this@Key2AccessibilityService)
+
+                if (charging && percent >= threshold) {
+                    if (!batteryThresholdArmed) {
+                        batteryThresholdArmed = true
+                        worker.execute { BatteryUsageController.resetStats() }
+                    }
+                } else if (percent < threshold) {
+                    batteryThresholdArmed = false
+                }
+            }
+        }
+        try {
+            ContextCompat.registerReceiver(
+                this, battery, IntentFilter(Intent.ACTION_BATTERY_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            batteryReceiver = battery
+        } catch (e: Exception) {
+            Log.e("Key2Toolbox", "Failed to register batteryReceiver", e)
         }
     }
 
@@ -559,6 +597,11 @@ class Key2AccessibilityService : AccessibilityService() {
         restoreImeBlock()
         prefs?.unregisterOnSharedPreferenceChangeListener(prefListener)
         screenReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (_: Exception) {}
+        }
+        batteryReceiver?.let {
             try {
                 unregisterReceiver(it)
             } catch (_: Exception) {}
