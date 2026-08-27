@@ -80,4 +80,8 @@ sealed class Screen(
         "LED Notify Colors", "Per-app notification LED colors",
         listOf(AccessType.ROOT, AccessType.NOTIFICATION)
     )
+    data object BatteryUsage : Screen(
+        "Battery Usage", "Per-app battery estimate, read from the native power model",
+        listOf(AccessType.ROOT)
+    )
 }

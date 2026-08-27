@@ -100,7 +100,7 @@ fun HomeScreen() {
             if (current != null) {
                 DetailHost(current, onNavigate = { detail = it }) { detail = null }
             } else when (tab) {
-                AppTab.Info -> InfoScreen()
+                AppTab.Info -> InfoScreen(onOpenBatteryUsage = { detail = Screen.BatteryUsage })
                 AppTab.Keyboard -> CategoryMenu("Keyboard", keyboardScreens) { detail = it }
                 AppTab.Display -> CategoryMenu("Display", displayScreens) { detail = it }
                 AppTab.System -> CategoryMenu("System", systemScreens) { detail = it }
@@ -128,6 +128,7 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
         Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
         Screen.K2PF -> K2PFScreen(onBack)
         Screen.LedNotify -> LedNotifyScreen(onBack)
+        Screen.BatteryUsage -> BatteryUsageScreen(onBack)
         Screen.AdBlock -> AdBlockScreen(onBack)
         Screen.DenylistManager -> DenylistScreen(onBack)
         Screen.Home -> Unit
