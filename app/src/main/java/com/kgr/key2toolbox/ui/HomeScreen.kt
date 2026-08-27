@@ -47,22 +47,29 @@ enum class AppTab(val label: String, val icon: ImageVector) {
 }
 
 val keyboardScreens = listOf(
+    Screen.CtrlKey,
     Screen.KbdLight,
     Screen.NavLock,
     Screen.PinKeyboard,
     Screen.ImeBlock,
+    Screen.Calculator,
     Screen.ImeSuggestions,
     Screen.ChatComposer,
-    Screen.CtrlKey
+    Screen.InCallShortcuts,
+    Screen.AutoFocus
 )
 
 val displayScreens = listOf(
-    Screen.Dt2w
+    Screen.Dt2w,
+    Screen.ExtraDim
 )
 
 val networkScreens = listOf(
     Screen.Wifi5g,
-    Screen.WirelessAdb
+    Screen.WirelessAdb,
+    Screen.BtIdle,
+    Screen.LocationIdle,
+    Screen.Telemetry
 )
 
 val systemScreens = listOf(
@@ -71,6 +78,7 @@ val systemScreens = listOf(
     Screen.K2PF,
     Screen.LedNotify,
     Screen.PlayStoreTagger,
+    Screen.TickerNotifications,
     Screen.Zram
 )
 
@@ -119,18 +127,26 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
         Screen.NavLock -> NavLockScreen(onBack)
         Screen.PinKeyboard -> PinKeyboardScreen(onBack)
         Screen.ImeBlock -> ImeBlockScreen(onBack)
+        Screen.Calculator -> CalculatorScreen(onBack)
         Screen.ImeSuggestions -> ImeSuggestionsScreen(onBack, onNavigateToCtrlKey = { onNavigate(Screen.CtrlKey) })
         Screen.ChatComposer -> ChatComposerScreen(onBack)
-        Screen.Zram -> ZramScreen(onBack)
-        Screen.WirelessAdb -> WirelessAdbScreen(onBack)
+        Screen.InCallShortcuts -> InCallShortcutsScreen(onBack)
+        Screen.AutoFocus -> AutoFocusScreen(onBack)
         Screen.Dt2w -> Dt2wScreen(onBack)
+        Screen.ExtraDim -> ExtraDimScreen(onBack)
         Screen.Wifi5g -> Wifi5gScreen(onBack)
-        Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
-        Screen.K2PF -> K2PFScreen(onBack)
-        Screen.LedNotify -> LedNotifyScreen(onBack)
-        Screen.BatteryUsage -> BatteryUsageScreen(onBack)
+        Screen.WirelessAdb -> WirelessAdbScreen(onBack)
+        Screen.BtIdle -> BtIdleScreen(onBack)
+        Screen.LocationIdle -> LocationIdleScreen(onBack)
+        Screen.Telemetry -> TelemetryScreen(onBack)
         Screen.AdBlock -> AdBlockScreen(onBack)
         Screen.DenylistManager -> DenylistScreen(onBack)
+        Screen.K2PF -> K2PFScreen(onBack)
+        Screen.LedNotify -> LedNotifyScreen(onBack)
+        Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
+        Screen.TickerNotifications -> TickerNotificationsScreen(onBack)
+        Screen.Zram -> ZramScreen(onBack)
+        Screen.BatteryUsage -> BatteryUsageScreen(onBack)
         Screen.Home -> Unit
     }
 }

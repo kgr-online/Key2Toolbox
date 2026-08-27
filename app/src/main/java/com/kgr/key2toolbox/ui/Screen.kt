@@ -34,12 +34,24 @@ sealed class Screen(
         "Per-App Keyboard Block", "Route keys straight to chosen apps",
         listOf(AccessType.ACCESSIBILITY)
     )
+    data object Calculator : Screen(
+        "Calculator Keys", "Route physical keys to a foreground calculator app",
+        listOf(AccessType.ACCESSIBILITY)
+    )
     data object ImeSuggestions : Screen(
         "IME Suggestion Shortcuts", "Ctrl+W/E/R picks keyboard suggestion 1/2/3",
         listOf(AccessType.ACCESSIBILITY)
     )
     data object ChatComposer : Screen(
         "Chat Enter-to-Send", "Enter sends, Alt+Enter newline in chat apps",
+        listOf(AccessType.ACCESSIBILITY)
+    )
+    data object InCallShortcuts : Screen(
+        "In-Call Shortcuts", "Toggle mute, speaker, and keypad in calls",
+        listOf(AccessType.ACCESSIBILITY)
+    )
+    data object AutoFocus : Screen(
+        "Auto-Focus Input", "Focus the first text field on your first keypress",
         listOf(AccessType.ACCESSIBILITY)
     )
 
@@ -87,5 +99,21 @@ sealed class Screen(
     data object BatteryUsage : Screen(
         "Battery Usage", "Per-app battery estimate, read from the native power model",
         listOf(AccessType.ROOT)
+    )
+    data object Telemetry : Screen(
+        "Global Telemetry Block", "Disable Firebase Crashlytics system-wide",
+        listOf(AccessType.ROOT)
+    )
+    data object BtIdle : Screen(
+        "Auto-disable Bluetooth", "Turn off Bluetooth when idle",
+        listOf(AccessType.ROOT)
+    )
+    data object LocationIdle : Screen(
+        "Auto-disable Location", "Turn off Location when idle",
+        listOf(AccessType.ROOT)
+    )
+    data object TickerNotifications : Screen(
+        "Ticker Notifications", "Scrolling status-bar banner instead of heads-up",
+        listOf(AccessType.ROOT, AccessType.ACCESSIBILITY, AccessType.NOTIFICATION)
     )
 }
