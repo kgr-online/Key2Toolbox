@@ -35,15 +35,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import com.kgr.key2toolbox.R
 
-enum class AppTab(val label: String, val icon: ImageVector) {
-    Info("Info", Icons.Filled.Home),
-    Keyboard("Keyboard", Icons.Filled.Keyboard),
-    Display("Display", Icons.Filled.Smartphone),
-    System("System", Icons.Filled.Build),
-    Network("Network", Icons.Filled.Wifi),
-    Settings("Settings", Icons.Filled.Settings),
+enum class AppTab(@StringRes val labelRes: Int, val icon: ImageVector) {
+    Info(R.string.tab_info, Icons.Filled.Home),
+    Keyboard(R.string.tab_keyboard, Icons.Filled.Keyboard),
+    Display(R.string.tab_display, Icons.Filled.Smartphone),
+    System(R.string.tab_system, Icons.Filled.Build),
+    Network(R.string.tab_network, Icons.Filled.Wifi),
+    Settings(R.string.tab_settings, Icons.Filled.Settings),
 }
 
 val keyboardScreens = listOf(
@@ -97,7 +100,7 @@ fun HomeScreen() {
                         selected = tab == entry && (entry != AppTab.Info || detail == null),
                         onClick = { tab = entry; detail = null },
                         icon = { Icon(entry.icon, contentDescription = null) },
-                        label = { Text(entry.label) }
+                        label = { Text(stringResource(entry.labelRes)) }
                     )
                 }
             }
@@ -109,10 +112,10 @@ fun HomeScreen() {
                 DetailHost(current, onNavigate = { detail = it }) { detail = null }
             } else when (tab) {
                 AppTab.Info -> InfoScreen(onOpenBatteryUsage = { detail = Screen.BatteryUsage })
-                AppTab.Keyboard -> CategoryMenu("Keyboard", keyboardScreens) { detail = it }
-                AppTab.Display -> CategoryMenu("Display", displayScreens) { detail = it }
-                AppTab.System -> CategoryMenu("System", systemScreens) { detail = it }
-                AppTab.Network -> CategoryMenu("Network", networkScreens) { detail = it }
+                AppTab.Keyboard -> CategoryMenu(R.string.tab_keyboard, keyboardScreens) { detail = it }
+                AppTab.Display -> CategoryMenu(R.string.tab_display, displayScreens) { detail = it }
+                AppTab.System -> CategoryMenu(R.string.tab_system, systemScreens) { detail = it }
+                AppTab.Network -> CategoryMenu(R.string.tab_network, networkScreens) { detail = it }
                 AppTab.Settings -> SettingsScreen(currentVersionName = BuildConfig.VERSION_NAME)
             }
         }
@@ -152,7 +155,7 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
 }
 
 @Composable
-private fun CategoryMenu(title: String, screens: List<Screen>, onNavigate: (Screen) -> Unit) {
+private fun CategoryMenu(@StringRes titleRes: Int, screens: List<Screen>, onNavigate: (Screen) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -160,7 +163,7 @@ private fun CategoryMenu(title: String, screens: List<Screen>, onNavigate: (Scre
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(titleRes), style = MaterialTheme.typography.headlineMedium)
         screens.forEach { screen ->
             MenuEntry(screen) { onNavigate(screen) }
         }
@@ -190,11 +193,15 @@ private fun MenuEntry(screen: Screen, onClick: () -> Unit) {
                     }
                     if (screen.access.isNotEmpty()) {
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            screen.access.joinToString(" ") { "[${it.label}]" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            screen.access.forEach { at ->
+                                Text(
+                                    "[" + stringResource(at.labelRes) + "]",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
                     }
                 }
             }

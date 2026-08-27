@@ -2,69 +2,26 @@
     <string name="app_name">Key2 Toolbox</string>
     <string name="accessibility_description">Enables Nav Lock (stops accidental Back/Home/Recents while typing), lockscreen PIN entry on the physical keyboard, and the system-wide audio EQ.</string>
 
-    <!-- Ticker Notifications -->
-    <string name="title_ticker_notifications">Ticker Notifications</string>
-    <string name="subtitle_ticker_notifications">Scrolling status-bar banner instead of heads-up</string>
-    <string name="ticker_enable_label">Enable ticker</string>
-    <string name="ticker_test_message">Ticker Notifications test - this is how a real notification will scroll by</string>
-    <string name="ticker_test_button">Test ticker</string>
-    <string name="ticker_test_needs_service">Needs the accessibility service enabled first (see below).</string>
-    <string name="ticker_headsup_disabled_notice">Heads-up popups are disabled while this is on.</string>
-    <string name="ticker_tap_to_open_label">Tap ticker to open app</string>
-    <string name="ticker_include_ongoing_label">Show ongoing notifications (media, downloads)</string>
-    <string name="ticker_min_priority_label">Minimum priority</string>
-    <string name="ticker_priority_min">Min</string>
-    <string name="ticker_priority_low">Low</string>
-    <string name="ticker_priority_default">Default</string>
-    <string name="ticker_priority_high">High</string>
-    <string name="ticker_lines_label">Lines of text shown</string>
-    <string name="ticker_scroll_speed_label">Scroll speed: %1$d dp/s</string>
-    <string name="ticker_start_delay_label">Start delay: %1$d ms</string>
-    <string name="ticker_color_label">Ticker color</string>
-    <string name="ticker_color_fixed">Fixed</string>
-    <string name="ticker_color_app_icon">App icon</string>
-    <string name="ticker_color_monet">Monet</string>
-    <string name="ticker_color_app_icon_desc">Uses each notifying app\'s own icon color, muted to a dark, readable tone.</string>
-    <string name="ticker_color_monet_desc">Monet needs Android 12+; falls back to the fixed color on this device.</string>
-    <string name="ticker_blocked_apps_label">Blocked apps</string>
-    <string name="ticker_blocked_apps_count">%1$d blocked</string>
-    <string name="ticker_blocked_apps_of_total">%1$d blocked of %2$d apps</string>
-    <string name="ticker_blocked_categories_label">Blocked categories</string>
-    <string name="ticker_desc">Shows a scrolling banner across the top of the screen for new notifications instead of a heads-up popup, and turns heads-up off system-wide while enabled. Needs root to grant notification access, and the accessibility service enabled to draw the banner.</string>
-    <string name="ticker_notif_access_granted">Notification access granted</string>
-    <string name="ticker_notif_access_missing">Notification access not granted - the root grant may have failed; toggle off and on again, or check root access on the Info tab.</string>
-    <string name="ticker_category_calls">Calls</string>
-    <string name="ticker_category_messages">Messages</string>
-    <string name="ticker_category_email">Email</string>
-    <string name="ticker_category_events">Calendar events</string>
-    <string name="ticker_category_promo">Promotions</string>
-    <string name="ticker_category_alarms">Alarms</string>
-    <string name="ticker_category_progress">Progress</string>
-    <string name="ticker_category_social">Social</string>
-    <string name="ticker_category_errors">Errors</string>
-    <string name="ticker_category_transport">Media playback</string>
-    <string name="ticker_category_system">System</string>
-    <string name="ticker_category_service">Background services</string>
-    <string name="ticker_category_reminder">Reminders</string>
-    <string name="ticker_category_recommendation">Recommendations</string>
-    <string name="ticker_category_missed_call">Missed calls</string>
-    <string name="ticker_category_navigation">Navigation</string>
-    <string name="ticker_category_stopwatch">Stopwatch/timers</string>
-    <string name="ticker_category_workout">Workouts</string>
-
-    <!-- imported from PR reference (localization) -->
+    <!-- Shared generic strings -->
     <string name="generic_enabled">Enabled</string>
     <string name="generic_back">← Back</string>
     <string name="generic_search_apps">Search apps</string>
+
+    <!-- Access-type tags shown on module cards -->
     <string name="access_root">root</string>
     <string name="access_accessibility">accessibility</string>
     <string name="access_notification">notification</string>
+
+    <!-- Bottom nav tabs -->
     <string name="tab_info">Info</string>
     <string name="tab_keyboard">Keyboard</string>
     <string name="tab_system">System</string>
     <string name="tab_network">Network</string>
     <string name="tab_settings">Settings</string>
+
+    <!-- Screen titles/subtitles -->
     <string name="title_battery_usage">Battery Usage</string>
+
     <string name="title_key_remap">Remap Key → Ctrl</string>
     <string name="subtitle_key_remap">Currency or Convenience key remapped to Ctrl</string>
     <string name="title_kbd_light">Adaptive Keyboard Backlight</string>
@@ -79,6 +36,7 @@
     <string name="subtitle_calculator">Route physical keys to a foreground calculator app</string>
     <string name="title_ime_suggestions">IME Suggestions</string>
     <string name="subtitle_ime_suggestions">Ctrl+W/E/R picks a keyboard suggestion</string>
+
     <string name="title_in_call_shortcuts">Call Shortcuts</string>
     <string name="subtitle_in_call_shortcuts">Mute, speaker, and dialpad from the physical keyboard</string>
     <string name="title_auto_focus">Auto-Focus</string>
@@ -97,6 +55,7 @@
     <string name="subtitle_led_notify">Per-app notification LED colors</string>
     <string name="title_extra_dim">Extra Dim</string>
     <string name="subtitle_extra_dim">Dim below the system minimum, with an optional night schedule</string>
+
     <string name="title_telemetry">Global Telemetry Block</string>
     <string name="subtitle_telemetry">Disable Firebase Crashlytics system-wide</string>
     <string name="title_wireless_adb">Persistent Wireless ADB</string>
@@ -107,6 +66,8 @@
     <string name="subtitle_watch">Stop background Bluetooth reconnect attempts</string>
     <string name="title_bt_idle">Auto-disable Bluetooth</string>
     <string name="subtitle_bt_idle">Turn off Bluetooth when idle</string>
+
+    <!-- More shared generic strings -->
     <string name="generic_yes">Yes</string>
     <string name="generic_no">No</string>
     <string name="generic_checking">checking…</string>
@@ -143,45 +104,71 @@
     <string name="persisted_ok">ok</string>
     <string name="persisted_mismatch">MISMATCH - check service.d write permissions</string>
     <string name="enable_at_boot">Enable at Boot</string>
+
+    <!-- Accessibility / notification access banners -->
     <string name="accessibility_service_enabled">Accessibility service: enabled</string>
     <string name="accessibility_service_required">This feature needs the accessibility service enabled.</string>
     <string name="accessibility_service_open_settings">Open Accessibility Settings</string>
     <string name="notification_access_enabled">Notification access: enabled</string>
     <string name="notification_access_required">This feature needs notification access granted.</string>
     <string name="notification_access_open_settings">Open Notification Access Settings</string>
+
+    <!-- Calculator Keys -->
     <string name="desc_calculator">In the AOSP/Google Calculator, route physical keys to the calculator buttons: digits (Q W E R / S D F / Z X C for 0-9), plus operators - O = +, I = -, A = ×, G = ÷, M = ., U = %%, B = !, T/Y = ( ), Sym/Alt toggles scientific mode, Backspace deletes. No root needed - uses the accessibility service only.</string>
+
+    <!-- IME Suggestions -->
     <string name="requires_ctrl_remap">Ctrl+W/E/R only work once a key is remapped to Ctrl - these shortcuts do nothing on their own otherwise.</string>
     <string name="action_open_key_remap">Open Remap Key → Ctrl</string>
     <string name="desc_ime_suggestions">Press Ctrl+W, Ctrl+E, or Ctrl+R to pick suggestion 1, 2, or 3 from the physical keyboard\'s candidate strip (BlackBerry Keyboard and similar). Only acts when a suggestion is actually showing, so Ctrl+W/E/R still behave normally elsewhere (e.g. closing a browser tab). Requires a key remapped to Ctrl (see Remap Key → Ctrl). No root required.</string>
+
+    <!-- Call Shortcuts -->
     <string name="requires_auto_focus_dialer">Mute and speaker work standalone. For fast, reliable dial-pad digit entry (speed dial), also enable Auto-Focus for the Phone/Dialer app.</string>
     <string name="action_open_auto_focus">Open Auto-Focus</string>
     <string name="desc_in_call_shortcuts">On the Google Phone call screen, use M to mute/unmute, the Currency key (or Ctrl, if remapped) to toggle the speaker, and Q W E R / S D F / Z X C to open the dialer keypad and dial digits. No root required.</string>
+
+    <!-- Auto-Focus -->
     <string name="desc_auto_focus">In the selected apps, the first text field found is focused and typed into as soon as you press a printable key with nothing already focused - handy for search/entry fields that otherwise need a tap first. No root required.</string>
     <string name="enable_auto_focus">Enable auto-focus</string>
+
+    <!-- Per-App Keyboard Block -->
     <string name="desc_ime_block">In the selected apps, physical key presses go straight to the app instead of through the keyboard - handy for games where the BlackBerry keyboard otherwise intercepts the keys. While a selected app is open, the input method is switched to a do-nothing passthrough keyboard, then restored on the way out. Needs root.</string>
     <string name="enable_ime_block">Enable per-app block</string>
+
+    <!-- Key Remap -->
     <string name="key_remap_source_title">Remap to Ctrl</string>
     <string name="key_remap_currency_label">Currency key</string>
     <string name="key_remap_currency_desc">The $ / € key next to Space. Remapping it to Ctrl doesn\'t affect normal typing.</string>
     <string name="key_remap_convenience_label">Convenience key</string>
     <string name="key_remap_convenience_desc">The dedicated side button. Remapping it to Ctrl means it no longer launches its assigned shortcut.</string>
     <string name="desc_key_remap">Remaps the selected key to Ctrl at the keylayout level, so it works as a real modifier for the Calculator Keys and IME Suggestions shortcuts. Persists across reboots via a service.d boot script.</string>
+
+    <!-- Adaptive Keyboard Backlight -->
     <string name="status_kbd_light_enabled">Keyboard backlight enabled. Persisted: %1$s.</string>
     <string name="status_kbd_light_disabled">Keyboard backlight disabled. Persisted: %1$s.</string>
+
+    <!-- Lockscreen PIN on Keyboard -->
     <string name="desc_pin_keyboard">Type your lockscreen PIN on the physical keyboard. Digits map phone-dialpad style: W E R = 1 2 3, S D F = 4 5 6, Z X C = 7 8 9, Q = 0. Enter confirms, Backspace deletes. No root needed - uses the accessibility service only.</string>
+
+    <!-- Keyboard Nav Lock -->
     <string name="nav_lock_intro">Stops accidental Back / Home / Recents presses while the keyboard is showing. Pick a mode below.</string>
     <string name="nav_lock_toggle">Keyboard Nav Lock</string>
     <string name="nav_lock_gesture_desc">Double-tap Back (keep button): while typing, a single tap on Back is ignored - only a double-tap fires it. Only Back works this way; Android won\'t let an app gate Home/Recents. Off = all three buttons are fully disabled while typing (needs root).</string>
     <string name="nav_lock_gesture_toggle">Double-tap Back</string>
     <string name="nav_lock_always_off_desc">Disable nav buttons ALWAYS: keeps Back / Home / Recents disabled permanently, not just while typing. Navigate with gestures instead. Overrides the modes above; turn off to restore the buttons. Needs root.</string>
     <string name="nav_lock_always_off_toggle">Disable ALWAYS</string>
+
+    <!-- Double-Tap to Wake -->
     <string name="dt2w_intro">Apply with the screen ON for the gesture to be configured on suspend.</string>
     <string name="status_dt2w_enabled">DT2W enabled. Persisted: %1$s.</string>
     <string name="status_dt2w_disabled">DT2W disabled. Persisted: %1$s.</string>
+
+    <!-- Auto-disable Bluetooth -->
     <string name="desc_bt_idle">Turns Bluetooth off after a period with no device connected, so an idle radio can\'t hold the system awake overnight. Connecting earbuds, a watch or a speaker resets the timer.</string>
     <string name="status_bt_idle_enabled">Bluetooth will turn off after %1$d min with nothing connected.</string>
     <string name="status_bt_idle_disabled">Auto-disable off. Bluetooth stays as you set it.</string>
     <string name="bt_idle_turn_off_after">Turn off after</string>
+
+    <!-- ZRAM -->
     <string name="zram_size_off">Off</string>
     <string name="zram_size_2gb">2 GB</string>
     <string name="zram_size_3gb">3 GB</string>
@@ -200,6 +187,8 @@
     <string name="zram_apply_dialog_title">Apply ZRAM settings now?</string>
     <string name="zram_apply_dialog_desc">Resizing/recompressing ZRAM live briefly disables swap and can cause background apps to be killed under memory pressure. It\'s usually safer to set this and reboot instead.</string>
     <string name="status_zram_applied_live">ZRAM applied live: %1$s, %2$s, swappiness=%3$d.</string>
+
+    <!-- Performance & Battery Tuning -->
     <string name="desc_performance">Fine-tune kernel scheduler scaling rates and CPU input boost to save battery. Tuned settings relax the CPU LITTLE cluster scaling and lower the input boost intensity during screen interaction.</string>
     <string name="performance_current_live_status">Current Live Status</string>
     <string name="performance_up_rate_limit">LITTLE Cluster up_rate_limit: %1$s</string>
@@ -218,16 +207,22 @@
     <string name="status_performance_applied_live">Settings applied live and persisted for reboot.</string>
     <string name="status_performance_restored_live">Default settings restored live.</string>
     <string name="status_performance_saved">Settings saved. Will apply on next reboot.</string>
+
+    <!-- 5GHz Hotspot Workaround -->
     <string name="desc_wifi5g_1">On this build no EU WiFi region exposes any 5GHz hotspot (SoftAP) channels - only the US region does. This forces the WiFi country code to US so you can run a 5GHz hotspot, and re-applies it on every boot. Needs root.</string>
     <string name="desc_wifi5g_2">Caveats: this also applies to WiFi as a client - you lose 2.4GHz channels 12-13 and EU-only 5GHz channels, so it can stop you connecting to APs that use them. US allows the upper 5GHz channels (149-165) that aren\'t licensed in the EU; for an EU-legal hotspot keep it on the lower channels (36-48). Turn off to restore your region.</string>
     <string name="wifi5g_force_toggle">Force US WiFi region</string>
     <string name="wifi5g_applied_region">Applied WiFi region: %1$s</string>
+
+    <!-- Persistent Wireless ADB -->
     <string name="wireless_adb_wlan_ip">WLAN IP: %1$s</string>
     <string name="wireless_adb_current_port">Current live port: %1$s</string>
     <string name="wireless_adb_port_label">Port</string>
     <string name="wireless_adb_enable_apply">Enable / Apply</string>
     <string name="status_wireless_adb_enabled">Wireless ADB enabled on port %1$d. Persisted: %2$s.</string>
     <string name="status_wireless_adb_disabled">Wireless ADB disabled.</string>
+
+    <!-- Play Store Tagger -->
     <string name="tagger_loading_apps">Loading apps…</string>
     <string name="tagger_no_root">Root access not available. Grant root to Key2 Toolbox and try again.</string>
     <string name="tagger_error">Error: %1$s</string>
@@ -255,6 +250,8 @@
     <string name="tagger_all_already_tagged">All apps are already tagged as Play Store installed.</string>
     <string name="tagger_no_apps_found">No apps found.</string>
     <string name="tagger_tagging_progress">Tagging %1$d/%2$d: %3$s</string>
+
+    <!-- BBProdFix Settings -->
     <string name="k2pf_checking">Checking for bb-prodfix module…</string>
     <string name="k2pf_not_installed">The bb-prodfix (BBProdFix) module is not installed.</string>
     <string name="k2pf_install_instructions">Install the BBProdFix Magisk/APatch module to access these settings. Once installed, return here to manage its tweaks.</string>
@@ -275,6 +272,8 @@
     <string name="k2pf_swappiness_conservative">60 — Conservative (recommended)</string>
     <string name="k2pf_swappiness_balanced">80 — Balanced</string>
     <string name="k2pf_swappiness_aggressive">100 — Aggressive</string>
+
+    <!-- LED Notify Colors -->
     <string name="desc_led_notify">Assign a raw LED color per app, written straight to the LED hardware - this bypasses LineageOS\'s own notification light color picker, whose colors don\'t come out accurate on this device. Needs root and notification access.</string>
     <string name="led_notify_no_root">Root not available - LED writes will fail.</string>
     <string name="led_notify_no_led_device">No supported LED device found on this ROM/kernel.</string>
@@ -286,6 +285,8 @@
     <string name="led_notify_most_recent">Show only the most recent</string>
     <string name="led_notify_cycle_colors">Cycle through colors</string>
     <string name="led_notify_assigned_count">%1$d of %2$d apps have a color assigned</string>
+
+    <!-- Extra Dim -->
     <string name="extra_dim_activated">Extra Dim Activated</string>
     <string name="status_extra_dim_activated">Extra Dimming activated.</string>
     <string name="status_extra_dim_deactivated">Extra Dimming deactivated.</string>
@@ -298,6 +299,8 @@
     <string name="extra_dim_starts_at">Starts at</string>
     <string name="extra_dim_ends_at">Ends at</string>
     <string name="desc_extra_dim">Reduces the screen brightness below the system\'s standard minimum level. Perfect for reading in low light and saving battery at night.</string>
+
+    <!-- Global Telemetry Block -->
     <string name="desc_telemetry">Globally deactivates Firebase Crashlytics collection system-wide. This halts background crash logs packaging and upload triggers, saving mobile data, RAM, and wakeup cycles.</string>
     <string name="telemetry_protection_status">Protection Status</string>
     <string name="telemetry_status_fully_protected">Status: Fully Protected</string>
@@ -309,6 +312,8 @@
     <string name="status_telemetry_disabled">Auto-block disabled.</string>
     <string name="status_telemetry_toggled">Toggled telemetry off for all detected apps.</string>
     <string name="telemetry_block_now">Block all telemetry now</string>
+
+    <!-- Wearable Power Saver -->
     <string name="desc_watch">Smartwatches or fitness trackers paired via Google Play Services generate constant reconnect attempts and alarms while out of range, draining the battery. Set a device to Dormant to stop these wakeups without unpairing or factory-resetting.</string>
     <string name="watch_unsupported">No Google Wearable connection database detected. This feature is only active if you have Wear OS or GMS wearables paired.</string>
     <string name="watch_no_devices">No paired wearables found in Google Play Services. If you have a smartwatch, ensure it is configured and paired.</string>
@@ -317,6 +322,8 @@
     <string name="watch_status_dormant">Status: Dormant (Power Saving)</string>
     <string name="status_watch_dormant">%1$s set to dormant. Reconnection loops stopped.</string>
     <string name="status_watch_active">%1$s activated. Reconnecting...</string>
+
+    <!-- Battery Usage -->
     <string name="battery_usage_reset">Reset stats</string>
     <string name="battery_usage_more_options">More options</string>
     <string name="battery_usage_set_threshold">Set auto-reset threshold</string>
@@ -324,6 +331,8 @@
     <string name="battery_usage_total">Total since last reset: %1$s</string>
     <string name="battery_usage_threshold_desc">Automatically resets battery usage stats once charging reaches this percentage, since this device never reports a full-charge signal.</string>
     <string name="desc_battery_usage">Estimated per-app share of battery use since the last reset, read from the same power model as Android\'s own Battery usage screen. Auto-resets when charging reaches the configured threshold, since this device\'s charging driver never reports a full-charge signal to trigger Android\'s own reset.</string>
+
+    <!-- Info screen -->
     <string name="info_device">Device</string>
     <string name="info_battery">Battery</string>
     <string name="info_battery_usage_row">Battery usage by app</string>
@@ -353,6 +362,8 @@
     <string name="battery_health_dead">Dead</string>
     <string name="battery_health_over_voltage">Over voltage</string>
     <string name="battery_health_cold">Cold</string>
+
+    <!-- Settings tab -->
     <string name="settings_updates">Updates</string>
     <string name="settings_quick_access">Quick Access</string>
     <string name="settings_accessibility_service">Accessibility Service</string>
@@ -377,26 +388,4 @@
     <string name="settings_loading_contributors">Loading contributors…</string>
     <string name="settings_no_contributors">No contributor data available.</string>
     <string name="settings_commits">%1$d commits</string>
-
-    <!-- localization wave 1: nav + screen meta + info -->
-    <string name="tab_display">Display</string>
-    <string name="title_ctrl_key">Physical Keyboard Fixes</string>
-    <string name="subtitle_ctrl_key">Remap Ctrl key, fix SYM key</string>
-    <string name="title_chat_composer">Chat Enter-to-Send</string>
-    <string name="subtitle_chat_composer">Enter sends, Alt+Enter newline in chat apps</string>
-    <string name="title_adblock">AdBlock</string>
-    <string name="subtitle_adblock">Systemless hosts-based ad &amp; tracker blocking</string>
-    <string name="title_denylist">Denylist Manager</string>
-    <string name="subtitle_denylist">Manage Magisk DenyList and Zygisk-Hide together</string>
-    <string name="title_location_idle">Auto-disable Location</string>
-    <string name="subtitle_location_idle">Turn off Location when idle</string>
-    <string name="subtitle_battery_usage">Per-app battery estimate, read from the native power model</string>
-    <string name="generic_disabled">Disabled</string>
-    <string name="info_access">Access</string>
-    <string name="info_root_access">Root access</string>
-    <string name="info_accessibility_service">Accessibility service</string>
-    <string name="info_status_checking">Checking…</string>
-    <string name="info_status_granted">Granted</string>
-    <string name="info_status_not_granted">Not granted</string>
-    <string name="battery_status_unknown">Unknown</string>
 </resources>
