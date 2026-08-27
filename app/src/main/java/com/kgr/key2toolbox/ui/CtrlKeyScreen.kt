@@ -14,7 +14,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.CtrlKeyController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,11 +46,16 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
     }
 
     ScreenScaffold(title = Screen.CtrlKey.title, onBack = onBack) {
-        Text("Live Ctrl keymap: ${keymapState.name}")
-        Text("Ctrl persisted: ${if (ctrlPersisted) "Yes" else "No"}")
+        Text(stringResource(R.string.ctrl_key_live_ctrl_keymap, keymapState.name))
+        Text(
+            stringResource(
+                R.string.ctrl_key_ctrl_persisted,
+                stringResource(if (ctrlPersisted) R.string.generic_yes else R.string.generic_no)
+            )
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enable Ctrl remap")
+            Text(stringResource(R.string.ctrl_key_enable_ctrl_remap))
             Switch(
                 checked = ctrlPersisted,
                 enabled = !busy,
@@ -66,14 +73,23 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
                         busy = false
 
                         statusMessage = when {
-                            !result.success ->
-                                "Failed to ${if (enable) "enable" else "disable"} Ctrl remap: ${result.outString}"
-                            needsReboot ->
-                                "Ctrl remap ${if (enable) "staged" else "un-staged"}. " +
-                                    "Reboot your device for this to take effect."
-                            else ->
-                                "Ctrl remap ${if (enable) "enabled" else "disabled"}. " +
-                                    "Persisted: ${if (ctrlPersisted) "yes" else "NO - check service.d write permissions"}."
+                            !result.success -> context.getString(
+                                if (enable) R.string.ctrl_key_status_ctrl_enable_failed
+                                else R.string.ctrl_key_status_ctrl_disable_failed,
+                                result.outString
+                            )
+                            needsReboot -> context.getString(
+                                if (enable) R.string.ctrl_key_status_ctrl_staged
+                                else R.string.ctrl_key_status_ctrl_unstaged
+                            )
+                            else -> context.getString(
+                                if (enable) R.string.ctrl_key_status_ctrl_enabled
+                                else R.string.ctrl_key_status_ctrl_disabled,
+                                context.getString(
+                                    if (ctrlPersisted) R.string.ctrl_key_persist_ok
+                                    else R.string.ctrl_key_persist_fail
+                                )
+                            )
                         }
                     }
                 }
@@ -82,15 +98,19 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
 
         if (symApplicable) {
             Text(
-                "Fixes the physical SYM key, which some ROM builds map incorrectly " +
-                    "(the symbol picker won't open until this is fixed).",
+                stringResource(R.string.ctrl_key_sym_desc),
                 style = MaterialTheme.typography.bodySmall
             )
-            Text("Live SYM keymap: ${symState.name}")
-            Text("SYM fix persisted: ${if (symPersisted) "Yes" else "No"}")
+            Text(stringResource(R.string.ctrl_key_live_sym_keymap, symState.name))
+            Text(
+                stringResource(
+                    R.string.ctrl_key_sym_fix_persisted,
+                    stringResource(if (symPersisted) R.string.generic_yes else R.string.generic_no)
+                )
+            )
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Enable SYM fix")
+                Text(stringResource(R.string.ctrl_key_enable_sym_fix))
                 Switch(
                     checked = symPersisted,
                     enabled = !busy,
@@ -108,13 +128,19 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
                             busy = false
 
                             statusMessage = when {
-                                !result.success ->
-                                    "Failed to ${if (enable) "enable" else "disable"} SYM fix: ${result.outString}"
-                                needsReboot ->
-                                    "SYM fix ${if (enable) "staged" else "un-staged"}. " +
-                                        "Reboot your device for this to take effect."
-                                else ->
-                                    "SYM fix ${if (enable) "enabled" else "disabled"}."
+                                !result.success -> context.getString(
+                                    if (enable) R.string.ctrl_key_status_sym_enable_failed
+                                    else R.string.ctrl_key_status_sym_disable_failed,
+                                    result.outString
+                                )
+                                needsReboot -> context.getString(
+                                    if (enable) R.string.ctrl_key_status_sym_staged
+                                    else R.string.ctrl_key_status_sym_unstaged
+                                )
+                                else -> context.getString(
+                                    if (enable) R.string.ctrl_key_status_sym_enabled
+                                    else R.string.ctrl_key_status_sym_disabled
+                                )
                             }
                         }
                     }
@@ -122,7 +148,7 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
             }
         } else {
             Text(
-                "SYM already works natively on this device - no fix needed.",
+                stringResource(R.string.ctrl_key_sym_native),
                 style = MaterialTheme.typography.bodySmall
             )
         }

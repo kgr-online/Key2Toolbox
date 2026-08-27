@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Wifi
 import com.kgr.key2toolbox.BuildConfig
 import com.kgr.key2toolbox.settings.SettingsScreen
 import androidx.compose.material3.Card
@@ -32,27 +35,54 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import com.kgr.key2toolbox.R
 
-enum class AppTab(val label: String) { Info("Info"), Keyboard("Keyboard"), System("System"), Settings("Settings") }
+enum class AppTab(@StringRes val labelRes: Int, val icon: ImageVector) {
+    Info(R.string.tab_info, Icons.Filled.Home),
+    Keyboard(R.string.tab_keyboard, Icons.Filled.Keyboard),
+    Display(R.string.tab_display, Icons.Filled.Smartphone),
+    System(R.string.tab_system, Icons.Filled.Build),
+    Network(R.string.tab_network, Icons.Filled.Wifi),
+    Settings(R.string.tab_settings, Icons.Filled.Settings),
+}
 
 val keyboardScreens = listOf(
+    Screen.CtrlKey,
     Screen.KbdLight,
     Screen.NavLock,
     Screen.PinKeyboard,
     Screen.ImeBlock,
-    Screen.CtrlKey
+    Screen.Calculator,
+    Screen.ImeSuggestions,
+    Screen.ChatComposer,
+    Screen.InCallShortcuts,
+    Screen.AutoFocus
+)
+
+val displayScreens = listOf(
+    Screen.Dt2w,
+    Screen.ExtraDim
+)
+
+val networkScreens = listOf(
+    Screen.Wifi5g,
+    Screen.WirelessAdb,
+    Screen.BtIdle,
+    Screen.LocationIdle,
+    Screen.Telemetry
 )
 
 val systemScreens = listOf(
-    Screen.Wifi5g,
     Screen.AdBlock,
     Screen.DenylistManager,
-    Screen.Dt2w,
     Screen.K2PF,
     Screen.LedNotify,
-    Screen.WirelessAdb,
     Screen.PlayStoreTagger,
+    Screen.TickerNotifications,
     Screen.Zram
 )
 
@@ -66,41 +96,27 @@ fun HomeScreen() {
     Scaffold(
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(
-                    selected = tab == AppTab.Info && detail == null,
-                    onClick = { tab = AppTab.Info; detail = null },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                    label = { Text(AppTab.Info.label) }
-                )
-                NavigationBarItem(
-                    selected = tab == AppTab.Keyboard,
-                    onClick = { tab = AppTab.Keyboard; detail = null },
-                    icon = { Icon(Icons.Filled.Keyboard, contentDescription = null) },
-                    label = { Text(AppTab.Keyboard.label) }
-                )
-                NavigationBarItem(
-                    selected = tab == AppTab.System,
-                    onClick = { tab = AppTab.System; detail = null },
-                    icon = { Icon(Icons.Filled.Build, contentDescription = null) },
-                    label = { Text(AppTab.System.label) }
-                )
-                NavigationBarItem(
-                    selected = tab == AppTab.Settings,
-                    onClick = { tab = AppTab.Settings; detail = null },
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text(AppTab.Settings.label) }
-                )
+                AppTab.entries.forEach { entry ->
+                    NavigationBarItem(
+                        selected = tab == entry && (entry != AppTab.Info || detail == null),
+                        onClick = { tab = entry; detail = null },
+                        icon = { Icon(entry.icon, contentDescription = null) },
+                        label = { Text(stringResource(entry.labelRes)) }
+                    )
+                }
             }
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             val current = detail
             if (current != null) {
-                DetailHost(current) { detail = null }
+                DetailHost(current, onNavigate = { detail = it }) { detail = null }
             } else when (tab) {
-                AppTab.Info -> InfoScreen()
-                AppTab.Keyboard -> CategoryMenu("Keyboard", keyboardScreens) { detail = it }
-                AppTab.System -> CategoryMenu("System", systemScreens) { detail = it }
+                AppTab.Info -> InfoScreen(onOpenBatteryUsage = { detail = Screen.BatteryUsage })
+                AppTab.Keyboard -> CategoryMenu(R.string.tab_keyboard, keyboardScreens) { detail = it }
+                AppTab.Display -> CategoryMenu(R.string.tab_display, displayScreens) { detail = it }
+                AppTab.System -> CategoryMenu(R.string.tab_system, systemScreens) { detail = it }
+                AppTab.Network -> CategoryMenu(R.string.tab_network, networkScreens) { detail = it }
                 AppTab.Settings -> SettingsScreen(currentVersionName = BuildConfig.VERSION_NAME)
             }
         }
@@ -108,28 +124,39 @@ fun HomeScreen() {
 }
 
 @Composable
-private fun DetailHost(screen: Screen, onBack: () -> Unit) {
+private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () -> Unit) {
     when (screen) {
         Screen.CtrlKey -> CtrlKeyScreen(onBack)
         Screen.KbdLight -> KbdLightScreen(onBack)
         Screen.NavLock -> NavLockScreen(onBack)
         Screen.PinKeyboard -> PinKeyboardScreen(onBack)
         Screen.ImeBlock -> ImeBlockScreen(onBack)
-        Screen.Zram -> ZramScreen(onBack)
-        Screen.WirelessAdb -> WirelessAdbScreen(onBack)
+        Screen.Calculator -> CalculatorScreen(onBack)
+        Screen.ImeSuggestions -> ImeSuggestionsScreen(onBack, onNavigateToCtrlKey = { onNavigate(Screen.CtrlKey) })
+        Screen.ChatComposer -> ChatComposerScreen(onBack)
+        Screen.InCallShortcuts -> InCallShortcutsScreen(onBack)
+        Screen.AutoFocus -> AutoFocusScreen(onBack)
         Screen.Dt2w -> Dt2wScreen(onBack)
+        Screen.ExtraDim -> ExtraDimScreen(onBack)
         Screen.Wifi5g -> Wifi5gScreen(onBack)
-        Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
-        Screen.K2PF -> K2PFScreen(onBack)
-        Screen.LedNotify -> LedNotifyScreen(onBack)
+        Screen.WirelessAdb -> WirelessAdbScreen(onBack)
+        Screen.BtIdle -> BtIdleScreen(onBack)
+        Screen.LocationIdle -> LocationIdleScreen(onBack)
+        Screen.Telemetry -> TelemetryScreen(onBack)
         Screen.AdBlock -> AdBlockScreen(onBack)
         Screen.DenylistManager -> DenylistScreen(onBack)
+        Screen.K2PF -> K2PFScreen(onBack)
+        Screen.LedNotify -> LedNotifyScreen(onBack)
+        Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
+        Screen.TickerNotifications -> TickerNotificationsScreen(onBack)
+        Screen.Zram -> ZramScreen(onBack)
+        Screen.BatteryUsage -> BatteryUsageScreen(onBack)
         Screen.Home -> Unit
     }
 }
 
 @Composable
-private fun CategoryMenu(title: String, screens: List<Screen>, onNavigate: (Screen) -> Unit) {
+private fun CategoryMenu(@StringRes titleRes: Int, screens: List<Screen>, onNavigate: (Screen) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -137,7 +164,7 @@ private fun CategoryMenu(title: String, screens: List<Screen>, onNavigate: (Scre
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(titleRes), style = MaterialTheme.typography.headlineMedium)
         screens.forEach { screen ->
             MenuEntry(screen) { onNavigate(screen) }
         }
@@ -157,21 +184,28 @@ private fun MenuEntry(screen: Screen, onClick: () -> Unit) {
         ) {
             Text(screen.title, style = MaterialTheme.typography.titleMedium)
             if (screen.subtitle.isNotEmpty() || screen.access.isNotEmpty()) {
-                Row {
+                Row(verticalAlignment = Alignment.Top) {
                     if (screen.subtitle.isNotEmpty()) {
                         Text(
                             screen.subtitle,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                     }
                     if (screen.access.isNotEmpty()) {
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            screen.access.joinToString(" ") { "[${it.label}]" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            screen.access.forEach { at ->
+                                Text(
+                                    "[" + stringResource(at.labelRes) + "]",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
                     }
                 }
             }

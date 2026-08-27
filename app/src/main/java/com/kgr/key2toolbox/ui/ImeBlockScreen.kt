@@ -30,8 +30,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.service.Key2AccessibilityService
 import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
 import kotlinx.coroutines.Dispatchers
@@ -92,23 +94,19 @@ fun ImeBlockScreen(onBack: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Back") }
+            TextButton(onClick = onBack) { Text(stringResource(R.string.generic_back)) }
         }
         Text(Screen.ImeBlock.title, style = MaterialTheme.typography.headlineSmall)
 
         AccessibilityServiceBanner(serviceEnabled)
 
         Text(
-            "In the selected apps, physical key presses go straight to the app " +
-                "instead of through the keyboard - handy for games where the " +
-                "BlackBerry keyboard otherwise intercepts the keys. While a selected " +
-                "app is open, the input method is switched to a do-nothing " +
-                "passthrough keyboard, then restored on the way out. Needs root.",
+            stringResource(R.string.desc_ime_block),
             style = MaterialTheme.typography.bodySmall
         )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enable per-app block")
+            Text(stringResource(R.string.enable_ime_block))
             Switch(
                 checked = enabled,
                 onCheckedChange = { checked ->
@@ -123,7 +121,7 @@ fun ImeBlockScreen(onBack: () -> Unit) {
             onValueChange = { query = it },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            label = { Text("Search apps") }
+            label = { Text(stringResource(R.string.generic_search_apps)) }
         )
 
         when (val list = apps) {
@@ -134,7 +132,7 @@ fun ImeBlockScreen(onBack: () -> Unit) {
 
             else -> {
                 Text(
-                    "${selected.size} selected of ${list.size} apps",
+                    stringResource(R.string.generic_selected_of_apps, selected.size, list.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

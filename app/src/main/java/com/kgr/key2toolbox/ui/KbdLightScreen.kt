@@ -14,7 +14,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.KbdLightController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,11 +40,21 @@ fun KbdLightScreen(onBack: () -> Unit) {
     }
 
     ScreenScaffold(title = Screen.KbdLight.title, onBack = onBack) {
-        Text("Persisted: ${if (persisted) "Yes" else "No"}")
-        Text("Currently running: ${if (running) "Yes" else "No"}")
+        Text(
+            stringResource(
+                R.string.generic_persisted,
+                stringResource(if (persisted) R.string.generic_yes else R.string.generic_no)
+            )
+        )
+        Text(
+            stringResource(
+                R.string.generic_currently_running,
+                stringResource(if (running) R.string.generic_yes else R.string.generic_no)
+            )
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text(stringResource(R.string.generic_enabled))
             Switch(
                 checked = persisted,
                 enabled = !busy,
@@ -57,9 +69,15 @@ fun KbdLightScreen(onBack: () -> Unit) {
                         persisted = KbdLightController.isPersisted()
                         running = KbdLightController.isRunningLive()
                         busy = false
-                        statusMessage =
-                            "Keyboard backlight ${if (enable) "enabled" else "disabled"}. " +
-                                "Persisted: ${if (persisted == enable) "ok" else "MISMATCH - check service.d write permissions"}."
+                        val persistedTag = context.getString(
+                            if (persisted == enable) R.string.persisted_ok
+                            else R.string.persisted_mismatch
+                        )
+                        statusMessage = context.getString(
+                            if (enable) R.string.status_kbd_light_enabled
+                            else R.string.status_kbd_light_disabled,
+                            persistedTag
+                        )
                     }
                 }
             )

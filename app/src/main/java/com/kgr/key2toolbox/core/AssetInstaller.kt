@@ -42,4 +42,24 @@ object AssetInstaller {
 
     fun readFile(path: String): String =
         RootShell.run("cat '$path' 2>/dev/null").outString
+
+    /**
+     * Whether the file installed at [targetPath] is byte-for-byte (modulo trailing
+     * whitespace) what [installFromAsset] would write today for [assetName] with the
+     * same [transform]. Catches a stale on-device copy from an older app version or a
+     * changed parameter - a bare "does it exist / is the daemon running" check can't.
+     * same [transform]. Used to catch a stale on-device copy left over from an older
+     * app version or a changed parameter - a bare "does the file exist / is the daemon
+     * running" check can't see that.
+     */
+    fun matchesAsset(
+        context: Context,
+        assetName: String,
+        targetPath: String,
+        transform: ((String) -> String)? = null
+    ): Boolean {
+        val raw = context.assets.open(assetName).bufferedReader().use { it.readText() }
+        val expected = (transform?.invoke(raw) ?: raw).trimEnd()
+        return readFile(targetPath).trimEnd() == expected
+    }
 }

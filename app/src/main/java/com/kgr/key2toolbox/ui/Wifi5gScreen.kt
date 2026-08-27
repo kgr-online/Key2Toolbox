@@ -14,7 +14,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.WifiRegdomainController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,24 +42,16 @@ fun Wifi5gScreen(onBack: () -> Unit) {
 
     ScreenScaffold(title = Screen.Wifi5g.title, onBack = onBack) {
         Text(
-            "On this build no EU WiFi region exposes any 5GHz hotspot (SoftAP) " +
-                "channels - only the US region does. This forces the WiFi country " +
-                "code to US so you can run a 5GHz hotspot, and re-applies it on every " +
-                "boot. Needs root.",
+            stringResource(R.string.desc_wifi5g_1),
             style = MaterialTheme.typography.bodySmall
         )
         Text(
-            "Caveats: this also applies to WiFi as a client - you lose 2.4GHz " +
-                "channels 12-13 and EU-only 5GHz channels, so it can stop you " +
-                "connecting to APs that use them. US allows the upper 5GHz channels " +
-                "(149-165) that aren't licensed in the EU; for an EU-legal hotspot " +
-                "keep it on the lower channels (36-48). Turn off to restore your " +
-                "region.",
+            stringResource(R.string.desc_wifi5g_2),
             style = MaterialTheme.typography.bodySmall
         )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Force US WiFi region")
+            Text(stringResource(R.string.wifi5g_force_toggle))
             Switch(
                 checked = forced,
                 enabled = loaded && !busy,
@@ -76,7 +70,7 @@ fun Wifi5gScreen(onBack: () -> Unit) {
         }
 
         Text(
-            "Applied WiFi region: " + country.ifEmpty { "…" },
+            stringResource(R.string.wifi5g_applied_region, country.ifEmpty { "…" }),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

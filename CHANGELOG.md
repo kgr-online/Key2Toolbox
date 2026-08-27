@@ -2,6 +2,86 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.0] - 2026-08-27
+
+Adds eleven modules, splits the bottom navigation, and localizes the whole
+app into seven languages. versionCode 1 → 31. Debug build tested on a KEY2
+(LineageOS 22.2 / Android 15, 4.19 kernel).
+
+### Added — modules
+
+- **Calculator Keys**: routes physical keys to the on-screen buttons of the
+  AOSP/Google Calculator (digits Q W E R / S D F / Z X C, operators, Sym
+  toggles scientific mode, Backspace deletes). Accessibility service only,
+  no root.
+- **IME Suggestion Shortcuts**: Ctrl+W / Ctrl+E / Ctrl+R pick candidate
+  1/2/3 from the physical-keyboard candidate strip (BlackBerry Keyboard and
+  similar). Only fires while a suggestion is showing, so the shortcuts
+  behave normally elsewhere. Requires a key remapped to Ctrl. No root.
+- **Chat Enter-to-Send**: Enter sends, Alt+Enter / Shift+Enter inserts a
+  newline, in ~15 messaging apps (Messages, WhatsApp, Telegram, Signal,
+  Element, Mattermost, ChatGPT, Perplexity, …). Accessibility service only.
+- **Call Shortcuts**: on the Google Phone in-call screen, M mutes, the
+  Currency key (or Ctrl if remapped) toggles speaker, and Q W E R / S D F /
+  Z X C open the dialpad and send DTMF. Per-locale button-label matching.
+  No root.
+- **Auto-Focus**: in selected apps, focuses and types into the first text
+  field as soon as a printable key is pressed with nothing focused. No root.
+- **Extra Dim**: dims below the system minimum brightness via an overlay,
+  with an optional boot-persisted night schedule.
+- **Battery Usage**: per-app battery estimate read from the platform's
+  native power model; adds an Info-tab row and a detail screen.
+- **Global Telemetry Block**: disables Firebase Crashlytics system-wide.
+  Root, boot-persisted.
+- **Auto-disable Bluetooth**: turns Bluetooth off after a configurable idle
+  period with nothing connected. Root daemon from service.d; multi-signal
+  connection detection (adapter ACL state, A2DP/HFP active device, playback,
+  AVRCP) so it never turns off under a device in use; wall-clock deadline so
+  suspended time counts.
+- **Auto-disable Location**: same design as Auto-disable Bluetooth, for
+  Location. Passive / low-power Play-services location checks do not reset
+  the timer.
+- **Ticker Notifications**: scrolling status-bar banner for new
+  notifications instead of a heads-up popup, and turns heads-up off
+  system-wide while enabled. Uses a `NotificationListenerService` plus a
+  `TYPE_ACCESSIBILITY_OVERLAY` window. Per-app and per-category blocklist;
+  fixed / app-icon / Monet colour modes. Adds an `androidx.palette`
+  dependency.
+
+### Added — localization
+
+- Every user-facing string (~499) moved from Kotlin literals into resources.
+  `Screen` titles/subtitles, `AppTab` labels and `AccessType` labels are now
+  `@StringRes`; `SettingsBackup.BackupModule` labels are string resources.
+- Translations for **Catalan, German, Spanish, French, Italian, Dutch,
+  Portuguese**. The 326 previously-translated strings for the older
+  overlapping modules are carried over verbatim; ~173 new strings per
+  language cover the new modules and Ticker. Key parity and
+  printf-specifier parity with the English source verified for all seven
+  files.
+
+### Changed
+
+- **Navigation**: the bottom bar is split into Keyboard / Display / System /
+  Network tabs (plus Info and Settings) instead of one flat list.
+- **ZRAM screen**: seeds its controls from the live device state and marks
+  which values come from ROM defaults.
+- **Status bar**: icon and background colour set explicitly per light/dark
+  scheme rather than relying on the framework default.
+
+### Fixed
+
+- **Home menu**: the per-module access badges (`[root]` / `[accessibility]`
+  / `[notification]`) shared an unweighted row with the subtitle, so a long
+  subtitle squeezed them to near-zero width and each badge wrapped one
+  character per line (surfaced by the longer translated subtitles). The
+  subtitle now yields space and wraps itself; badges stay on one line.
+- **5GHz Hotspot Workaround**: the boot script broke out of its retry loop
+  on the first successful `force-country-code` call, so the telephony
+  stack's SIM-country detection (~30–60 s into boot) silently reverted it.
+  It now re-applies every 3 s for ~4 minutes after boot, then runs a 60 s
+  drift watchdog, and stops as soon as the feature is toggled off.
+
 ## [4.8-beta3] - 2026-08-13
 
 ### Added

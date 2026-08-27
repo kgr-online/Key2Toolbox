@@ -12,8 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.AdBlockController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -78,7 +80,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                 onDone()
                 refresh()
             } else {
-                error = result.outString.ifBlank { "Command failed" }
+                error = result.outString.ifBlank { context.getString(R.string.adblock_command_failed) }
             }
         }
     }
@@ -89,15 +91,17 @@ fun AdBlockScreen(onBack: () -> Unit) {
     if (showResetConfirm) {
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
-            title = { Text("Reset to defaults?") },
-            text = { Text("Removes all sources, added/removed/whitelisted domains, and reverts to the bundled default blacklist. This can't be undone.") },
+            title = { Text(stringResource(R.string.adblock_reset_dialog_title)) },
+            text = { Text(stringResource(R.string.adblock_reset_dialog_desc)) },
             confirmButton = {
                 TextButton(onClick = {
                     showResetConfirm = false
-                    runAction({ AdBlockController.resetToDefaults() }) { message = "Reset to defaults." }
-                }) { Text("Reset") }
+                    runAction({ AdBlockController.resetToDefaults() }) {
+                        message = context.getString(R.string.adblock_reset_done)
+                    }
+                }) { Text(stringResource(R.string.adblock_reset_confirm)) }
             },
-            dismissButton = { TextButton(onClick = { showResetConfirm = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showResetConfirm = false }) { Text(stringResource(R.string.generic_cancel)) } }
         )
     }
 
@@ -107,10 +111,10 @@ fun AdBlockScreen(onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.adblock_cd_back))
             }
             Spacer(Modifier.width(4.dp))
-            Text("AdBlock", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.title_adblock), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             if (busy) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
         }
@@ -131,8 +135,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text(
-                            "AdBlock isn't installed yet. This deploys a systemless-hosts " +
-                                "module that overlays /system/etc/hosts with a compiled blacklist.",
+                            stringResource(R.string.adblock_not_installed_desc),
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(Modifier.height(12.dp))
@@ -140,10 +143,10 @@ fun AdBlockScreen(onBack: () -> Unit) {
                             enabled = !busy,
                             onClick = {
                                 runAction({ AdBlockController.install(context) }) {
-                                    message = "Installed. Reboot to activate filtering."
+                                    message = context.getString(R.string.adblock_installed_message)
                                 }
                             }
-                        ) { Text("Install") }
+                        ) { Text(stringResource(R.string.adblock_install)) }
                     }
                 }
                 Spacer(Modifier.height(16.dp))
@@ -159,7 +162,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                         Icon(Icons.Default.Warning, contentDescription = null)
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            "Reboot required to activate the hosts overlay. Content edits below will apply automatically once you've rebooted.",
+                            stringResource(R.string.adblock_reboot_required),
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -175,9 +178,9 @@ fun AdBlockScreen(onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Filtering", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.adblock_filtering_title), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "$entryCount blocked entries",
+                            stringResource(R.string.adblock_blocked_entries, entryCount),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -193,7 +196,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(16.dp))
-            SectionLabel("Manage Entries")
+            SectionLabel(stringResource(R.string.adblock_section_manage_entries))
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -207,7 +210,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                                     }
                                 }
                             },
-                            label = { Text("Search blocked domains") },
+                            label = { Text(stringResource(R.string.adblock_search_label)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -229,7 +232,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = newDomain,
                             onValueChange = { newDomain = it },
-                            label = { Text("Add domain or *.glob") },
+                            label = { Text(stringResource(R.string.adblock_add_domain_label)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -240,17 +243,17 @@ fun AdBlockScreen(onBack: () -> Unit) {
                                 val domain = newDomain.trim()
                                 runAction({ AdBlockController.addEntry(domain) }) { newDomain = "" }
                             }
-                        ) { Text("Add") }
+                        ) { Text(stringResource(R.string.adblock_add)) }
                     }
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            SectionLabel("Whitelist")
+            SectionLabel(stringResource(R.string.adblock_section_whitelist))
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text(
-                        "Domains here are never blocked, even if a source or manual entry includes them.",
+                        stringResource(R.string.adblock_whitelist_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -265,7 +268,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = newWhitelistEntry,
                             onValueChange = { newWhitelistEntry = it },
-                            label = { Text("Whitelist domain or *.glob") },
+                            label = { Text(stringResource(R.string.adblock_whitelist_input_label)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -276,13 +279,13 @@ fun AdBlockScreen(onBack: () -> Unit) {
                                 val domain = newWhitelistEntry.trim()
                                 runAction({ AdBlockController.whitelistAdd(domain) }) { newWhitelistEntry = "" }
                             }
-                        ) { Text("Add") }
+                        ) { Text(stringResource(R.string.adblock_add)) }
                     }
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            SectionLabel("Sources")
+            SectionLabel(stringResource(R.string.adblock_section_sources))
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     sources.forEach { (lineNumber, url) ->
@@ -295,7 +298,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                             IconButton(
                                 onClick = { runAction({ AdBlockController.sourceRemove(lineNumber) }) },
                                 enabled = !busy
-                            ) { Icon(Icons.Default.Close, contentDescription = "Remove source") }
+                            ) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.adblock_cd_remove_source)) }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -303,7 +306,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = newSourceUrl,
                             onValueChange = { newSourceUrl = it },
-                            label = { Text("Source URL (hosts or domain list)") },
+                            label = { Text(stringResource(R.string.adblock_source_url_label)) },
                             singleLine = true,
                             modifier = Modifier.weight(1f)
                         )
@@ -314,7 +317,7 @@ fun AdBlockScreen(onBack: () -> Unit) {
                                 val url = newSourceUrl.trim()
                                 runAction({ AdBlockController.sourceAdd(url) }) { newSourceUrl = "" }
                             }
-                        ) { Text("Add") }
+                        ) { Text(stringResource(R.string.adblock_add)) }
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -343,10 +346,10 @@ fun AdBlockScreen(onBack: () -> Unit) {
                                     refresh()
                                 }
                             }
-                        ) { Text("Update sources now") }
+                        ) { Text(stringResource(R.string.adblock_update_sources_now)) }
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            updateStatusLabel(updateStatus),
+                            updateStatusLabel(context, updateStatus),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -355,14 +358,14 @@ fun AdBlockScreen(onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(16.dp))
-            SectionLabel("Danger Zone")
+            SectionLabel(stringResource(R.string.adblock_section_danger_zone))
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     OutlinedButton(
                         enabled = !busy,
                         onClick = { showResetConfirm = true },
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) { Text("Reset to defaults") }
+                    ) { Text(stringResource(R.string.adblock_reset_button)) }
                 }
             }
 
@@ -401,15 +404,18 @@ private fun EntryRow(domain: String, onRemove: () -> Unit) {
     ) {
         Text(domain, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
         IconButton(onClick = onRemove) {
-            Icon(Icons.Default.Close, contentDescription = "Remove")
+            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.adblock_cd_remove))
         }
     }
 }
 
-private fun updateStatusLabel(status: String): String = when {
+private fun updateStatusLabel(context: android.content.Context, status: String): String = when {
     status == "none" -> ""
-    status.startsWith("running") -> "Updating…"
-    status.startsWith("done") -> "Up to date"
-    status.startsWith("error") -> "Error: ${status.removePrefix("error:").substringBeforeLast(':')}"
+    status.startsWith("running") -> context.getString(R.string.adblock_update_status_updating)
+    status.startsWith("done") -> context.getString(R.string.adblock_update_status_done)
+    status.startsWith("error") -> context.getString(
+        R.string.adblock_update_status_error,
+        status.removePrefix("error:").substringBeforeLast(':')
+    )
     else -> status
 }

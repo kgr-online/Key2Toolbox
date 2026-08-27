@@ -5,14 +5,23 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,19 +30,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private data class Row(val label: String, val value: String)
+private data class Row(val label: String, val value: String, val isLevel: Boolean = false)
 
 @Composable
-fun InfoScreen() {
+fun InfoScreen(onOpenBatteryUsage: () -> Unit) {
     val context = LocalContext.current
 
     var rootOk by remember { mutableStateOf<Boolean?>(null) }
@@ -43,11 +56,11 @@ fun InfoScreen() {
 
     LaunchedEffect(Unit) {
         a11yOk = isKey2AccessibilityServiceEnabled(context)
-        device = buildDeviceRows()
+        device = buildDeviceRows(context)
         battery = readBatteryRows(context)
         withContext(Dispatchers.IO) {
             val r = RootShell.isRootAvailable()
-            val health = readBatteryHealthRows()
+            val health = readBatteryHealthRows(context)
             withContext(Dispatchers.Main) {
                 rootOk = r
                 if (health.isNotEmpty()) battery = battery + health
@@ -62,24 +75,65 @@ fun InfoScreen() {
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Key2 Toolbox", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineMedium)
 
-        InfoCard("Access") {
+        InfoCard(stringResource(R.string.info_access)) {
             StatusRow(
-                "Root access",
-                when (rootOk) { null -> "Checking…"; true -> "Granted"; else -> "Not granted" },
+                stringResource(R.string.info_root_access),
+                when (rootOk) {
+                    null -> stringResource(R.string.info_status_checking)
+                    true -> stringResource(R.string.info_status_granted)
+                    else -> stringResource(R.string.info_status_not_granted)
+                },
                 when (rootOk) { null -> NEUTRAL; true -> OK; else -> BAD }
             )
             StatusRow(
-                "Accessibility service",
-                if (a11yOk) "Enabled" else "Disabled",
+                stringResource(R.string.info_accessibility_service),
+                if (a11yOk) stringResource(R.string.generic_enabled) else stringResource(R.string.generic_disabled),
                 if (a11yOk) OK else BAD
             )
         }
 
-        InfoCard("Device") { device.forEach { LabelValue(it) } }
+        InfoCard(stringResource(R.string.info_device)) { device.forEach { LabelValue(it) } }
 
-        InfoCard("Battery") { battery.forEach { LabelValue(it) } }
+        InfoCard(stringResource(R.string.info_battery)) {
+            battery.forEach { row ->
+                LabelValue(row)
+                if (row.isLevel) {
+                    BatteryUsageEntryRow(onClick = onOpenBatteryUsage)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatteryUsageEntryRow(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(Icons.Filled.QueryStats, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.info_battery_usage_row), style = MaterialTheme.typography.titleSmall)
+            Text(
+                stringResource(R.string.info_battery_usage_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -123,15 +177,18 @@ private fun getprop(key: String): String = try {
     ""
 }
 
-private fun buildDeviceRows(): List<Row> {
+private fun buildDeviceRows(context: Context): List<Row> {
     val rows = mutableListOf(
-        Row("Model", "${Build.MANUFACTURER} ${Build.MODEL}"),
-        Row("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"),
+        Row(context.getString(R.string.info_model), "${Build.MANUFACTURER} ${Build.MODEL}"),
+        Row(
+            context.getString(R.string.info_android),
+            context.getString(R.string.info_android_value, Build.VERSION.RELEASE, Build.VERSION.SDK_INT)
+        ),
     )
-    getprop("ro.lineage.version").takeIf { it.isNotEmpty() }?.let { rows += Row("LineageOS", it) }
-    rows += Row("Build", Build.DISPLAY)
-    Build.VERSION.SECURITY_PATCH.takeIf { it.isNotEmpty() }?.let { rows += Row("Security patch", it) }
-    System.getProperty("os.version")?.takeIf { it.isNotEmpty() }?.let { rows += Row("Kernel", it) }
+    getprop("ro.lineage.version").takeIf { it.isNotEmpty() }?.let { rows += Row(context.getString(R.string.info_lineageos), it) }
+    rows += Row(context.getString(R.string.info_build), Build.DISPLAY)
+    Build.VERSION.SECURITY_PATCH.takeIf { it.isNotEmpty() }?.let { rows += Row(context.getString(R.string.info_security_patch), it) }
+    System.getProperty("os.version")?.takeIf { it.isNotEmpty() }?.let { rows += Row(context.getString(R.string.info_kernel), it) }
     return rows
 }
 
@@ -142,35 +199,39 @@ private fun readBatteryRows(context: Context): List<Row> {
     val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
     val pct = if (level >= 0 && scale > 0) level * 100 / scale else -1
     val status = when (intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)) {
-        BatteryManager.BATTERY_STATUS_CHARGING -> "Charging"
-        BatteryManager.BATTERY_STATUS_DISCHARGING -> "Discharging"
-        BatteryManager.BATTERY_STATUS_FULL -> "Full"
-        BatteryManager.BATTERY_STATUS_NOT_CHARGING -> "Not charging"
-        else -> "Unknown"
+        BatteryManager.BATTERY_STATUS_CHARGING -> context.getString(R.string.battery_status_charging)
+        BatteryManager.BATTERY_STATUS_DISCHARGING -> context.getString(R.string.battery_status_discharging)
+        BatteryManager.BATTERY_STATUS_FULL -> context.getString(R.string.battery_status_full)
+        BatteryManager.BATTERY_STATUS_NOT_CHARGING -> context.getString(R.string.battery_status_not_charging)
+        else -> context.getString(R.string.battery_status_unknown)
     }
     val health = when (intent.getIntExtra(BatteryManager.EXTRA_HEALTH, -1)) {
-        BatteryManager.BATTERY_HEALTH_GOOD -> "Good"
-        BatteryManager.BATTERY_HEALTH_OVERHEAT -> "Overheat"
-        BatteryManager.BATTERY_HEALTH_DEAD -> "Dead"
-        BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> "Over voltage"
-        BatteryManager.BATTERY_HEALTH_COLD -> "Cold"
-        else -> "Unknown"
+        BatteryManager.BATTERY_HEALTH_GOOD -> context.getString(R.string.battery_health_good)
+        BatteryManager.BATTERY_HEALTH_OVERHEAT -> context.getString(R.string.battery_health_overheat)
+        BatteryManager.BATTERY_HEALTH_DEAD -> context.getString(R.string.battery_health_dead)
+        BatteryManager.BATTERY_HEALTH_OVER_VOLTAGE -> context.getString(R.string.battery_health_over_voltage)
+        BatteryManager.BATTERY_HEALTH_COLD -> context.getString(R.string.battery_health_cold)
+        else -> context.getString(R.string.battery_status_unknown)
     }
     val temp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
     val volt = intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1)
     val tech = intent.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY) ?: ""
 
     val rows = mutableListOf<Row>()
-    if (pct >= 0) rows += Row("Level", "$pct%  ($status)")
-    rows += Row("Health", health)
-    if (temp > 0) rows += Row("Temperature", String.format("%.1f °C", temp / 10.0))
-    if (volt > 0) rows += Row("Voltage", String.format("%.3f V", volt / 1000.0))
-    if (tech.isNotEmpty()) rows += Row("Technology", tech)
+    if (pct >= 0) rows += Row(
+        context.getString(R.string.info_level),
+        context.getString(R.string.info_level_value, pct, status),
+        isLevel = true
+    )
+    rows += Row(context.getString(R.string.info_health), health)
+    if (temp > 0) rows += Row(context.getString(R.string.info_temperature), String.format("%.1f °C", temp / 10.0))
+    if (volt > 0) rows += Row(context.getString(R.string.info_voltage), String.format("%.3f V", volt / 1000.0))
+    if (tech.isNotEmpty()) rows += Row(context.getString(R.string.info_technology), tech)
     return rows
 }
 
 /** Capacity-based health and cycle count from sysfs (needs root). */
-private fun readBatteryHealthRows(): List<Row> {
+private fun readBatteryHealthRows(context: Context): List<Row> {
     val out = RootShell.run(
         "cat /sys/class/power_supply/battery/charge_full " +
             "/sys/class/power_supply/battery/charge_full_design " +
@@ -183,8 +244,14 @@ private fun readBatteryHealthRows(): List<Row> {
     val rows = mutableListOf<Row>()
     if (full != null && design != null && design > 0) {
         val pct = full * 100 / design
-        rows += Row("Capacity", "${full / 1000} / ${design / 1000} mAh  ($pct%)")
+        rows += Row(
+            context.getString(R.string.info_capacity),
+            context.getString(
+                R.string.info_capacity_value,
+                (full / 1000).toInt(), (design / 1000).toInt(), pct.toInt()
+            )
+        )
     }
-    if (cycles != null) rows += Row("Charge cycles", cycles.toString())
+    if (cycles != null) rows += Row(context.getString(R.string.info_charge_cycles), cycles.toString())
     return rows
 }

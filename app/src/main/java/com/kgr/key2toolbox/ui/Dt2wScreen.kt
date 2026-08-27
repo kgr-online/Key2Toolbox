@@ -14,7 +14,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.Dt2wController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,14 +41,19 @@ fun Dt2wScreen(onBack: () -> Unit) {
 
     ScreenScaffold(title = Screen.Dt2w.title, onBack = onBack) {
         Text(
-            "Apply with the screen ON for the gesture to be configured on suspend.",
+            stringResource(R.string.dt2w_intro),
             style = MaterialTheme.typography.bodySmall
         )
-        Text("Live state: ${state.name}")
-        Text("Persisted: ${if (persisted) "Yes" else "No"}")
+        Text(stringResource(R.string.generic_live_state, state.name))
+        Text(
+            stringResource(
+                R.string.generic_persisted,
+                stringResource(if (persisted) R.string.generic_yes else R.string.generic_no)
+            )
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Enabled")
+            Text(stringResource(R.string.generic_enabled))
             Switch(
                 checked = state == Dt2wController.State.ON,
                 enabled = !busy,
@@ -63,9 +70,13 @@ fun Dt2wScreen(onBack: () -> Unit) {
                         state = Dt2wController.currentState()
                         persisted = Dt2wController.isPersisted()
                         busy = false
-                        statusMessage =
-                            "DT2W ${if (enable) "enabled" else "disabled"}. " +
-                                "Persisted: ${if (persisted == enable) "yes" else "NO - check service.d write permissions"}."
+                        val persistedTag = context.getString(
+                            if (persisted == enable) R.string.persisted_ok else R.string.persisted_mismatch
+                        )
+                        statusMessage = context.getString(
+                            if (enable) R.string.status_dt2w_enabled else R.string.status_dt2w_disabled,
+                            persistedTag
+                        )
                     }
                 }
             )
