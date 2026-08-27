@@ -72,4 +72,8 @@ sealed class Screen(
         "LED Notify Colors", "Per-app notification LED colors",
         listOf(AccessType.ROOT, AccessType.NOTIFICATION)
     )
+    data object TickerNotifications : Screen(
+        "Ticker Notifications", "Scrolling status-bar banner instead of heads-up",
+        listOf(AccessType.ROOT, AccessType.ACCESSIBILITY, AccessType.NOTIFICATION)
+    )
 }
