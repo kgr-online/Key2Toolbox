@@ -36,6 +36,8 @@ sealed class Screen(
     )
     data object ImeSuggestions : Screen(
         "IME Suggestion Shortcuts", "Ctrl+W/E/R picks keyboard suggestion 1/2/3",
+    data object ChatComposer : Screen(
+        "Chat Enter-to-Send", "Enter sends, Alt+Enter newline in chat apps",
         listOf(AccessType.ACCESSIBILITY)
     )
 

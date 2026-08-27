@@ -52,6 +52,7 @@ val keyboardScreens = listOf(
     Screen.PinKeyboard,
     Screen.ImeBlock,
     Screen.ImeSuggestions,
+    Screen.ChatComposer,
     Screen.CtrlKey
 )
 
@@ -119,6 +120,7 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
         Screen.PinKeyboard -> PinKeyboardScreen(onBack)
         Screen.ImeBlock -> ImeBlockScreen(onBack)
         Screen.ImeSuggestions -> ImeSuggestionsScreen(onBack, onNavigateToCtrlKey = { onNavigate(Screen.CtrlKey) })
+        Screen.ChatComposer -> ChatComposerScreen(onBack)
         Screen.Zram -> ZramScreen(onBack)
         Screen.WirelessAdb -> WirelessAdbScreen(onBack)
         Screen.Dt2w -> Dt2wScreen(onBack)
