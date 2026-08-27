@@ -46,16 +46,11 @@ fun ScreenScaffold(
     }
 }
 
-/** Subtle separator above a module's trailing description text. */
-/**
- * Subtle separator placed above a module's trailing description text, so it
- * reads as disclaimer-like content rather than part of the controls above it.
 /**
  * Subtle separator placed above a module's trailing description text, so it
  * reads as disclaimer-like content rather than part of the controls above it.
  * Deliberately carries no padding of its own - callers sit in containers that
- * already space siblings evenly (a [Column]'s `spacedBy`), so adding padding
- * here would make the gap above the divider larger than the gap below it.
+ * already space siblings evenly (a [Column]'s `spacedBy`).
  */
 @Composable
 fun DescriptionDivider() {

@@ -9,6 +9,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.graphics.Rect
+import android.os.BatteryManager
+import android.os.Bundle
+import android.os.SystemClock
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -19,10 +22,15 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
+import com.kgr.key2toolbox.inputfix.CalculatorInputFix
 import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
+import com.kgr.key2toolbox.modules.AutoFocusController
+import com.kgr.key2toolbox.modules.BatteryUsageController
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Combined accessibility service for the ported nozerorma Key2 Tweaks features.
@@ -84,6 +92,8 @@ class Key2AccessibilityService : AccessibilityService() {
         const val KEY_IME_SAVED = "ime_block_saved_ime"   // IME to restore when leaving a blocked app
         const val KEY_IME_SUGGESTIONS = "ime_suggestions_enabled" // Ctrl+W/E/R picks IME suggestion 1/2/3
         const val KEY_CHAT_COMPOSER = "chat_composer_enabled" // Enter -> send in chat apps
+        const val KEY_CALCULATOR = "calculator_enabled"   // route digit/operator keys to a foreground calculator
+        const val KEY_IN_CALL_SHORTCUTS = "in_call_shortcuts_enabled" // M=mute, Speed/$=speaker, letters=dialpad in-call
 
         // Our do-nothing IME: while it's active, physical key presses go straight
         // to the app instead of being intercepted/translated by the normal keyboard.
@@ -92,8 +102,19 @@ class Key2AccessibilityService : AccessibilityService() {
         private const val DEFAULT_IME_FALLBACK =
             "com.blackberry.keyboard/com.blackberry.inputmethod.core.BlackBerryIME"
 
+        // Every localized label Google Dialer uses for the three in-call action-bar buttons
+        // (incall_label_speaker / _mute / _dialpad). Exact trimmed, lowercased match.
+        private val SPEAKER_LABELS = setOf("altaveu", "altavoz", "altifalante", "alto-falante", "altofalante", "altoparlanti", "bocina", "bozgorailua", "difuzor", "dinamik", "garsiakalbis", "głośnik", "hangszóró", "haut-parleur", "hoparlör", "hátalari", "högtalare", "højttaler", "høyttaler", "isipikha", "kaiutin", "karnay", "kõlar", "lautsprecher", "loa", "luidspreker", "pmbsr suara", "reproduktor", "skaļrunis", "speaker", "spika", "vivavoce", "zvočnik", "zvučnik", "ηχείο", "високогов.", "динамик", "динамік", "дынамік", "звучник", "катуу сүйлөткүч", "чанга яригч", "բարձրախոս", "רמקול", "اسپیکر", "بلندگو", "مكبر الصوت", "स्पिकर", "स्पीकर", "स्‍पीकर", "স্পিকার", "স্পীকাৰ", "ਸਪੀਕਰ", "સ્પીકર", "ସ୍ପିକର୍‌", "ஸ்பீக்கர்", "స్పీకర్", "ಸ್ಪೀಕರ್‌", "സ്പീക്കർ", "ස්පීකරය", "ลำโพง", "ລຳໂພງ", "စပီကာ", "სპიკერი", "የድምጽ ማጉያ", "ឧបករណ៍​បំពង​សំឡេង", "スピーカー", "免提", "喇叭", "擴音", "스피커")
+        private val MUTE_LABELS = setOf("bisukan", "couper le son", "couper micro", "demp", "dempen", "desakt. audioa", "desativ. som", "hiqi zërin", "hljóð af", "i-mute", "isklj. zvuk", "isključi zvuk", "izklopi zvok", "izslēgt", "kutt lyden", "ljud av", "mute", "mykistä", "nutildyti", "némítás", "ovozsiz", "redam", "sesi kapat", "silencia", "silenciar", "silenzia", "silențios", "sluk mikrofon", "stumm", "susdurun", "thulisa", "tắt tiếng", "vaigista", "vypnúť zvuk", "wycisz", "zima maikrofoni", "ztlumit", "σίγαση", "без звука", "выкл. гук", "дууг хаах", "дыбысын өшіру", "заглушаване", "исклучи звук", "искључи звук", "мікрофон", "үнүн өчүрүү", "անջատել", "השתקה", "خاموش کریں", "صامت کردن", "كتم", "म्युट गर्नुहोस्", "म्यूट करा", "म्यूट करें", "মিউট করুন", "মিউট কৰক", "ਮਿਊਟ ਕਰੋ", "મ્યૂટ કરો", "ମ୍ୟୁଟ୍ କର", "ஒலியடக்கு", "మ్యూట్", "ಮ್ಯೂಟ್‌", "മ്യൂട്ടുചെയ്യുക", "නිහඬ කරන්න", "ปิดเสียง", "ປີດສຽງ", "အသံပိတ်ရန်", "დადუმება", "ድምፀ-ከል አድርግ", "បិទ​សំឡេង", "ミュート", "静音", "靜音", "음소거")
+        private val DIALPAD_LABELS = setOf("billentyűzet", "blloku i tasteve", "bàn phím", "cipartast.", "clavier", "ikhiphedi", "keypad", "klaviatura", "klaviatuur", "klaviatūra", "klawiatura", "klávesnice", "knappsats", "nommerblad", "näppäimistö", "pad kekunci", "talnaborð", "tastatur", "tastatura", "tastatură", "tastenfeld", "tastierino", "teclado", "teclat", "teklatua", "telefonska tastatura", "tipkovnica", "toetsenblok", "tuş takımı", "vitufe vya simu", "číselník", "πληκτρολόγιο", "клавиа­тура", "клавиатура", "клавіатура", "клавіятура", "ном. тергич", "пернетақта", "тастатура", "товчлуур", "թվաշար", "לוח חיוג", "صفحه کلید", "لوحة المفاتيح", "کی پیڈ", "किप्याड", "कीपॅड", "कीपैड", "কীপেড", "কীপ্যাড", "ਕੀਪੈਡ", "કીપેડ", "କୀ’ପେଡ", "கீபேட்", "కీప్యాడ్", "ಕೀಪ್ಯಾಡ್‌", "കീപാഡ്", "යතුරු පුවරුව", "ปุ่มกด", "ແປ້ນກົດ", "ခလုတ်ခုံ", "კლავიატურა", "ቁልፍ ሰሌዳ", "ផ្ទាំងចុចលេខ", "キーパッド", "拨号键盘", "撥號鍵盤", "키패드")
+
         private const val LONG_PRESS_MS = 350L
         private const val DOUBLE_TAP_MS = 300L
+
+        // Auto-Focus timing.
+        private const val AUTO_FOCUS_FOCUS_TIMEOUT_MS = 1000L
+        private const val AUTO_FOCUS_SETTLE_MS = 150L
+        private const val NO_EDITABLE_CACHE_MS = 1500L
 
         private const val ALWAYS_OFF_SCRIPT = "nav_always_off.sh"
         private const val ALWAYS_OFF_TARGET = "/data/adb/service.d/$ALWAYS_OFF_SCRIPT"
@@ -104,6 +125,21 @@ class Key2AccessibilityService : AccessibilityService() {
         ComposerEnterKeyHandler.defaultSupportedPackages(),
         ComposerEnterKeyHandler.defaultSendButtonMatchers()
     )
+    private val calculatorFix = CalculatorInputFix()
+    private val autoFocusWorker: ExecutorService = Executors.newSingleThreadExecutor()
+
+    // --- Auto-Focus state ---
+    private val consumedAutofocusKeys = mutableSetOf<Int>()
+    @Volatile private var focusLatch: CountDownLatch? = null
+    @Volatile private var autoFocusInjecting = false
+    private val pendingAutoFocusKeys = mutableListOf<Pair<Int, Char>>()
+    private val autoFocusLock = Any()
+    private var noEditableWindowId = -1
+    private var noEditableAtMs = 0L
+
+    private var batteryReceiver: BroadcastReceiver? = null
+    @Volatile private var batteryThresholdArmed = false
+
     @Volatile private var navDisabled = false // last state pushed to kernel
     @Volatile private var imeActive = false   // keyboard currently showing
     @Volatile private var imeBlockApplied = false // last show_ime value we pushed (true = suppressed)
@@ -191,6 +227,38 @@ class Key2AccessibilityService : AccessibilityService() {
             Log.d("Key2Toolbox", "Successfully registered screenReceiver")
         } catch (e: Exception) {
             Log.e("Key2Toolbox", "Failed to register screenReceiver", e)
+        }
+
+        // Battery Usage: auto-reset stats once the level crosses the threshold while charging,
+        // a stand-in for BATTERY_STATUS_FULL which this device's charging driver never reports.
+        val battery = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                intent ?: return
+                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                if (level < 0 || scale <= 0) return
+                val percent = level * 100 / scale
+                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL
+                val threshold = BatteryUsageController.getResetThreshold(this@Key2AccessibilityService)
+                if (charging && percent >= threshold) {
+                    if (!batteryThresholdArmed) {
+                        batteryThresholdArmed = true
+                        worker.execute { BatteryUsageController.resetStats() }
+                    }
+                } else if (percent < threshold) {
+                    batteryThresholdArmed = false
+                }
+            }
+        }
+        try {
+            ContextCompat.registerReceiver(
+                this, battery, IntentFilter(Intent.ACTION_BATTERY_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            batteryReceiver = battery
+        } catch (e: Exception) {
+            Log.e("Key2Toolbox", "Failed to register batteryReceiver", e)
         }
     }
 
@@ -280,6 +348,199 @@ class Key2AccessibilityService : AccessibilityService() {
         return if (count == 1) text else null
     }
     private fun chatComposerEnabled() = prefs?.getBoolean(KEY_CHAT_COMPOSER, false) ?: false
+    private fun calculatorEnabled() = prefs?.getBoolean(KEY_CALCULATOR, false) ?: false
+    private fun inCallShortcutsEnabled() = prefs?.getBoolean(KEY_IN_CALL_SHORTCUTS, false) ?: false
+
+    private fun isGoogleDialerForeground(): Boolean {
+        val pkg = foregroundPkg ?: return false
+        return pkg == "com.google.android.dialer" || pkg == "com.google.android.apps.dialer"
+    }
+
+    private fun getDialerKeycode(kc: Int): Int? = when (kc) {
+        KeyEvent.KEYCODE_W -> KeyEvent.KEYCODE_1
+        KeyEvent.KEYCODE_E -> KeyEvent.KEYCODE_2
+        KeyEvent.KEYCODE_R -> KeyEvent.KEYCODE_3
+        KeyEvent.KEYCODE_S -> KeyEvent.KEYCODE_4
+        KeyEvent.KEYCODE_D -> KeyEvent.KEYCODE_5
+        KeyEvent.KEYCODE_F -> KeyEvent.KEYCODE_6
+        KeyEvent.KEYCODE_Z -> KeyEvent.KEYCODE_7
+        KeyEvent.KEYCODE_X -> KeyEvent.KEYCODE_8
+        KeyEvent.KEYCODE_C -> KeyEvent.KEYCODE_9
+        KeyEvent.KEYCODE_0 -> KeyEvent.KEYCODE_0
+        else -> null
+    }
+
+    private fun dialerDigitChar(kc: Int): Char? = when (getDialerKeycode(kc)) {
+        KeyEvent.KEYCODE_0 -> '0'; KeyEvent.KEYCODE_1 -> '1'; KeyEvent.KEYCODE_2 -> '2'
+        KeyEvent.KEYCODE_3 -> '3'; KeyEvent.KEYCODE_4 -> '4'; KeyEvent.KEYCODE_5 -> '5'
+        KeyEvent.KEYCODE_6 -> '6'; KeyEvent.KEYCODE_7 -> '7'; KeyEvent.KEYCODE_8 -> '8'
+        KeyEvent.KEYCODE_9 -> '9'; else -> null
+    }
+
+    private fun findCheckables(node: AccessibilityNodeInfo, list: MutableList<AccessibilityNodeInfo>) {
+        if (node.isCheckable) list.add(AccessibilityNodeInfo.obtain(node))
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            findCheckables(child, list)
+            child.recycle()
+        }
+    }
+
+    private fun findCheckableByLabel(
+        checkables: List<AccessibilityNodeInfo>,
+        labels: Set<String>
+    ): AccessibilityNodeInfo? = checkables.firstOrNull { nodeSubtreeContainsLabel(it, labels) }
+
+    private fun nodeSubtreeContainsLabel(node: AccessibilityNodeInfo, labels: Set<String>): Boolean {
+        if (node.contentDescription?.toString()?.trim()?.lowercase() in labels ||
+            node.text?.toString()?.trim()?.lowercase() in labels
+        ) return true
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            try {
+                if (nodeSubtreeContainsLabel(child, labels)) return true
+            } finally {
+                child.recycle()
+            }
+        }
+        return false
+    }
+
+    private fun findDialerDigitsField(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        for (id in arrayOf("com.google.android.dialer:id/digits", "com.google.android.apps.dialer:id/digits")) {
+            val nodes = root.findAccessibilityNodeInfosByViewId(id)
+            if (nodes != null && nodes.isNotEmpty()) {
+                for (i in 1 until nodes.size) nodes[i].recycle()
+                return nodes[0]
+            }
+        }
+        return null
+    }
+
+    private fun insertDialerDigit(target: AccessibilityNodeInfo, kc: Int) {
+        try {
+            val digit = dialerDigitChar(kc) ?: return
+            val current = if (target.isShowingHintText) "" else (target.text?.toString() ?: "")
+            val args = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, current + digit)
+            }
+            target.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+        } finally {
+            target.recycle()
+        }
+    }
+
+    private fun autoOpenDialpad() {
+        val root = rootInActiveWindow ?: return
+        try {
+            val checkables = mutableListOf<AccessibilityNodeInfo>()
+            findCheckables(root, checkables)
+            try {
+                if (checkables.size >= 3) {
+                    val keypadNode = findCheckableByLabel(checkables, DIALPAD_LABELS)
+                    if (keypadNode != null && !keypadNode.isChecked) {
+                        keypadNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    }
+                }
+            } finally {
+                checkables.forEach { it.recycle() }
+            }
+        } finally {
+            root.recycle()
+        }
+    }
+
+    // --- Auto-Focus ---
+
+    private fun isAutoFocusEnabledForForeground(): Boolean {
+        val p = prefs ?: return false
+        if (!AutoFocusController.isEnabled(p)) return false
+        val pkg = foregroundPkg ?: return false
+        return pkg in AutoFocusController.getSelectedApps(p)
+    }
+
+    private fun isPhoneNumberField(node: AccessibilityNodeInfo): Boolean =
+        (node.inputType and android.text.InputType.TYPE_MASK_CLASS) ==
+            android.text.InputType.TYPE_CLASS_PHONE
+
+    private fun recentlyFoundNoEditableField(root: AccessibilityNodeInfo): Boolean =
+        root.windowId == noEditableWindowId &&
+            (SystemClock.uptimeMillis() - noEditableAtMs) < NO_EDITABLE_CACHE_MS
+
+    private fun rememberNoEditableField(root: AccessibilityNodeInfo) {
+        noEditableWindowId = root.windowId
+        noEditableAtMs = SystemClock.uptimeMillis()
+    }
+
+    private fun runAutoFocusInjection(latch: CountDownLatch) {
+        try {
+            val landedInTime = try {
+                latch.await(AUTO_FOCUS_FOCUS_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            } catch (_: InterruptedException) {
+                false
+            }
+            focusLatch = null
+            if (landedInTime) Thread.sleep(AUTO_FOCUS_SETTLE_MS)
+            while (true) {
+                val batch = synchronized(autoFocusLock) {
+                    val copy = pendingAutoFocusKeys.toList()
+                    pendingAutoFocusKeys.clear()
+                    if (copy.isEmpty()) autoFocusInjecting = false
+                    copy
+                }
+                if (batch.isEmpty()) return
+                if (!insertAutoFocusText(batch)) {
+                    Log.d("Key2Toolbox", "autoFocus: no editable field took focus, dropped ${batch.size} key(s)")
+                    return
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Key2Toolbox", "autoFocus injection failed", e)
+        } finally {
+            synchronized(autoFocusLock) {
+                pendingAutoFocusKeys.clear()
+                autoFocusInjecting = false
+            }
+        }
+    }
+
+    private fun insertAutoFocusText(batch: List<Pair<Int, Char>>): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val focused = try {
+            root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+        } finally {
+            root.recycle()
+        }
+        val target = focused ?: return false
+        try {
+            if (!AutoFocusController.isEditableTextField(target)) return false
+            val asDialpad = isPhoneNumberField(target)
+            val addition = buildString {
+                for ((keycode, typed) in batch) {
+                    append(if (asDialpad) (dialerDigitChar(keycode) ?: typed) else typed)
+                }
+            }
+            val current = if (target.isShowingHintText) "" else (target.text?.toString() ?: "")
+            val updated = current + addition
+            val args = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, updated)
+            }
+            if (!target.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) return false
+            setCaretToEnd(target, updated.length)
+            return true
+        } finally {
+            target.recycle()
+        }
+    }
+
+    private fun setCaretToEnd(target: AccessibilityNodeInfo, end: Int) {
+        val args = Bundle().apply {
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, end)
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, end)
+        }
+        target.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args)
+    }
+
     private fun imeBlockEnabled() = prefs?.getBoolean(KEY_IME_BLOCK, false) ?: false
     private fun imeBlockApps(): Set<String> =
         prefs?.getStringSet(KEY_IME_BLOCK_APPS, emptySet()) ?: emptySet()
@@ -294,6 +555,34 @@ class Key2AccessibilityService : AccessibilityService() {
         if (pkg != null && pkg != foregroundPkg) {
             foregroundPkg = pkg
             reconcileImeBlock()
+        }
+
+        // In-Call Shortcuts: open the dialpad tab the moment the in-call screen appears.
+        if (inCallShortcutsEnabled() && isGoogleDialerForeground() &&
+            event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        ) {
+            autoOpenDialpad()
+        }
+
+        // Auto-Focus: wake a pending focus wait the moment the target field takes input focus.
+        focusLatch?.let { latch ->
+            val t = event?.eventType
+            if (t == AccessibilityEvent.TYPE_VIEW_FOCUSED ||
+                t == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED ||
+                t == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            ) {
+                rootInActiveWindow?.let { r ->
+                    try {
+                        val focused = r.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                        val isEditable = focused?.let { AutoFocusController.isEditableTextField(it) } ?: false
+                        focused?.recycle()
+                        if (isEditable) latch.countDown()
+                    } finally {
+                        r.recycle()
+                    }
+                }
+            }
         }
     }
 
@@ -462,6 +751,131 @@ class Key2AccessibilityService : AccessibilityService() {
             return handleNavGesture(event, kc)
         }
 
+        // In-Call Shortcuts: on the Google Dialer in-call screen, Speed/$ -> Speaker,
+        // M -> Mute, letter keys -> dialpad digits. Runs before Auto-Focus below.
+        if (inCallShortcutsEnabled() && isGoogleDialerForeground()) {
+            val root = rootInActiveWindow
+            if (root != null) {
+                try {
+                    val checkables = mutableListOf<AccessibilityNodeInfo>()
+                    findCheckables(root, checkables)
+                    try {
+                        if (checkables.size >= 3) {
+                            val isSpeakerKey = kc == KeyEvent.KEYCODE_CTRL_LEFT || kc == KeyEvent.KEYCODE_4
+                            val isMuteKey = kc == KeyEvent.KEYCODE_M
+                            if (isSpeakerKey) {
+                                if (event.action == KeyEvent.ACTION_UP) {
+                                    findCheckableByLabel(checkables, SPEAKER_LABELS)
+                                        ?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                }
+                                return true
+                            }
+                            if (isMuteKey) {
+                                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                                    findCheckableByLabel(checkables, MUTE_LABELS)
+                                        ?.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                }
+                                return true
+                            }
+                            if (getDialerKeycode(kc) != null) {
+                                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                                    val keypadNode = findCheckableByLabel(checkables, DIALPAD_LABELS)
+                                    when {
+                                        keypadNode == null -> {}
+                                        keypadNode.isChecked ->
+                                            findDialerDigitsField(root)?.let { insertDialerDigit(it, kc) }
+                                        else -> {
+                                            keypadNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                            worker.execute {
+                                                var digits: AccessibilityNodeInfo? = null
+                                                for (attempt in 1..10) {
+                                                    Thread.sleep(50)
+                                                    digits = rootInActiveWindow?.let { r ->
+                                                        try {
+                                                            findDialerDigitsField(r)
+                                                        } finally {
+                                                            r.recycle()
+                                                        }
+                                                    }
+                                                    if (digits != null) break
+                                                }
+                                                digits?.let { insertDialerDigit(it, kc) }
+                                            }
+                                        }
+                                    }
+                                }
+                                return true
+                            }
+                        }
+                    } finally {
+                        checkables.forEach { it.recycle() }
+                    }
+                } finally {
+                    root.recycle()
+                }
+            }
+        }
+
+        // Auto-Focus: on the first printable keypress in a selected app while nothing is
+        // focused, find + focus the first text field and replay the key(s) into it.
+        if (isAutoFocusEnabledForForeground()) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                val unicodeChar = event.unicodeChar
+                if (unicodeChar > 0 && event.repeatCount == 0 && !event.isAltPressed && !event.isCtrlPressed) {
+                    val queued = synchronized(autoFocusLock) {
+                        if (autoFocusInjecting) {
+                            pendingAutoFocusKeys.add(kc to unicodeChar.toChar())
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    if (queued) {
+                        consumedAutofocusKeys.add(kc)
+                        return true
+                    }
+                    val root = rootInActiveWindow
+                    if (root != null) {
+                        try {
+                            val alreadyFocused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                            val alreadyFocusedIsTextField =
+                                alreadyFocused?.let { AutoFocusController.isEditableTextField(it) } ?: false
+                            alreadyFocused?.recycle()
+                            if (!alreadyFocusedIsTextField && !recentlyFoundNoEditableField(root)) {
+                                val inputNode = AutoFocusController.findFirstEditableNode(root)
+                                if (inputNode == null) {
+                                    rememberNoEditableField(root)
+                                } else {
+                                    try {
+                                        inputNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                                        inputNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                        consumedAutofocusKeys.add(kc)
+                                        synchronized(autoFocusLock) {
+                                            pendingAutoFocusKeys.clear()
+                                            pendingAutoFocusKeys.add(kc to unicodeChar.toChar())
+                                            autoFocusInjecting = true
+                                        }
+                                        val latch = CountDownLatch(1)
+                                        focusLatch = latch
+                                        autoFocusWorker.execute { runAutoFocusInjection(latch) }
+                                        return true
+                                    } finally {
+                                        inputNode.recycle()
+                                    }
+                                }
+                            }
+                        } finally {
+                            root.recycle()
+                        }
+                    }
+                }
+            } else if (event.action == KeyEvent.ACTION_UP) {
+                if (consumedAutofocusKeys.remove(kc)) {
+                    return true
+                }
+            }
+        }
+
         // Chat Enter-to-Send: in a supported chat app, a plain Enter clicks the send
         // button instead of inserting a newline (Alt/Shift+Enter still newlines).
         // Pre-gated on the tracked foreground package so it costs nothing elsewhere.
@@ -470,6 +884,11 @@ class Key2AccessibilityService : AccessibilityService() {
         ) {
             return true
         }
+
+        // Calculator Keys: route digit/operator keys to a foreground calculator app.
+        if (calculatorEnabled() && CalculatorInputFix.isCalculatorPackage(foregroundPkg) &&
+            calculatorFix.onKeyEvent(this, event)
+        ) return true
 
         // PIN Input: map physical keys to the lockscreen PIN pad.
         if (!pinInputEnabled()) return false
@@ -673,7 +1092,13 @@ class Key2AccessibilityService : AccessibilityService() {
                 unregisterReceiver(it)
             } catch (_: Exception) {}
         }
+        batteryReceiver?.let {
+            try {
+                unregisterReceiver(it)
+            } catch (_: Exception) {}
+        }
         worker.shutdown()
+        autoFocusWorker.shutdown()
         super.onDestroy()
     }
 }
