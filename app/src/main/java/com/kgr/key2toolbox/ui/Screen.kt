@@ -72,4 +72,8 @@ sealed class Screen(
         "LED Notify Colors", "Per-app notification LED colors",
         listOf(AccessType.ROOT, AccessType.NOTIFICATION)
     )
+    data object LocationIdle : Screen(
+        "Auto-disable Location", "Turn off Location when idle",
+        listOf(AccessType.ROOT)
+    )
 }
