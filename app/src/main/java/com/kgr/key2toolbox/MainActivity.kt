@@ -1,5 +1,6 @@
 package com.kgr.key2toolbox
 
+import android.app.Activity
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,8 +15,13 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.ui.HomeScreen
@@ -28,9 +34,8 @@ import kotlinx.coroutines.launch
  * fall back to the stock Material 3 light/dark baseline schemes.
  */
 @Composable
-private fun appColorScheme(): ColorScheme {
+private fun appColorScheme(dark: Boolean): ColorScheme {
     val context = LocalContext.current
-    val dark = isSystemInDarkTheme()
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
@@ -56,7 +61,17 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MaterialTheme(colorScheme = appColorScheme()) {
+            val darkTheme = isSystemInDarkTheme()
+            // Ported from q25toolbox: on that ROM (BenOS/MTK), `Theme.DeviceDefault.DayNight`
+            // didn't reliably flip the status bar icon color or background with day/night -
+            // white icons were invisible in light mode, and the background stayed on one
+            // theme's color regardless of which scheme Compose was actually rendering. Set
+            // both explicitly instead of trusting the parent theme's DayNight resolution.
+            // Unverified whether LineageOS on the Key2 has the same issue, but harmless
+            // either way - this is a no-op if the parent theme was already correct.
+            StatusBarIconAppearance(darkIcons = !darkTheme)
+            MaterialTheme(colorScheme = appColorScheme(darkTheme)) {
+                StatusBarColor(MaterialTheme.colorScheme.background)
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -65,5 +80,27 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun StatusBarIconAppearance(darkIcons: Boolean) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    val window = (view.context as Activity).window
+    SideEffect {
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkIcons
+    }
+}
+
+@Composable
+private fun StatusBarColor(color: Color) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    val window = (view.context as Activity).window
+    val argb = color.toArgb()
+    SideEffect {
+        @Suppress("DEPRECATION")
+        window.statusBarColor = argb
     }
 }
