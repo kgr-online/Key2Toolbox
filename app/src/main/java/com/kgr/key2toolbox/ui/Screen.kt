@@ -34,6 +34,10 @@ sealed class Screen(
         "Per-App Keyboard Block", "Route keys straight to chosen apps",
         listOf(AccessType.ACCESSIBILITY)
     )
+    data object AutoFocus : Screen(
+        "Auto-Focus Input", "Focus the first text field on your first keypress",
+        listOf(AccessType.ACCESSIBILITY)
+    )
 
     // System tab
     data object AdBlock : Screen(

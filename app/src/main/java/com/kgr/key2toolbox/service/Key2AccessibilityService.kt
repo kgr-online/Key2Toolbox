@@ -8,8 +8,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
@@ -18,9 +20,12 @@ import android.view.accessibility.AccessibilityWindowInfo
 import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
+import com.kgr.key2toolbox.modules.AutoFocusController
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Combined accessibility service for the ported nozerorma Key2 Tweaks features.
@@ -80,11 +85,47 @@ class Key2AccessibilityService : AccessibilityService() {
         private const val LONG_PRESS_MS = 350L
         private const val DOUBLE_TAP_MS = 300L
 
+        // Auto-Focus: how long to wait for the field we just asked for to take input
+        // focus before giving up on the injection, and how long to let its input
+        // connection settle once it has.
+        private const val AUTO_FOCUS_FOCUS_TIMEOUT_MS = 1000L
+        private const val AUTO_FOCUS_SETTLE_MS = 150L
+        // How long a "this window has no editable field" result is trusted before the
+        // tree is walked again (content can appear without a window event).
+        private const val NO_EDITABLE_CACHE_MS = 1500L
+
         private const val ALWAYS_OFF_SCRIPT = "nav_always_off.sh"
         private const val ALWAYS_OFF_TARGET = "/data/adb/service.d/$ALWAYS_OFF_SCRIPT"
     }
 
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
+    // Separate from [worker]: auto-focus injection sleeps up to a second waiting for
+    // focus to land, and must not block the shared root-command queue.
+    private val autoFocusWorker: ExecutorService = Executors.newSingleThreadExecutor()
+
+    // --- Auto-Focus state -----------------------------------------------------
+    // Keycodes whose ACTION_DOWN auto-focus consumed, so their matching ACTION_UP is
+    // consumed too. A set because a whole burst of keys can be consumed while one
+    // injection is in flight (see [autoFocusInjecting]).
+    private val consumedAutofocusKeys = mutableSetOf<Int>()
+    // Set right before a focus-and-type attempt starts waiting, so onAccessibilityEvent
+    // can wake it the instant the target field actually receives input focus.
+    @Volatile private var focusLatch: CountDownLatch? = null
+    // True from the moment auto-focus consumes a key until its text has been written into
+    // the field. Everything typed in that window is consumed and queued in
+    // [pendingAutoFocusKeys] rather than left to the IME, whose keystrokes would otherwise
+    // be overwritten by our ACTION_SET_TEXT taking a snapshot from before them.
+    @Volatile private var autoFocusInjecting = false
+    // (keycode, character typed) pairs in press order. Keycode is kept because the dialer's
+    // number field wants the key's phone-keypad digit (F -> 6) instead of the raw letter,
+    // and which applies is only known once the landed-in field is seen.
+    private val pendingAutoFocusKeys = mutableListOf<Pair<Int, Char>>()
+    private val autoFocusLock = Any()
+    // Window id + time of the last tree walk that found no editable field, so a burst of
+    // typing on a screen with nothing to focus doesn't re-walk the tree per keystroke.
+    private var noEditableWindowId = -1
+    private var noEditableAtMs = 0L
+
     @Volatile private var navDisabled = false // last state pushed to kernel
     @Volatile private var imeActive = false   // keyboard currently showing
     @Volatile private var imeBlockApplied = false // last show_ime value we pushed (true = suppressed)
@@ -213,6 +254,164 @@ class Key2AccessibilityService : AccessibilityService() {
             foregroundPkg = pkg
             reconcileImeBlock()
         }
+
+        // Wake a pending auto-focus wait (see onKeyEvent) the moment the field it asked
+        // for actually takes input focus, instead of waiting out the poll timeout.
+        focusLatch?.let { latch ->
+            val t = event?.eventType
+            if (t == AccessibilityEvent.TYPE_VIEW_FOCUSED ||
+                t == AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED ||
+                t == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            ) {
+                rootInActiveWindow?.let { r ->
+                    try {
+                        val focused = r.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                        val isEditable = focused?.let { AutoFocusController.isEditableTextField(it) } ?: false
+                        focused?.recycle()
+                        if (isEditable) latch.countDown()
+                    } finally {
+                        r.recycle()
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- Auto-Focus
+
+    private fun isAutoFocusEnabledForForeground(): Boolean {
+        val p = prefs ?: return false
+        if (!AutoFocusController.isEnabled(p)) return false
+        val pkg = foregroundPkg ?: return false
+        return pkg in AutoFocusController.getSelectedApps(p)
+    }
+
+    /**
+     * Whether [node] is a phone-number entry field (a dialpad's number line, or any
+     * `android:inputType="phone"` field), where the physical letter keys are meant to
+     * type their phone-keypad digit (F -> 6) rather than the raw letter. Keyed on
+     * inputType rather than a dialer resource-id: it holds across Dialer versions/OEMs
+     * and naturally excludes the same app's contact-*search* field (which is
+     * TYPE_CLASS_TEXT), which is exactly the case the old id check existed to separate.
+     */
+    private fun isPhoneNumberField(node: AccessibilityNodeInfo): Boolean =
+        (node.inputType and android.text.InputType.TYPE_MASK_CLASS) ==
+            android.text.InputType.TYPE_CLASS_PHONE
+
+    private fun recentlyFoundNoEditableField(root: AccessibilityNodeInfo): Boolean =
+        root.windowId == noEditableWindowId &&
+            (SystemClock.uptimeMillis() - noEditableAtMs) < NO_EDITABLE_CACHE_MS
+
+    private fun rememberNoEditableField(root: AccessibilityNodeInfo) {
+        noEditableWindowId = root.windowId
+        noEditableAtMs = SystemClock.uptimeMillis()
+    }
+
+    /**
+     * Waits for the field auto-focus just asked for to take input focus, then writes every
+     * key consumed since (see [autoFocusInjecting]) into it in one go, draining any that
+     * arrived while the write itself was in flight. Runs on [autoFocusWorker]; only the
+     * list handoff is synchronized, never the accessibility calls.
+     */
+    private fun runAutoFocusInjection(latch: CountDownLatch) {
+        try {
+            val landedInTime = try {
+                latch.await(AUTO_FOCUS_FOCUS_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+            } catch (_: InterruptedException) {
+                false
+            }
+            focusLatch = null
+            // The field can report focus a beat before its input connection is live -
+            // injecting into that gap drops the text. Only worth waiting when focus landed.
+            if (landedInTime) Thread.sleep(AUTO_FOCUS_SETTLE_MS)
+
+            while (true) {
+                val batch = synchronized(autoFocusLock) {
+                    val copy = pendingAutoFocusKeys.toList()
+                    pendingAutoFocusKeys.clear()
+                    if (copy.isEmpty()) autoFocusInjecting = false
+                    copy
+                }
+                if (batch.isEmpty()) return
+                if (!insertAutoFocusText(batch)) {
+                    Log.d("Key2Toolbox", "autoFocus: no editable field took focus, dropped ${batch.size} key(s)")
+                    return
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Key2Toolbox", "autoFocus injection failed", e)
+        } finally {
+            synchronized(autoFocusLock) {
+                pendingAutoFocusKeys.clear()
+                autoFocusInjecting = false
+            }
+        }
+    }
+
+    /**
+     * Appends [batch] to whatever editable field currently holds input focus, writing
+     * nothing (and returning false) if that isn't an editable text field. Uses
+     * ACTION_SET_TEXT rather than re-injecting key events, which was found to be silently
+     * dropped by some fields (notably the dialer's number field).
+     */
+    private fun insertAutoFocusText(batch: List<Pair<Int, Char>>): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val focused = try {
+            root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+        } finally {
+            root.recycle()
+        }
+        val target = focused ?: return false
+        try {
+            if (!AutoFocusController.isEditableTextField(target)) return false
+            // In a phone-number field, physical letter keys type their phone-keypad digit
+            // (F -> 6), matching what the dialer does natively for every key after this one.
+            val asDialpad = isPhoneNumberField(target)
+            val addition = buildString {
+                for ((keycode, typed) in batch) {
+                    append(if (asDialpad) (dialerDigitChar(keycode) ?: typed) else typed)
+                }
+            }
+            val current = if (target.isShowingHintText) "" else (target.text?.toString() ?: "")
+            val updated = current + addition
+            val args = Bundle().apply {
+                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, updated)
+            }
+            if (!target.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) return false
+            setCaretToEnd(target, updated.length)
+            return true
+        } finally {
+            target.recycle()
+        }
+    }
+
+    /**
+     * Moves the caret after the text just written AND tells the IME about it - without this
+     * the IME still believes the cursor is at position 0 on an empty field, so its next
+     * keystroke inserts at the front and auto-capitalizes ("first letter after switching
+     * apps comes out capitalized / doubled").
+     */
+    private fun setCaretToEnd(target: AccessibilityNodeInfo, end: Int) {
+        val args = Bundle().apply {
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, end)
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, end)
+        }
+        target.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args)
+    }
+
+    private fun dialerDigitChar(kc: Int): Char? = when (kc) {
+        KeyEvent.KEYCODE_W -> '1'
+        KeyEvent.KEYCODE_E -> '2'
+        KeyEvent.KEYCODE_R -> '3'
+        KeyEvent.KEYCODE_S -> '4'
+        KeyEvent.KEYCODE_D -> '5'
+        KeyEvent.KEYCODE_F -> '6'
+        KeyEvent.KEYCODE_Z -> '7'
+        KeyEvent.KEYCODE_X -> '8'
+        KeyEvent.KEYCODE_C -> '9'
+        KeyEvent.KEYCODE_0 -> '0'
+        else -> null
     }
 
     // --------------------------------------------------------------- IME Block
@@ -360,6 +559,74 @@ class Key2AccessibilityService : AccessibilityService() {
             kc == KeyEvent.KEYCODE_BACK && !isDeviceLocked()
         ) {
             return handleNavGesture(event, kc)
+        }
+
+        // Auto-Focus: on the first printable keypress in a selected app while nothing is
+        // focused, find + focus the first text field and replay the key(s) into it. Gated
+        // on live "is anything focused?" state, not a per-session flag, so it re-attempts
+        // whenever focus is actually lost mid-session.
+        if (isAutoFocusEnabledForForeground()) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                val unicodeChar = event.unicodeChar
+                if (unicodeChar > 0 && event.repeatCount == 0 && !event.isAltPressed && !event.isCtrlPressed) {
+                    // An injection is already in flight: hand this key to it so keys 2..n land
+                    // in the same ACTION_SET_TEXT, in order, rather than racing the IME.
+                    val queued = synchronized(autoFocusLock) {
+                        if (autoFocusInjecting) {
+                            pendingAutoFocusKeys.add(kc to unicodeChar.toChar())
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    if (queued) {
+                        consumedAutofocusKeys.add(kc)
+                        return true
+                    }
+
+                    val root = rootInActiveWindow
+                    if (root != null) {
+                        try {
+                            val alreadyFocused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                            val alreadyFocusedIsTextField =
+                                alreadyFocused?.let { AutoFocusController.isEditableTextField(it) } ?: false
+                            alreadyFocused?.recycle()
+                            if (!alreadyFocusedIsTextField && !recentlyFoundNoEditableField(root)) {
+                                val inputNode = AutoFocusController.findFirstEditableNode(root)
+                                if (inputNode == null) {
+                                    rememberNoEditableField(root)
+                                } else {
+                                    try {
+                                        // Some search boxes (Maps, Gmail) activate via ACTION_CLICK
+                                        // (a full search overlay) and ignore ACTION_FOCUS - fire both
+                                        // and wait for real input focus before injecting.
+                                        inputNode.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
+                                        inputNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                                        consumedAutofocusKeys.add(kc)
+                                        synchronized(autoFocusLock) {
+                                            pendingAutoFocusKeys.clear()
+                                            pendingAutoFocusKeys.add(kc to unicodeChar.toChar())
+                                            autoFocusInjecting = true
+                                        }
+                                        val latch = CountDownLatch(1)
+                                        focusLatch = latch
+                                        autoFocusWorker.execute { runAutoFocusInjection(latch) }
+                                        return true
+                                    } finally {
+                                        inputNode.recycle()
+                                    }
+                                }
+                            }
+                        } finally {
+                            root.recycle()
+                        }
+                    }
+                }
+            } else if (event.action == KeyEvent.ACTION_UP) {
+                if (consumedAutofocusKeys.remove(kc)) {
+                    return true // consume the matching release of a key we swallowed
+                }
+            }
         }
 
         // PIN Input: map physical keys to the lockscreen PIN pad.
@@ -564,6 +831,7 @@ class Key2AccessibilityService : AccessibilityService() {
             } catch (_: Exception) {}
         }
         worker.shutdown()
+        autoFocusWorker.shutdown()
         super.onDestroy()
     }
 }
