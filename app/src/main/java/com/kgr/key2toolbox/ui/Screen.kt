@@ -35,7 +35,7 @@ sealed class Screen(
         listOf(AccessType.ACCESSIBILITY)
     )
 
-    // System tab
+    // Display / System / Network tabs (see HomeScreen for the split)
     data object AdBlock : Screen(
         "AdBlock", "Systemless hosts-based ad & tracker blocking",
         listOf(AccessType.ROOT)

@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Wifi
 import com.kgr.key2toolbox.BuildConfig
 import com.kgr.key2toolbox.settings.SettingsScreen
 import androidx.compose.material3.Card
@@ -32,9 +34,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
-enum class AppTab(val label: String) { Info("Info"), Keyboard("Keyboard"), System("System"), Settings("Settings") }
+enum class AppTab(val label: String, val icon: ImageVector) {
+    Info("Info", Icons.Filled.Home),
+    Keyboard("Keyboard", Icons.Filled.Keyboard),
+    Display("Display", Icons.Filled.Smartphone),
+    System("System", Icons.Filled.Build),
+    Network("Network", Icons.Filled.Wifi),
+    Settings("Settings", Icons.Filled.Settings),
+}
 
 val keyboardScreens = listOf(
     Screen.KbdLight,
@@ -44,14 +54,20 @@ val keyboardScreens = listOf(
     Screen.CtrlKey
 )
 
-val systemScreens = listOf(
+val displayScreens = listOf(
+    Screen.Dt2w
+)
+
+val networkScreens = listOf(
     Screen.Wifi5g,
+    Screen.WirelessAdb
+)
+
+val systemScreens = listOf(
     Screen.AdBlock,
     Screen.DenylistManager,
-    Screen.Dt2w,
     Screen.K2PF,
     Screen.LedNotify,
-    Screen.WirelessAdb,
     Screen.PlayStoreTagger,
     Screen.Zram
 )
@@ -66,30 +82,14 @@ fun HomeScreen() {
     Scaffold(
         bottomBar = {
             NavigationBar {
-                NavigationBarItem(
-                    selected = tab == AppTab.Info && detail == null,
-                    onClick = { tab = AppTab.Info; detail = null },
-                    icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                    label = { Text(AppTab.Info.label) }
-                )
-                NavigationBarItem(
-                    selected = tab == AppTab.Keyboard,
-                    onClick = { tab = AppTab.Keyboard; detail = null },
-                    icon = { Icon(Icons.Filled.Keyboard, contentDescription = null) },
-                    label = { Text(AppTab.Keyboard.label) }
-                )
-                NavigationBarItem(
-                    selected = tab == AppTab.System,
-                    onClick = { tab = AppTab.System; detail = null },
-                    icon = { Icon(Icons.Filled.Build, contentDescription = null) },
-                    label = { Text(AppTab.System.label) }
-                )
-                NavigationBarItem(
-                    selected = tab == AppTab.Settings,
-                    onClick = { tab = AppTab.Settings; detail = null },
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text(AppTab.Settings.label) }
-                )
+                AppTab.entries.forEach { entry ->
+                    NavigationBarItem(
+                        selected = tab == entry && (entry != AppTab.Info || detail == null),
+                        onClick = { tab = entry; detail = null },
+                        icon = { Icon(entry.icon, contentDescription = null) },
+                        label = { Text(entry.label) }
+                    )
+                }
             }
         }
     ) { padding ->
@@ -100,7 +100,9 @@ fun HomeScreen() {
             } else when (tab) {
                 AppTab.Info -> InfoScreen()
                 AppTab.Keyboard -> CategoryMenu("Keyboard", keyboardScreens) { detail = it }
+                AppTab.Display -> CategoryMenu("Display", displayScreens) { detail = it }
                 AppTab.System -> CategoryMenu("System", systemScreens) { detail = it }
+                AppTab.Network -> CategoryMenu("Network", networkScreens) { detail = it }
                 AppTab.Settings -> SettingsScreen(currentVersionName = BuildConfig.VERSION_NAME)
             }
         }
