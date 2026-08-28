@@ -84,6 +84,7 @@ class RecentsHookInit : IXposedHookLoadPackage {
         val cl = lpparam.classLoader
         forceOverviewTablet(cl)
         fixupOverviewDeviceProfile(cl)
+        guardNavButtonLayoutFactory(cl)
         forceShowAsGrid(cl)
         mosaicTileHeights(cl)
         squareTaskCorners(cl)
@@ -116,6 +117,16 @@ class RecentsHookInit : IXposedHookLoadPackage {
      * The decisive lever: `DisplayController.Info.isTablet(WindowBounds)` -> true
      * while Grid mode is active, so the `DeviceProfile` constructor computes
      * tablet (two-row grid) Overview metrics.
+     *
+     * Scoped to the launcher / RecentsActivity profile only: when the
+     * `DeviceProfile` currently being built belongs to the **Taskbar**
+     * ([buildingForTaskbar]), fall through to the stock value. Forcing tablet on
+     * the Taskbar's own profile, combined with the [fixupOverviewDeviceProfile]
+     * `isTaskbarPresent` clear, leaves it in the `(isTablet && !isTaskbarPresent)`
+     * state that `NavButtonLayoutFactory.getUiLayoutter()` has no branch for -> it
+     * throws `IllegalStateException("No layoutter found")` on every taskbar-window
+     * config change (fullscreen toggle, rotation, dark mode, IME) and the launcher
+     * process crash-loops.
      */
     private fun forceOverviewTablet(cl: ClassLoader) {
         try {
@@ -124,7 +135,7 @@ class RecentsHookInit : IXposedHookLoadPackage {
                 "isTablet", "com.android.launcher3.util.WindowBounds",
                 object : XC_MethodHook() {
                     override fun afterHookedMethod(param: MethodHookParam) {
-                        if (gridActive()) param.result = true
+                        if (gridActive() && !buildingForTaskbar()) param.result = true
                     }
                 }
             )
@@ -167,6 +178,14 @@ class RecentsHookInit : IXposedHookLoadPackage {
                     override fun afterHookedMethod(param: MethodHookParam) {
                         if (!gridActive()) return
                         val o = param.thisObject
+
+                        // Never touch the Taskbar's own DeviceProfile. It
+                        // genuinely hosts a taskbar; clearing isTaskbarPresent
+                        // here (while forceOverviewTablet has isTablet true) is
+                        // what makes NavButtonLayoutFactory.getUiLayoutter()
+                        // throw "No layoutter found" and crash-loop the launcher.
+                        if (isTaskbarContext(param.args.getOrNull(0)) || buildingForTaskbar()) return
+
                         runCatching { XposedHelpers.setBooleanField(o, "isTaskbarPresent", false) }
                         runCatching { XposedHelpers.setIntField(o, "taskbarHeight", 0) }
                         runCatching {
@@ -194,6 +213,62 @@ class RecentsHookInit : IXposedHookLoadPackage {
             }
         }
         XposedBridge.log("[$TAG] overview profile fixup on $n DeviceProfile constructor(s)")
+    }
+
+    /**
+     * Safety net for the "No layoutter found" launcher crash.
+     *
+     * `NavButtonLayoutFactory$Companion.getUiLayoutter(deviceProfile, ...)` on
+     * this build maps the nav-button layout from `deviceProfile`:
+     *
+     *   isPhoneMode          -> phone portrait / landscape / seascape / gesture
+     *   isTaskbarPresent     -> tablet (or kids / setup) layoutter
+     *   else                 -> throw IllegalStateException("No layoutter found")
+     *
+     * and `isPhoneMode` is false unless `isPhone && !isTaskbarPresent`. So any
+     * `DeviceProfile` that ends up `isTablet && !isTaskbarPresent` (which the
+     * Grid hooks can produce) crashes the launcher process on the next config
+     * change. [forceOverviewTablet] / [fixupOverviewDeviceProfile] already avoid
+     * creating that state on the Taskbar profile; this hook is belt-and-braces
+     * for any path that still slips through: if the incoming profile would take
+     * the throwing branch, flip `isTaskbarPresent` on for the duration of the
+     * call so the tablet layoutter is selected, then restore it.
+     */
+    private fun guardNavButtonLayoutFactory(cl: ClassLoader) {
+        var hooked = false
+        runCatching {
+            val companion = XposedHelpers.findClass(
+                "com.android.launcher3.taskbar.navbutton.NavButtonLayoutFactory\$Companion", cl
+            )
+            XposedBridge.hookAllMethods(companion, "getUiLayoutter", object : XC_MethodHook() {
+                override fun beforeHookedMethod(param: MethodHookParam) {
+                    val dp = param.args.getOrNull(0) ?: return
+                    val present = runCatching {
+                        XposedHelpers.getBooleanField(dp, "isTaskbarPresent")
+                    }.getOrNull() ?: return
+                    if (present) return
+                    val isPhone = runCatching {
+                        XposedHelpers.getBooleanField(dp, "isPhone")
+                    }.getOrDefault(false)
+                    // A real phone-mode profile has a layoutter already; only the
+                    // tablet-without-taskbar profile needs rescuing.
+                    if (isPhone) return
+                    runCatching { XposedHelpers.setBooleanField(dp, "isTaskbarPresent", true) }
+                    param.setObjectExtra("k2_restore_taskbar_present", true)
+                    XposedBridge.log("[$TAG] getUiLayoutter: patched isTaskbarPresent for this call")
+                }
+
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    if (param.getObjectExtra("k2_restore_taskbar_present") != null) {
+                        runCatching {
+                            XposedHelpers.setBooleanField(param.args[0], "isTaskbarPresent", false)
+                        }
+                    }
+                }
+            })
+            hooked = true
+        }
+        XposedBridge.log("[$TAG] NavButtonLayoutFactory guard attached=$hooked")
     }
 
     /**
@@ -328,6 +403,34 @@ class RecentsHookInit : IXposedHookLoadPackage {
     }
 
     // --- helpers --------------------------------------------------------
+
+    /**
+     * True when a `DeviceProfile` is currently being constructed on behalf of the
+     * Taskbar (`TaskbarActivityContext.applyDeviceProfile` ->
+     * `DeviceProfile.toBuilder(taskbarContext).build()`), rather than the
+     * launcher / RecentsActivity. Used to keep the Grid tablet-mode overrides off
+     * the Taskbar's own profile. Stack-based because the deciding call
+     * (`DisplayController.Info.isTablet`) gets no context argument.
+     */
+    private fun buildingForTaskbar(): Boolean = try {
+        Thread.currentThread().stackTrace.any {
+            it.className.startsWith("com.android.launcher3.taskbar.")
+        }
+    } catch (t: Throwable) {
+        false
+    }
+
+    /** True when [obj] is (or wraps) a `com.android.launcher3.taskbar.*` Context. */
+    private fun isTaskbarContext(obj: Any?): Boolean {
+        var c = obj
+        var depth = 0
+        while (c != null && depth < 6) {
+            if (c.javaClass.name.startsWith("com.android.launcher3.taskbar.")) return true
+            c = (c as? android.content.ContextWrapper)?.baseContext ?: break
+            depth++
+        }
+        return false
+    }
 
     /** Let the app's own UI detect that the module is enabled. */
     private fun selfProbe(cl: ClassLoader) {

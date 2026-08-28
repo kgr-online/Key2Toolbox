@@ -85,6 +85,9 @@ class Key2AccessibilityService : AccessibilityService() {
         var instance: Key2AccessibilityService? = null
             private set
 
+        /** Coalesce window-event bursts into one immersive-state `dumpsys` probe. */
+        private const val FULLSCREEN_PROBE_DEBOUNCE_MS = 200L
+
         const val PREFS = "key2tweaks"
         const val KEY_NAV_LOCK = "nav_lock_enabled"
         const val KEY_NAV_GESTURE = "nav_gesture_mode" // false=disable buttons, true=double-tap gate (Back)
@@ -147,6 +150,8 @@ class Key2AccessibilityService : AccessibilityService() {
     @Volatile private var imeActive = false   // keyboard currently showing
     @Volatile private var imeBlockApplied = false // last show_ime value we pushed (true = suppressed)
     @Volatile private var foregroundPkg: String? = null // last seen foreground app package
+    @Volatile private var fullscreenCached = false       // last known immersive state of the foreground app
+    @Volatile private var fullscreenProbeInFlight = false
     private val lastNavTap = HashMap<Int, Long>() // keycode -> last short-tap time
     private var prefs: SharedPreferences? = null
     private var screenReceiver: BroadcastReceiver? = null
@@ -664,16 +669,20 @@ class Key2AccessibilityService : AccessibilityService() {
         reconcileNav()
 
         val pkg = foregroundAppPackage()
-        if (pkg != null && pkg != foregroundPkg) {
+        val pkgChanged = pkg != null && pkg != foregroundPkg
+        if (pkgChanged) {
             foregroundPkg = pkg
             reconcileImeBlock()
         }
 
         // Toolbelt: keep the belt attached; slide it away while the soft keyboard
-        // is up or the foreground app is fullscreen/immersive.
+        // is up or the foreground app is fullscreen/immersive. The immersive
+        // check is async + cached (see [scheduleFullscreenProbe]); every event
+        // just re-applies the last known value.
         ToolbeltOverlayController.setImeVisible(imeActive)
-        ToolbeltOverlayController.setForegroundFullscreen(isForegroundFullscreen())
+        ToolbeltOverlayController.setForegroundFullscreen(fullscreenCached)
         refreshToolbelt()
+        scheduleFullscreenProbe(event, pkgChanged)
 
         // In-Call Shortcuts: open the dialpad tab the moment the in-call screen appears.
         if (inCallShortcutsEnabled() && isGoogleDialerForeground() &&
@@ -728,14 +737,73 @@ class Key2AccessibilityService : AccessibilityService() {
         return null
     }
 
+    private val fullscreenProbeRunnable = Runnable { runFullscreenProbe() }
+
     /**
-     * Whether the foreground app is running fullscreen / immersive. Detected by
-     * the absence of the system status-bar strip: when an app hides the status
-     * bar, SystemUI's top TYPE_SYSTEM window leaves the accessibility window
-     * list. Checking window *bounds* of the app itself is unreliable now that
-     * edge-to-edge apps draw under the bars while still showing them.
+     * Ask for a fresh immersive-state probe, but only on window-shaped events
+     * (app switch, windows changed, window state changed) and coalesced through
+     * a short delay so a burst of events triggers one `dumpsys` at most.
      */
-    private fun isForegroundFullscreen(): Boolean {
+    private fun scheduleFullscreenProbe(event: AccessibilityEvent?, pkgChanged: Boolean) {
+        val t = event?.eventType
+        val windowish = pkgChanged ||
+            t == AccessibilityEvent.TYPE_WINDOWS_CHANGED ||
+            t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        if (!windowish) return
+        mainHandler.removeCallbacks(fullscreenProbeRunnable)
+        mainHandler.postDelayed(fullscreenProbeRunnable, FULLSCREEN_PROBE_DEBOUNCE_MS)
+    }
+
+    private fun runFullscreenProbe() {
+        if (fullscreenProbeInFlight) return
+        fullscreenProbeInFlight = true
+        val fallback = isForegroundFullscreenByStrip()
+        worker.execute {
+            val value = try { probeImmersiveViaDump() } catch (_: Exception) { null } ?: fallback
+            fullscreenProbeInFlight = false
+            if (value != fullscreenCached) {
+                fullscreenCached = value
+                mainHandler.post {
+                    ToolbeltOverlayController.setForegroundFullscreen(value)
+                    refreshToolbelt()
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether the focused app window is *requesting* an immersive
+     * (status-bar-hidden) layout, read from `dumpsys window`. `null` = the
+     * focused window couldn't be resolved, caller keeps the last value.
+     *
+     * This keys off the app's requested inset visibility, not whether a bar is
+     * on screen right now, so a transient status-bar reveal - the privacy chip
+     * flash on a location/mic/camera hit, or a deliberate swipe-to-peek - does
+     * not read as "left fullscreen" and does not bounce the belt back in. The
+     * belt only reappears when the foreground app itself drops the immersive
+     * request (e.g. a video player going from fullscreen to inline).
+     */
+    private fun probeImmersiveViaDump(): Boolean? {
+        val out = RootShell.run("dumpsys window windows").outString
+        if (out.isBlank()) return null
+        val hash = Regex("""mCurrentFocus=Window\{(\w+)""").find(out)?.groupValues?.get(1) ?: return null
+        val start = out.indexOf("Window{$hash")
+        if (start < 0) return null
+        val tail = out.substring(start)
+        val end = tail.indexOf("\n  Window #").let { if (it < 0) minOf(tail.length, 6000) else it }
+        val block = tail.substring(0, end)
+        return Regex("""Requested non-default-visibility types:[^\n]*\bstatusBars\b""").containsMatchIn(block) ||
+            Regex("""vsysui=[^\n]*(FULLSCREEN|IMMERSIVE)""").containsMatchIn(block) ||
+            Regex("""\bfl=[^\n]*\bFULLSCREEN\b""").containsMatchIn(block)
+    }
+
+    /**
+     * Fallback immersive check: the foreground app is fullscreen when the system
+     * status-bar strip is absent from the accessibility window list. Cheap and
+     * root-free, but fooled by a transient bar reveal - hence it only backs up
+     * [probeImmersiveViaDump] when the `dumpsys` parse fails.
+     */
+    private fun isForegroundFullscreenByStrip(): Boolean {
         val list = try { windows ?: return false } catch (_: Exception) { return false }
         if (list.none { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }) return false
         val strip = (32 * resources.displayMetrics.density).toInt()
