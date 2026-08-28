@@ -86,6 +86,7 @@ class RecentsHookInit : IXposedHookLoadPackage {
         fixupOverviewDeviceProfile(cl)
         guardNavButtonLayoutFactory(cl)
         forceShowAsGrid(cl)
+        filterLauncherFromOverview(cl)
         mosaicTileHeights(cl)
         squareTaskCorners(cl)
         scaleOverviewScrim(cl)
@@ -291,6 +292,59 @@ class RecentsHookInit : IXposedHookLoadPackage {
         } catch (t: Throwable) {
             XposedBridge.log("[$TAG] showAsGrid hook failed: ${t.message}")
         }
+    }
+
+    /**
+     * Drop the launcher's own task from the Overview list. On this device the
+     * home app is a third party (KISS), so QuickStep's `RecentsActivity` /
+     * `Launcher` task is not recognised as "the home task to hide" and leaks
+     * into Overview as a blank, thumbnail-less tile - most visibly as the first
+     * card when Overview is opened via `GLOBAL_ACTION_RECENTS` from the toolbelt.
+     *
+     * `RecentsView.applyLoadPlan(List<GroupTask>)` is the single point where the
+     * view receives the task list; filter out any GroupTask whose task belongs
+     * to `com.android.launcher3` / `org.lineageos.trebuchet` or carries a HOME
+     * intent, and hand `applyLoadPlan` the trimmed list. Gated on grid mode so
+     * it tracks the rest of this module; widen if it turns out to happen in the
+     * stock layout too.
+     */
+    private fun filterLauncherFromOverview(cl: ClassLoader) {
+        try {
+            XposedHelpers.findAndHookMethod(
+                "com.android.quickstep.views.RecentsView", cl, "applyLoadPlan",
+                "java.util.List",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        if (!gridActive()) return
+                        val src = param.args.getOrNull(0) as? List<*> ?: return
+                        val kept = src.filterNot { isLauncherGroupTask(it) }
+                        if (kept.size != src.size) {
+                            param.args[0] = ArrayList(kept)
+                            XposedBridge.log("[$TAG] applyLoadPlan: dropped ${src.size - kept.size} launcher/home tile(s)")
+                        }
+                    }
+                }
+            )
+            XposedBridge.log("[$TAG] hooked RecentsView.applyLoadPlan (launcher-tile filter)")
+        } catch (t: Throwable) {
+            XposedBridge.log("[$TAG] applyLoadPlan hook failed: ${t.message}")
+        }
+    }
+
+    private fun isLauncherGroupTask(gt: Any?): Boolean {
+        gt ?: return false
+        for (field in arrayOf("task1", "task2")) {
+            val task = runCatching { XposedHelpers.getObjectField(gt, field) }.getOrNull() ?: continue
+            val top = runCatching { XposedHelpers.getObjectField(task, "topActivity") }
+                .getOrNull() as? android.content.ComponentName
+            if (top?.packageName in TARGET_PACKAGES) return true
+            val key = runCatching { XposedHelpers.getObjectField(task, "key") }.getOrNull()
+            val intent = runCatching { XposedHelpers.getObjectField(key, "baseIntent") }
+                .getOrNull() as? android.content.Intent ?: continue
+            if (intent.component?.packageName in TARGET_PACKAGES) return true
+            if (intent.hasCategory(android.content.Intent.CATEGORY_HOME)) return true
+        }
+        return false
     }
 
     /**
