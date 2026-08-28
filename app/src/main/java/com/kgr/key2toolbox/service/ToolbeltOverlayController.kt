@@ -11,10 +11,13 @@ import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.TypedValue
+import android.view.Choreographer
 import android.view.Gravity
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.VelocityTracker
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
@@ -69,6 +72,12 @@ object ToolbeltOverlayController {
     private val handleDp get() = if (collapsible) ToolbeltController.HANDLE_DP else 0
 
     private var vibrator: Vibrator? = null
+
+    // Pull-to-grab: live translationY of the belt row (0 = fully shown) and the
+    // running settle spring.
+    private var dragTy = 0f
+    private var springCb: Choreographer.FrameCallback? = null
+    private var springVel = 0f
 
     /** Recompute + apply the bar / icon colours (cheap - no window rebuild). */
     private fun applyColors() {
@@ -204,7 +213,7 @@ object ToolbeltOverlayController {
         }
 
         val container = FrameLayout(svc)
-        container.setBackgroundColor(barColor)
+        container.setBackgroundColor(Color.TRANSPARENT)
 
         val belt = LinearLayout(svc).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -262,27 +271,74 @@ object ToolbeltOverlayController {
             }
         }
 
-        // Toggle the belt from the grab strip. A plain click (most reliable) or a
-        // long-press expands it while collapsed; a downward drag collapses it
-        // while shown. Small threshold so it's easy to trigger.
-        val threshold = 8f * density
-        val stripDetector = GestureDetector(svc, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: MotionEvent) = true
-            override fun onScroll(
-                e1: MotionEvent?, e2: MotionEvent, dx: Float, dy: Float
-            ): Boolean {
-                val start = e1 ?: return false
-                val moved = e2.rawY - start.rawY
-                if (collapsed && moved < -threshold) { buzz(0); setCollapsed(false); return true }
-                if (!collapsed && moved > threshold) { buzz(0); setCollapsed(true); return true }
-                return false
+        // Pull-to-grab: the belt row follows the finger between "shown" (ty 0) and
+        // "collapsed" (ty = belt height), with an elastic overshoot past either
+        // end and a spring settle on release; a tap toggles. The same handler
+        // runs on the thin strip and on the handle pill.
+        val slop = ViewConfiguration.get(svc).scaledTouchSlop
+        var downRawY = 0f
+        var downTy = 0f
+        var moved = false
+        var vt: VelocityTracker? = null
+        var lastDetent = -1
+        val gripTouch = View.OnTouchListener { v, ev ->
+            val d = v.resources.displayMetrics.density
+            val beltPx = beltDp * d
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    springCancel()
+                    beginDrag()
+                    downRawY = ev.rawY
+                    downTy = dragTy
+                    moved = false
+                    lastDetent = if (collapsed) 1 else 0
+                    vt = VelocityTracker.obtain().apply { addMovement(ev) }
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    vt?.addMovement(ev)
+                    if (!moved && kotlin.math.abs(ev.rawY - downRawY) > slop) moved = true
+                    var ty = downTy + (ev.rawY - downRawY)
+                    ty = when {
+                        ty < 0f -> ty * 0.35f
+                        ty > beltPx -> beltPx + (ty - beltPx) * 0.35f
+                        else -> ty
+                    }
+                    applyBeltTy(ty)
+                    val detent = if (ty > beltPx * 0.5f) 1 else 0
+                    if (detent != lastDetent) { lastDetent = detent; buzz(0) }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    var vy = 0f
+                    vt?.apply { addMovement(ev); computeCurrentVelocity(1000); vy = yVelocity; recycle() }
+                    vt = null
+                    if (!moved && ev.actionMasked == MotionEvent.ACTION_UP) {
+                        buzz(0)
+                        collapsed = !collapsed
+                        service?.let { ToolbeltController.setCollapsed(it, collapsed) }
+                        settle(0f)
+                    } else {
+                        val wantCollapsed = when {
+                            ev.actionMasked == MotionEvent.ACTION_CANCEL -> collapsed
+                            vy < -1200f -> false
+                            vy > 1200f -> true
+                            else -> dragTy > beltPx * 0.5f
+                        }
+                        if (wantCollapsed != collapsed) {
+                            collapsed = wantCollapsed
+                            service?.let { ToolbeltController.setCollapsed(it, wantCollapsed) }
+                            buzz(0)
+                        }
+                        settle(vy)
+                    }
+                    true
+                }
+                else -> true
             }
-            override fun onLongPress(e: MotionEvent) {
-                buzz(0); setCollapsed(!collapsed)
-            }
-        })
-        strip.setOnClickListener { buzz(0); setCollapsed(!collapsed) }
-        strip.setOnTouchListener { _, ev -> stripDetector.onTouchEvent(ev); false }
+        }
+        strip.setOnTouchListener(gripTouch)
+        handlePill.setOnTouchListener(gripTouch)
 
         try {
             wm.addView(container, lp)
@@ -348,58 +404,143 @@ object ToolbeltOverlayController {
         else actionHandler?.invoke(action, arg)
     }
 
-    private fun applyLayoutState(animate: Boolean) {
-        val container = root ?: return
-        val belt = beltRow ?: return
-        val strip = grabStrip ?: return
-        val lp = params ?: return
-        val wm = windowManager ?: return
+    private val density0 get() = root?.resources?.displayMetrics?.density ?: 2.75f
+    private fun fullHPx() = ((beltDp + handleDp) * density0).toInt().coerceAtLeast(1)
+    private fun collapsedHPx() = (ToolbeltController.COLLAPSED_DP * density0).toInt().coerceAtLeast(1)
 
-        val hidden = fullscreenHidden || imeHidden
-        val density = container.resources.displayMetrics.density
-        val beltPx = beltDp * density
-        val handlePx = handleDp * density
-        val collapsedPx = ToolbeltController.COLLAPSED_DP * density
-
-        // Belt row translation: fully off when hidden, or tucked below the strip
-        // when collapsed.
-        val beltTy = when {
-            hidden -> beltPx + handlePx
-            collapsed -> beltPx
+    /** Rigid belt-row translationY target for the current state (0 = fully shown). */
+    private fun tyRest(): Float {
+        val d = density0
+        return when {
+            fullscreenHidden || imeHidden -> (beltDp + handleDp) * d
+            collapsed -> beltDp * d
             else -> 0f
         }
-        if (animate) belt.animate().translationY(beltTy).setDuration(150).start()
-        else belt.translationY = beltTy
+    }
+
+    /** Move belt row, grip strip and handle pill together (mid-drag and mid-spring). */
+    private fun applyBeltTy(ty: Float) {
+        dragTy = ty
+        beltRow?.translationY = ty
+        grabStrip?.translationY = ty
+        handleView?.translationY = ty
+    }
+
+    private fun setWindowHeight(h: Int) {
+        val c = root ?: return
+        val lp = params ?: return
+        if (lp.height == h) return
+        lp.height = h
+        try { windowManager?.updateViewLayout(c, lp) } catch (_: IllegalArgumentException) {}
+    }
+
+    private fun stripHeight(h: Int) {
+        val s = grabStrip ?: return
+        (s.layoutParams as? FrameLayout.LayoutParams)?.let {
+            if (it.height != h) { it.height = h; s.layoutParams = it }
+        }
+    }
+
+    /**
+     * Grow the window to full height and put the grip strip into its thin,
+     * translatable form so the belt row has room to follow the finger / spring.
+     * The current on-screen position is preserved by re-asserting it as a
+     * translation ([dragTy] already tracks it).
+     */
+    private fun beginDrag() {
+        if (fullscreenHidden || imeHidden) return
+        setWindowHeight(fullHPx())
+        stripHeight((handleDp * density0).toInt().coerceAtLeast(1))
+        applyBeltTy(dragTy)
+    }
+
+    private fun applyLayoutState(animate: Boolean) {
+        val strip = grabStrip ?: return
+        val hidden = fullscreenHidden || imeHidden
 
         strip.visibility = if (collapsible && !hidden) View.VISIBLE else View.GONE
         handleView?.visibility = if (collapsible && !hidden) View.VISIBLE else View.GONE
         applyColors()
 
-        val desired = when {
-            hidden -> 1
-            collapsed -> collapsedPx.toInt()
-            else -> (beltPx + handlePx).toInt()
+        if (!animate) {
+            springCancel()
+            applyRestLayout()
+            return
         }
-        // Collapsed: the strip fills the whole (short) window so the entire
-        // bottom edge is tappable, and the handle pill centres in it. Shown:
-        // the strip is the thin band above the icons, pill near the top.
-        strip.layoutParams = (strip.layoutParams as FrameLayout.LayoutParams).apply {
-            height = if (collapsed) desired else handlePx.toInt().coerceAtLeast(1)
-        }
-        handleView?.let { pill ->
-            pill.layoutParams = (pill.layoutParams as FrameLayout.LayoutParams).apply {
-                gravity = Gravity.CENTER_HORIZONTAL or
-                    (if (collapsed) Gravity.CENTER_VERTICAL else Gravity.TOP)
-                topMargin = if (collapsed) 0 else (3 * density).toInt()
+        beginDrag()          // hold the window open for the animation
+        settle(0f)
+    }
+
+    private fun settle(initialVel: Float) {
+        springTo(tyRest(), initialVel) { applyRestLayout() }
+    }
+
+    /** Snap window / strip / translations to the tidy resting layout for the state. */
+    private fun applyRestLayout() {
+        val d = density0
+        val beltPx = beltDp * d
+        val handlePx = handleDp * d
+        when {
+            fullscreenHidden || imeHidden -> {
+                applyBeltTy(beltPx + handlePx)
+                setWindowHeight(1)
+            }
+            collapsed && collapsible -> {
+                val ch = collapsedHPx()
+                stripHeight(ch)
+                setWindowHeight(ch)
+                beltRow?.translationY = beltPx
+                grabStrip?.translationY = 0f
+                handleView?.translationY = 0f
+                dragTy = beltPx
+            }
+            else -> {
+                stripHeight(handlePx.toInt().coerceAtLeast(1))
+                setWindowHeight(fullHPx())
+                applyBeltTy(0f)
             }
         }
-        if (lp.height != desired) {
-            lp.height = desired
-            try {
-                wm.updateViewLayout(container, lp)
-            } catch (_: IllegalArgumentException) {
+    }
+
+    private fun springCancel() {
+        springCb?.let { Choreographer.getInstance().removeFrameCallback(it) }
+        springCb = null
+    }
+
+    /**
+     * Damped spring driving [dragTy] to [target] (px), seeded with [initialVel]
+     * (px/s). `dampingRatio < 1` gives it a small, pleasant overshoot on the way
+     * in. Runs on the Choreographer so it stays in step with the display.
+     */
+    private fun springTo(target: Float, initialVel: Float, onEnd: () -> Unit) {
+        springCancel()
+        springVel = initialVel
+        val stiffness = 950f
+        val dampingRatio = 0.75f
+        val critical = 2f * kotlin.math.sqrt(stiffness)
+        var lastNs = 0L
+        val cb = object : Choreographer.FrameCallback {
+            override fun doFrame(now: Long) {
+                if (springCb !== this) return
+                val dt = if (lastNs == 0L) 0.016f
+                else ((now - lastNs) / 1_000_000_000f).coerceIn(0.001f, 0.032f)
+                lastNs = now
+                val x = dragTy
+                val accel = -stiffness * (x - target) - dampingRatio * critical * springVel
+                springVel += accel * dt
+                val nx = x + springVel * dt
+                if (kotlin.math.abs(nx - target) < 0.5f && kotlin.math.abs(springVel) < 3f) {
+                    applyBeltTy(target)
+                    springCb = null
+                    onEnd()
+                    return
+                }
+                applyBeltTy(nx)
+                Choreographer.getInstance().postFrameCallback(this)
             }
         }
+        springCb = cb
+        Choreographer.getInstance().postFrameCallback(cb)
     }
 
     private fun rippleBackground(): android.graphics.drawable.Drawable {
