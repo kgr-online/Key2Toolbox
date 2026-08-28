@@ -512,6 +512,7 @@
     <string name="settings_import_dialog_desc">This will overwrite your current settings for the selected module(s) (keys present in the backup file) with the values from the selected file. Unselected modules are left untouched. This can\'t be undone.</string>
     <string name="settings_import_restored">Restored %1$d setting(s).</string>
     <string name="settings_import_zram_restored"> ZRAM config restored — reboot to apply.</string>
+    <string name="settings_import_script_modules_restored"> Also restored and applied live: %1$s.</string>
     <string name="settings_import_failed">Import failed: %1$s: %2$s</string>
     <string name="settings_github_label">github.com/kgr-online/Key2Toolbox</string>
     <string name="settings_status_not_enabled">Not enabled</string>

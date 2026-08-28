@@ -106,7 +106,12 @@ object UpdateChecker {
     ): File = withContext(Dispatchers.IO) {
         val url = release.apkAssetUrl ?: error("No APK asset URL")
         val fileName = release.apkAssetName ?: "key2toolbox-${release.tagName}.apk"
-        val outDir = context.getExternalFilesDir(null) ?: context.filesDir
+        // Must be internal storage (filesDir), not getExternalFilesDir().
+        // External app storage is sdcardfs-backed; system_server (which
+        // services `pm install`) is denied read access to sdcardfs paths
+        // by SELinux policy on all modern Android builds, regardless of
+        // root. filesDir is plain internal storage and is readable.
+        val outDir = context.filesDir
         val outFile = File(outDir, fileName)
 
         val connection = URL(url).openConnection() as HttpURLConnection

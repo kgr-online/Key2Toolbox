@@ -82,6 +82,78 @@ app into seven languages. versionCode 1 → 31. Debug build tested on a KEY2
   It now re-applies every 3 s for ~4 minutes after boot, then runs a 60 s
   drift watchdog, and stops as soon as the feature is toggled off.
 
+## [4.8-beta9] - 2026-08-21
+
+### Fixed
+- **Play Store Tagger reporting the wrong installer for every app**: two
+  bugs in installer detection. `getInstaller()` shelled out to
+  `cmd package get-install-source`, which doesn't exist on this ROM and
+  silently returned null, so the post-tag status refresh never reflected
+  reality. Separately, `loadApps()` read each app's installer via
+  `PackageManager.getInstallSourceInfo()`/`getInstallerPackageName()`
+  in-process, which returned wrong data on this ROM (e.g. F-Droid itself
+  showing as Play Store-installed) even though the equivalent shell read
+  was correct. Both are replaced with `dumpsys`-based reads:
+  `getInstaller()` now parses `dumpsys package <pkg>`, and a new
+  `getAllInstallers()` parses one `dumpsys package -a` dump for the whole
+  app list in a single root shell call instead of one `PackageManager`
+  call per app.
+- **Accessibility service status always showing disabled**: both
+  `Settings.Secure` and `AccessibilityManager` returned incorrect/empty
+  results when read in-process on this ROM, even though the service was
+  genuinely enabled and actively bound. `Key2AccessibilityService` now
+  reports its own state via a companion `isRunning` flag, set in
+  `onServiceConnected()` and cleared in `onUnbind()`/`onDestroy()`; both
+  status checks read that flag directly instead.
+
+## [4.8-beta7] - 2026-08-20
+
+### Fixed
+- **ZRAM swappiness reverting to default after reboot**: LineageOS/AOSP's
+  `init.rc` unconditionally writes `swappiness=60` on its "on boot"
+  trigger, which fires after `/data/adb/service.d/zram_size.sh` has
+  already run at the late_start service stage - silently reverting any
+  persisted swappiness value back to 60 on every boot (size and
+  comp_algorithm were unaffected). Added `ZramBootCompletedReceiver`, a
+  `BOOT_COMPLETED` receiver that re-applies the persisted swappiness
+  after boot fully completes, guaranteeing it runs after the ROM's own
+  write rather than racing it.
+
+## [4.8-beta5] - 2026-08-15
+
+### Added
+- **LED Notify - Respect Battery Saver** (default on): suppresses the LED
+  whenever `PowerManager.isPowerSaveMode` is true, however it was
+  triggered (manual, schedule, or automatic low-battery). Same shape as
+  the existing Respect DND check, with its own broadcast receiver for
+  `ACTION_POWER_SAVE_MODE_CHANGED`.
+- **LED Notify - Notification Acknowledgement** (default off): replicates
+  factory 8.1 KEY2 behavior. Once the screen is turned on, a notification
+  is seen on the lock screen, and the screen is turned back off with the
+  power button, that notification's LED won't re-trigger. A screen
+  timeout does not count as acknowledgement. Screen-off reason is read
+  via `dumpsys power`'s `mLastSleepReason` field over root shell (same
+  approach as the existing DND fallback).
+
+## [4.8-beta4] - 2026-08-13
+
+### Added
+- **LED Notify - minimum importance threshold**: `recompute()` now checks
+  each notification's ranking importance against a configurable floor
+  (default: Default and above) before assigning it a color, filtering out
+  low-importance notifications - e.g. an app that posts and immediately
+  self-retracts a low-priority notification - before the LED ever lights.
+  Adds a "Minimum importance to light the LED" chip row in Settings (Any
+  importance / Low and above / Default and above / High only). Unknown
+  importance always passes the filter rather than silently suppressing
+  the LED.
+
+### Fixed
+- **LED Notify settings chip row**: the longest importance-preset label
+  could get squeezed into a near-zero-width chip and wrap one character
+  per line. Labels no longer wrap, and the row scrolls horizontally
+  instead of forcing all four presets into one screen width.
+
 ## [4.8-beta3] - 2026-08-13
 
 ### Added
