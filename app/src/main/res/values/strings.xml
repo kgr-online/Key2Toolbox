@@ -97,6 +97,8 @@
     <string name="subtitle_led_notify">Per-app notification LED colors</string>
     <string name="title_extra_dim">Extra Dim</string>
     <string name="subtitle_extra_dim">Dim below the system minimum, with an optional night schedule</string>
+    <string name="title_recents">Recents Layout</string>
+    <string name="subtitle_recents">Two-row grid / masonry Overview via LSPosed</string>
     <string name="title_telemetry">Global Telemetry Block</string>
     <string name="subtitle_telemetry">Disable Firebase Crashlytics system-wide</string>
     <string name="title_wireless_adb">Persistent Wireless ADB</string>
@@ -524,5 +526,22 @@
     <string name="settings_backup_module_led_notify">LED Notify</string>
     <string name="settings_backup_module_zram">ZRAM</string>
     <string name="settings_backup_module_adblock">AdBlock</string>
+
+    <!-- Recents Layout -->
+    <string name="recents_intro">Makes Recents/Overview show two rows of smaller task cards, the way a tablet does, instead of the stock single row. It runs entirely through an LSPosed hook inside the launcher; this screen only stores the setting and restarts the launcher.</string>
+    <string name="recents_section_lsposed">LSPosed needed</string>
+    <string name="recents_xposed_ok">LSPosed module active.</string>
+    <string name="recents_xposed_missing">LSPosed module not active.</string>
+    <string name="recents_xposed_hint">Open your Xposed manager (LSPosed / Vector), enable \"Key2 Toolbox\", tick the launcher (com.android.launcher3) and this app in its scope, then force-stop the launcher. Requires an Xposed framework on APatch / KernelSU / Magisk.</string>
+    <string name="recents_grid_title">Overview layout</string>
+    <string name="recents_grid_desc">Grid forces the launcher\'s tablet two-row layout for Recents (the home screen and hotseat may shift slightly, since they share the layout profile). Masonry is Grid with staggered tile heights.</string>
+    <string name="recents_mode_stock">Stock (single row)</string>
+    <string name="recents_mode_grid">Grid (two rows)</string>
+    <string name="recents_mode_masonry">Masonry (two rows, staggered)</string>
+    <string name="recents_transparency_title">Background transparency</string>
+    <string name="recents_transparency_desc">How much wallpaper shows through behind the Overview cards. Restarts the launcher to apply.</string>
+    <string name="recents_restart_launcher">Restart launcher</string>
+    <string name="recents_restart_systemui">Restart SystemUI</string>
+    <string name="recents_debug_hint">Not working after enabling? Run: adb logcat | grep Key2Toolbox-Xposed and each hook logs whether it attached. Launcher3 method names can drift between LineageOS builds.</string>
 
 </resources>

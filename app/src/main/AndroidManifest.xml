@@ -30,6 +30,21 @@
         android:theme="@style/Theme.Key2Toolbox"
         android:supportsRtl="true">
 
+        <!-- Xposed / LSPosed module metadata. Enable the module in LSPosed and
+             scope it to Trebuchet to get the two-row Grid / Masonry Overview. -->
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="Two-row grid Recents/Overview for Launcher3 QuickStep" />
+        <meta-data
+            android:name="xposedminversion"
+            android:value="54" />
+        <meta-data
+            android:name="xposedscope"
+            android:resource="@array/xposed_scope" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

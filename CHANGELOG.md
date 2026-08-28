@@ -2,6 +2,41 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **Recents Layout** (Display tab): a toggle that forces the launcher's
+  two-row grid Overview instead of the stock single row of task cards.
+  Implemented entirely as an LSPosed module
+  (`com.kgr.key2toolbox.xposed.RecentsHookInit`), scoped to
+  `com.android.launcher3` (the AOSP Launcher3 that LineageOS 22.2 ships on
+  the Key2). Needs an Xposed framework (LSPosed / APatch's built-in).
+
+  Verified by decompiling `TrebuchetQuickStep.apk`: Overview task geometry
+  branches on the `DeviceProfile.isTablet` field, not on
+  `RecentsView.showAsGrid()`, and `isTablet` is derived in the
+  `DeviceProfile` constructor from
+  `DisplayController.Info.isTablet(WindowBounds)`. The hook forces that
+  method to return `true` while the toggle is on, so every downstream metric
+  is computed on the tablet path. It also clears `isTaskbarPresent` /
+  `taskbarHeight` right after `DeviceProfile` construction to drop the
+  floating tablet nav bar that would otherwise come with it (the home
+  screen / hotseat may still shift slightly, since they share the profile).
+  `RecentsView.showAsGrid()` is pinned too, mainly to make the off state
+  deterministic. Includes an Overview background-transparency slider that
+  scales the scrim colour.
+
+  Config: two world-readable `Settings.Global` keys
+  (`key2_recents_layout_mode`, `key2_recents_scrim_alpha`) written with root,
+  read by the hook with no permission. Every hook logs to
+  `Key2Toolbox-Xposed`.
+
+  Not done: a real "masonry" varied-height mosaic. That layout does not
+  exist in AOSP Launcher3 (it was bespoke to BlackBerry's launcher), so it
+  would mean injecting a custom `TaskView` layout pass at runtime. Left for
+  a later pass.
+
 ## [5.0] - 2026-08-27
 
 Adds eleven modules, splits the bottom navigation, and localizes the whole
