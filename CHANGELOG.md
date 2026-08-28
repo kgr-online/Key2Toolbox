@@ -2,6 +2,48 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.2] - 2026-08-29
+
+### Fixed
+
+- **Toolbelt / Recents Layout: launcher crash-loop and stranded app
+  transitions.** With both modules active, `RecentsHookInit` forced
+  `DeviceProfile.isTablet = true` across the launcher process and cleared
+  `isTaskbarPresent` on every `DeviceProfile` - including the Taskbar's own.
+  On this build `NavButtonLayoutFactory.getUiLayoutter()` has no branch for
+  `(isTablet && !isTaskbarPresent)` and throws `"No layoutter found"` on every
+  Taskbar-window configuration change (entering / leaving fullscreen, rotation,
+  dark-mode toggle, IME), killing `com.android.launcher3` in a loop. The
+  Taskbar flashing over fullscreen apps and app transitions freezing
+  mid-animation (a `GestureState` crash in `AbsSwipeUpHandler` when the
+  launcher process dies during the recents animation) both followed from that.
+  The tablet override and the `isTaskbarPresent` clear now skip the Taskbar's
+  own `DeviceProfile`, and a guard on `getUiLayoutter()` flips
+  `isTaskbarPresent` on for the call if a profile still reaches the throwing
+  branch.
+
+- **Toolbelt reappearing over a fullscreen app.** The immersive check keyed off
+  whether a status-bar strip was on screen, so a transient reveal - the privacy
+  indicator on a location / mic / camera access, or a deliberate swipe from the
+  top edge - counted as "left fullscreen" and slid the belt back in. It now
+  reads the focused app window's *requested* inset visibility from
+  `dumpsys window` (cached, refreshed on window changes); a transient reveal
+  does not change the request, so the belt stays hidden and only returns when
+  the app itself drops immersive.
+
+- **Overview showing the launcher's own tile.** On a third-party-home setup
+  (KISS) QuickStep's Launcher / RecentsActivity task could leak into Overview
+  as a blank, thumbnail-less card. `RecentsView.applyLoadPlan` now drops any
+  task belonging to the launcher package or carrying a HOME intent.
+
+### Changed
+
+- **Toolbelt collapse is now a pull-to-grab gesture.** The grip strip and
+  handle pill drag the belt with the finger between shown and collapsed, with
+  an elastic pull past either end and a damped-spring settle on release (a
+  fling picks the direction, otherwise it snaps to the nearer state). A tap
+  still toggles. The fullscreen / IME auto-hide uses the same spring.
+
 ## [5.1] - 2026-08-28
 
 ### Added

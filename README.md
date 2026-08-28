@@ -42,8 +42,9 @@ accessibility-service status
 - **Toolbelt** - a BlackBerry Q20-style bar of five customizable icons that
   replaces the on-screen navigation. Per-slot icon + single/double/long-tap
   actions, adjustable height / icon size / haptics, Fixed / Material You /
-  Transparent colour, optional collapse. Keeps the edge back-gesture; disables
-  the bottom swipe-up (LSPosed hook + accessibility service)
+  Transparent colour, optional pull-to-grab collapse (drag the belt away with
+  the finger, spring settle). Keeps the edge back-gesture; disables the bottom
+  swipe-up (LSPosed hook + accessibility service)
 
 **System**
 - **AdBlock** - systemless-hosts ad/tracker blocking, with search, add/remove,
