@@ -138,8 +138,14 @@ fun SettingsScreen(
                             when (result) {
                                 is SettingsBackup.ImportResult.Success -> {
                                     backupError = null
+                                    val scriptNames = result.scriptModulesRestored.joinToString(", ") {
+                                        context.getString(it.labelRes)
+                                    }
                                     backupMessage = context.getString(R.string.settings_import_restored, result.restoredKeys) +
-                                        (if (result.zramRestored) context.getString(R.string.settings_import_zram_restored) else "")
+                                        (if (result.zramRestored) context.getString(R.string.settings_import_zram_restored) else "") +
+                                        (if (scriptNames.isNotEmpty()) {
+                                            context.getString(R.string.settings_import_script_modules_restored, scriptNames)
+                                        } else "")
                                 }
                                 is SettingsBackup.ImportResult.Failure -> {
                                     backupMessage = null
@@ -240,22 +246,29 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
-                SettingsBackup.BackupModule.entries.forEach { module ->
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = module in selectedModules,
-                            onCheckedChange = { checked ->
-                                selectedModules = if (checked) {
-                                    selectedModules + module
-                                } else {
-                                    selectedModules - module
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 220.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    SettingsBackup.BackupModule.entries.forEach { module ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = module in selectedModules,
+                                onCheckedChange = { checked ->
+                                    selectedModules = if (checked) {
+                                        selectedModules + module
+                                    } else {
+                                        selectedModules - module
+                                    }
                                 }
-                            }
-                        )
-                        Text(stringResource(module.labelRes), style = MaterialTheme.typography.bodyMedium)
+                            )
+                            Text(stringResource(module.labelRes), style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
