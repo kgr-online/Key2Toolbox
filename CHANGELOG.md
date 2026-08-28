@@ -2,9 +2,46 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
-## [Unreleased]
+## [5.1] - 2026-08-28
 
 ### Added
+
+- **Toolbelt** (Display tab): a BlackBerry Q20-style bar of five customizable
+  icons pinned to the bottom of the screen that replaces the on-screen
+  navigation. It reserves its height like a real nav bar, so app content ends
+  above it. Q20 defaults: phone (dialer, long-press = voice assist), BlackBerry
+  logo (Recents), centre Home, Back (long-press = last app), hangup. Each
+  slot's icon and its single / double / long-tap actions are configurable
+  (Home, Back, Recents, Notifications, Quick Settings, Power dialog, Screenshot,
+  Lock, Split-screen, Voice assist, Dialer, Last app, Launch app, Toggle belt,
+  Hangup, Hangup-or-Home). "Launch app" opens an app picker. Hangup-or-Home
+  acts as Home unless a call is in progress (detected via `AudioManager.mode`,
+  no permission), then it ends the call with a root `KEYCODE_ENDCALL`.
+
+  Appearance settings: bar height (36-88 dp), icon size, haptic-feedback
+  strength (via the `Vibrator` API - `View.performHapticFeedback` does not fire
+  from an overlay window), and a colour mode - Fixed (black), Material You
+  (`system_neutral*`), or Transparent (a faint scrim so the app's own window
+  background shows through the reserved strip). Optional "Collapsible" mode adds
+  a grab strip: swipe down / tap / long-press to hide the belt and reclaim its
+  space, tap the strip to bring it back. The belt also auto-hides in fullscreen
+  apps, while the soft keyboard is up, and on the lockscreen.
+
+  The belt is a `TYPE_ACCESSIBILITY_OVERLAY` window drawn by
+  `Key2AccessibilityService` (same mechanism as the Ticker). Hiding the
+  on-screen nav bar, reserving the belt's inset and disabling the **bottom**
+  swipe-up gesture (home / recents / quickswitch - the **edge back-gesture is
+  deliberately left working**) is a second LSPosed hook,
+  `com.kgr.key2toolbox.xposed.NavBarHookInit`, scoped to the launcher and gated
+  on the world-readable `Settings.Global` keys `key2_toolbelt_active` /
+  `key2_toolbelt_inset_px`. On this device the nav bar is the Launcher3
+  Taskbar, so the hook overrides `TaskbarStashController` /
+  `TaskbarInsetsController` height reporting and skips
+  `TouchInteractionService.onInputEvent`. Verified by decompiling
+  `TrebuchetQuickStep.apk`. The taskbar only re-reads its inset on recreation,
+  so the app restarts the launcher when the reserved height changes (invisible
+  when a third-party launcher is the home app). Without an Xposed framework the
+  belt still draws but the nav bar / bottom gesture stay active.
 
 - **Recents Layout** (Display tab): a toggle that forces the launcher's
   two-row grid Overview instead of the stock single row of task cards.

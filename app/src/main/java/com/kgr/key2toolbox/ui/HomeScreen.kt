@@ -66,7 +66,8 @@ val keyboardScreens = listOf(
 val displayScreens = listOf(
     Screen.Dt2w,
     Screen.ExtraDim,
-    Screen.Recents
+    Screen.Recents,
+    Screen.Toolbelt
 )
 
 val networkScreens = listOf(
@@ -140,6 +141,7 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
         Screen.Dt2w -> Dt2wScreen(onBack)
         Screen.ExtraDim -> ExtraDimScreen(onBack)
         Screen.Recents -> RecentsScreen(onBack)
+        Screen.Toolbelt -> ToolbeltScreen(onBack)
         Screen.Wifi5g -> Wifi5gScreen(onBack)
         Screen.WirelessAdb -> WirelessAdbScreen(onBack)
         Screen.BtIdle -> BtIdleScreen(onBack)

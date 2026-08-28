@@ -24,8 +24,11 @@ import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.inputfix.CalculatorInputFix
 import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
+import android.media.AudioManager
 import com.kgr.key2toolbox.modules.AutoFocusController
 import com.kgr.key2toolbox.modules.BatteryUsageController
+import com.kgr.key2toolbox.modules.ToolbeltController
+import com.kgr.key2toolbox.modules.ToolbeltController.ToolbeltAction
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
@@ -161,6 +164,107 @@ class Key2AccessibilityService : AccessibilityService() {
         if (key == KEY_IME_BLOCK || key == KEY_IME_BLOCK_APPS) {
             reconcileImeBlock()
         }
+        if (key.startsWith("toolbelt_")) {
+            // Anything that changes the reserved bottom inset needs a launcher
+            // restart - the taskbar only re-reads that on recreation on this build.
+            if (key == ToolbeltController.KEY_ENABLED ||
+                key == ToolbeltController.KEY_HEIGHT_DP ||
+                key == ToolbeltController.KEY_COLLAPSIBLE ||
+                key == ToolbeltController.KEY_COLLAPSED ||
+                key == ToolbeltController.KEY_COLOR_MODE
+            ) {
+                val on = prefs?.getBoolean(ToolbeltController.KEY_ENABLED, false) ?: false
+                worker.execute {
+                    if (key == ToolbeltController.KEY_ENABLED) {
+                        ToolbeltController.pushGlobalActive(on)
+                        ToolbeltController.syncNavMode(this)
+                    }
+                    // Only bounce the launcher if the reserved inset actually moved.
+                    if (ToolbeltController.pushInset(this)) ToolbeltController.restartLauncher()
+                }
+            }
+            refreshToolbelt(rebuild = true)
+        }
+    }
+
+    /** (Re)attach or detach the toolbelt overlay to match current settings. */
+    private fun refreshToolbelt(rebuild: Boolean = false) {
+        // Keep the belt off the lockscreen - its buttons would be dead there and
+        // it would sit on top of the PIN pad.
+        if (isDeviceLocked()) {
+            ToolbeltOverlayController.hide()
+            return
+        }
+        ToolbeltOverlayController.refresh(this, ::handleToolbeltAction, rebuild)
+    }
+
+    /** True while a cellular or VoIP call occupies the audio path. No permission needed. */
+    private fun isInCall(): Boolean {
+        val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        return am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
+    }
+
+    private fun handleToolbeltAction(action: ToolbeltAction, arg: String?) {
+        when (action) {
+            ToolbeltAction.NONE, ToolbeltAction.TOGGLE_BELT -> {} // handled in the overlay
+            ToolbeltAction.LAUNCH_APP -> launchApp(arg)
+            ToolbeltAction.HOME -> performGlobalAction(GLOBAL_ACTION_HOME)
+            ToolbeltAction.BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
+            ToolbeltAction.RECENTS -> performGlobalAction(GLOBAL_ACTION_RECENTS)
+            ToolbeltAction.NOTIFICATIONS -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+            ToolbeltAction.QUICK_SETTINGS -> performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+            ToolbeltAction.POWER_DIALOG -> performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+            ToolbeltAction.LOCK_SCREEN -> performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+            ToolbeltAction.SPLIT_SCREEN -> performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
+            ToolbeltAction.SCREENSHOT ->
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R)
+                    performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+                else worker.execute { RootShell.run("input keyevent 120") }
+            ToolbeltAction.VOICE_ASSIST -> launchVoiceAssist()
+            ToolbeltAction.DIALER -> {
+                try {
+                    startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) {
+                }
+            }
+            ToolbeltAction.LAST_APP -> {
+                // Open Overview, then trigger it again: AOSP returns to the
+                // previously focused task, i.e. "switch to last app".
+                performGlobalAction(GLOBAL_ACTION_RECENTS)
+                mainHandler.postDelayed({ performGlobalAction(GLOBAL_ACTION_RECENTS) }, 350)
+            }
+            ToolbeltAction.HANGUP -> worker.execute { RootShell.run("input keyevent 6") }
+            ToolbeltAction.HANGUP_OR_HOME ->
+                if (isInCall()) worker.execute { RootShell.run("input keyevent 6") }
+                else performGlobalAction(GLOBAL_ACTION_HOME)
+        }
+    }
+
+    private fun launchApp(pkg: String?) {
+        val target = pkg?.takeIf { it.isNotBlank() } ?: return
+        val intent = packageManager.getLaunchIntentForPackage(target)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        } ?: return
+        try {
+            startActivity(intent)
+        } catch (_: Exception) {
+            // app gone / not launchable
+        }
+    }
+
+    private fun launchVoiceAssist() {
+        val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                startActivity(Intent(Intent.ACTION_ASSIST).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: Exception) {
+                // no assistant installed
+            }
+        }
     }
 
     /** Installs or removes the boot script that disables nav buttons at startup. */
@@ -205,6 +309,14 @@ class Key2AccessibilityService : AccessibilityService() {
             val curIme = RootShell.run("settings get secure default_input_method")
                 .outString.trim()
             imeBlockApplied = (curIme == PASSTHRU_IME)
+
+            // Toolbelt: mirror the enabled state + live nav mode for the SystemUI
+            // hook, then bring the belt up if it's on.
+            val toolbeltOn = prefs?.getBoolean(ToolbeltController.KEY_ENABLED, false) ?: false
+            ToolbeltController.pushGlobalActive(toolbeltOn)
+            ToolbeltController.syncNavMode(this)
+            ToolbeltController.pushInset(this)
+            mainHandler.post { refreshToolbelt(rebuild = true) }
         }
 
         val rx = object : BroadcastReceiver() {
@@ -557,6 +669,12 @@ class Key2AccessibilityService : AccessibilityService() {
             reconcileImeBlock()
         }
 
+        // Toolbelt: keep the belt attached; slide it away while the soft keyboard
+        // is up or the foreground app is fullscreen/immersive.
+        ToolbeltOverlayController.setImeVisible(imeActive)
+        ToolbeltOverlayController.setForegroundFullscreen(isForegroundFullscreen())
+        refreshToolbelt()
+
         // In-Call Shortcuts: open the dialpad tab the moment the in-call screen appears.
         if (inCallShortcutsEnabled() && isGoogleDialerForeground() &&
             event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
@@ -608,6 +726,25 @@ class Key2AccessibilityService : AccessibilityService() {
             }
         }
         return null
+    }
+
+    /**
+     * Whether the foreground app is running fullscreen / immersive. Detected by
+     * the absence of the system status-bar strip: when an app hides the status
+     * bar, SystemUI's top TYPE_SYSTEM window leaves the accessibility window
+     * list. Checking window *bounds* of the app itself is unreliable now that
+     * edge-to-edge apps draw under the bars while still showing them.
+     */
+    private fun isForegroundFullscreen(): Boolean {
+        val list = try { windows ?: return false } catch (_: Exception) { return false }
+        if (list.none { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }) return false
+        val strip = (32 * resources.displayMetrics.density).toInt()
+        val hasStatusBar = list.any { w ->
+            if (w.type != AccessibilityWindowInfo.TYPE_SYSTEM) return@any false
+            val b = Rect().also { w.getBoundsInScreen(it) }
+            b.top <= 0 && b.height() in 1..strip
+        }
+        return !hasStatusBar
     }
 
     /** Switch to / from the passthrough IME based on the current foreground app. */
@@ -1071,7 +1208,20 @@ class Key2AccessibilityService : AccessibilityService() {
         isRunning = false
         writeNodeBlocking(true) // never leave nav buttons dead
         restoreImeBlock()       // never leave the soft keyboard globally suppressed
+        teardownToolbelt()      // never leave the real nav bar hidden with no belt to replace it
         return super.onUnbind(intent)
+    }
+
+    /**
+     * Drop the belt and tell the SystemUI hook to restore the real navigation
+     * bar: with no accessibility service there is no overlay to stand in for it.
+     * onServiceConnected pushes the flag back if the module is still enabled.
+     */
+    private fun teardownToolbelt() {
+        ToolbeltOverlayController.hide()
+        try {
+            RootShell.run("settings put global ${ToolbeltController.GLOBAL_ACTIVE} 0")
+        } catch (_: Exception) {}
     }
 
     /** Re-enable the soft keyboard if we'd suppressed it, run synchronously on teardown. */
@@ -1086,6 +1236,7 @@ class Key2AccessibilityService : AccessibilityService() {
         instance = null
         writeNodeBlocking(true)
         restoreImeBlock()
+        teardownToolbelt()
         prefs?.unregisterOnSharedPreferenceChangeListener(prefListener)
         screenReceiver?.let {
             try {

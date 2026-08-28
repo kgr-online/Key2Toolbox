@@ -99,6 +99,8 @@
     <string name="subtitle_extra_dim">Dim below the system minimum, with an optional night schedule</string>
     <string name="title_recents">Recents Layout</string>
     <string name="subtitle_recents">Two-row grid / masonry Overview via LSPosed</string>
+    <string name="title_toolbelt">Toolbelt</string>
+    <string name="subtitle_toolbelt">BlackBerry Q20-style bottom bar that replaces system navigation</string>
     <string name="title_telemetry">Global Telemetry Block</string>
     <string name="subtitle_telemetry">Disable Firebase Crashlytics system-wide</string>
     <string name="title_wireless_adb">Persistent Wireless ADB</string>
@@ -543,5 +545,44 @@
     <string name="recents_restart_launcher">Restart launcher</string>
     <string name="recents_restart_systemui">Restart SystemUI</string>
     <string name="recents_debug_hint">Not working after enabling? Run: adb logcat | grep Key2Toolbox-Xposed and each hook logs whether it attached. Launcher3 method names can drift between LineageOS builds.</string>
+
+    <string name="toolbelt_intro">A fixed row of five icons pinned to the bottom of the screen, in the style of the BlackBerry Q20 toolbelt. The belt is drawn by the accessibility service and floats over the app, which renders full-screen behind it. Hiding the on-screen nav bar and disabling the bottom swipe-up gesture (home / recents) needs the LSPosed hook, scoped to the launcher; the edge back-gesture is left working. Swipe down on the handle above the belt (or use the centre icon) to collapse it to just the handle.</string>
+    <string name="toolbelt_xposed_ok">LSPosed hook active.</string>
+    <string name="toolbelt_xposed_missing">LSPosed hook not active. The belt still shows, but the on-screen nav bar / bottom gesture are not disabled.</string>
+    <string name="toolbelt_xposed_hint">Open your Xposed manager (LSPosed / Vector), enable \"Key2 Toolbox\", tick the launcher (com.android.launcher3) and this app in its scope, then restart the launcher.</string>
+    <string name="toolbelt_navmode_current">Current system navigation: %1$s</string>
+    <string name="toolbelt_navmode_gesture">gesture pill</string>
+    <string name="toolbelt_navmode_2button">2-button</string>
+    <string name="toolbelt_navmode_3button">3-button bar</string>
+    <string name="toolbelt_autohide_fullscreen">Auto-hide the belt in fullscreen apps</string>
+    <string name="toolbelt_collapsible">Collapsible</string>
+    <string name="toolbelt_collapsible_hint">Adds a grab strip above the belt: swipe down to hide it, tap or swipe up to bring it back. Each hide/show briefly restarts the launcher to reclaim the space.</string>
+    <string name="toolbelt_appearance_section">Appearance</string>
+    <string name="toolbelt_height">Bar height</string>
+    <string name="toolbelt_icon_size">Icon size</string>
+    <string name="toolbelt_haptics">Haptic feedback</string>
+    <string name="toolbelt_color">Bar colour</string>
+    <string-array name="toolbelt_haptic_levels">
+        <item>Off</item>
+        <item>Light</item>
+        <item>Medium</item>
+        <item>Strong</item>
+    </string-array>
+    <string-array name="toolbelt_color_modes">
+        <item>Fixed (black)</item>
+        <item>Material You</item>
+        <item>Translucent</item>
+    </string-array>
+    <string name="toolbelt_slots_section">Slots</string>
+    <string name="toolbelt_slot_n">Slot %1$d</string>
+    <string name="toolbelt_field_icon">Icon</string>
+    <string name="toolbelt_field_tap">Tap</string>
+    <string name="toolbelt_field_double">Double</string>
+    <string name="toolbelt_field_long">Long</string>
+    <string name="toolbelt_field_app">App</string>
+    <string name="toolbelt_pick_app">Pick an app…</string>
+    <string name="toolbelt_reset">Reset to Q20</string>
+    <string name="toolbelt_restart_systemui">Restart launcher</string>
+    <string name="toolbelt_debug_hint">Nav bar not hiding after enabling? Run: adb logcat | grep Key2Toolbox-Xposed and each hook logs whether it attached. Launcher class names can drift between LineageOS builds; a launcher restart is needed for the nav bar to relayout.</string>
 
 </resources>
