@@ -375,10 +375,19 @@ object ToolbeltOverlayController {
             }
             belt.addView(icon, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
 
+            // A slot with no double-tap action fires on tap-up (no wait). Only
+            // slots that actually use double-tap pay the ~300 ms disambiguation
+            // delay of onSingleTapConfirmed.
+            val hasDouble = slot.doubleTap != ToolbeltAction.NONE
             val detector = GestureDetector(svc, object : GestureDetector.SimpleOnGestureListener() {
                 override fun onDown(e: MotionEvent) = true
+                override fun onSingleTapUp(e: MotionEvent): Boolean {
+                    if (!hasDouble) fire(slot.tap, slot.tapArg)
+                    return true
+                }
                 override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-                    fire(slot.tap, slot.tapArg); return true
+                    if (hasDouble) fire(slot.tap, slot.tapArg)
+                    return true
                 }
                 override fun onDoubleTap(e: MotionEvent): Boolean {
                     fire(slot.doubleTap, slot.doubleArg); return true
@@ -389,7 +398,7 @@ object ToolbeltOverlayController {
             })
             icon.setOnTouchListener { v, ev ->
                 when (ev.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> v.isPressed = true
+                    MotionEvent.ACTION_DOWN -> { v.isPressed = true; buzz(0) }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> v.isPressed = false
                 }
                 detector.onTouchEvent(ev)
@@ -399,7 +408,9 @@ object ToolbeltOverlayController {
 
     private fun fire(action: ToolbeltAction, arg: String?, longPress: Boolean = false) {
         if (action == ToolbeltAction.NONE) return
-        buzz(if (longPress) 1 else 0)
+        // Taps already buzzed on ACTION_DOWN; a long-press gets a second, firmer
+        // buzz to confirm the hold registered.
+        if (longPress) buzz(1)
         if (action == ToolbeltAction.TOGGLE_BELT) setCollapsed(!collapsed)
         else actionHandler?.invoke(action, arg)
     }

@@ -102,7 +102,7 @@
     <string name="title_toolbelt">Toolbelt</string>
     <string name="subtitle_toolbelt">BlackBerry Q20-style bottom bar that replaces system navigation</string>
     <string name="title_telemetry">Global Telemetry Block</string>
-    <string name="subtitle_telemetry">Disable Firebase Crashlytics system-wide</string>
+    <string name="subtitle_telemetry">Disable Firebase Crashlytics, Analytics and Performance system-wide</string>
     <string name="title_wireless_adb">Persistent Wireless ADB</string>
     <string name="subtitle_wireless_adb">Static port, survives reboot</string>
     <string name="title_wifi5g">5GHz Hotspot Workaround</string>
@@ -302,7 +302,7 @@
     <string name="extra_dim_starts_at">Starts at</string>
     <string name="extra_dim_ends_at">Ends at</string>
     <string name="desc_extra_dim">Reduces the screen brightness below the system\'s standard minimum level. Perfect for reading in low light and saving battery at night.</string>
-    <string name="desc_telemetry">Globally deactivates Firebase Crashlytics collection system-wide. This halts background crash logs packaging and upload triggers, saving mobile data, RAM, and wakeup cycles.</string>
+    <string name="desc_telemetry">Globally forces off Firebase data collection system-wide — Crashlytics, Analytics / Google Analytics, and Performance Monitoring — by holding their persisted opt-out flags. A watchdog re-applies it every few minutes and after every app install, since the SDKs reset the flags on each cold start. Halts background crash-log and analytics packaging and upload, saving mobile data, RAM, and wakeups.</string>
     <string name="telemetry_protection_status">Protection Status</string>
     <string name="telemetry_status_fully_protected">Status: Fully Protected</string>
     <string name="telemetry_status_partially_protected">Status: Partially Protected</string>
@@ -313,6 +313,10 @@
     <string name="status_telemetry_disabled">Auto-block disabled.</string>
     <string name="status_telemetry_toggled">Toggled telemetry off for all detected apps.</string>
     <string name="telemetry_block_now">Block all telemetry now</string>
+    <string name="telemetry_show_details">Show per-app status (%1$d)</string>
+    <string name="telemetry_hide_details">Hide per-app status</string>
+    <string name="telemetry_surface_blocked">blocked</string>
+    <string name="telemetry_surface_leaking">leaking</string>
     <string name="desc_watch">Smartwatches or fitness trackers paired via Google Play Services generate constant reconnect attempts and alarms while out of range, draining the battery. Set a device to Dormant to stop these wakeups without unpairing or factory-resetting.</string>
     <string name="watch_unsupported">No Google Wearable connection database detected. This feature is only active if you have Wear OS or GMS wearables paired.</string>
     <string name="watch_no_devices">No paired wearables found in Google Play Services. If you have a smartwatch, ensure it is configured and paired.</string>

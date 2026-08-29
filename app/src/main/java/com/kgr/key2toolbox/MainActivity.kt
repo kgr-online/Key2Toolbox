@@ -9,6 +9,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -71,7 +72,15 @@ class MainActivity : ComponentActivity() {
             // either way - this is a no-op if the parent theme was already correct.
             StatusBarIconAppearance(darkIcons = !darkTheme)
             MaterialTheme(colorScheme = appColorScheme(darkTheme)) {
-                StatusBarColor(MaterialTheme.colorScheme.background)
+                // When the Toolbelt is active it reserves the bottom strip as the
+                // nav inset; the DecorView fills it with window.navigationBarColor.
+                // Match it to the app's own bottom NavigationBar container (a Monet
+                // surface tint) so - especially in the belt's Translucent mode - it
+                // reads as an extension of the app chrome, not a black/white band.
+                SystemBarColors(
+                    statusBar = MaterialTheme.colorScheme.background,
+                    navBar = NavigationBarDefaults.containerColor,
+                )
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -89,18 +98,24 @@ private fun StatusBarIconAppearance(darkIcons: Boolean) {
     if (view.isInEditMode) return
     val window = (view.context as Activity).window
     SideEffect {
-        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkIcons
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = darkIcons
+            isAppearanceLightNavigationBars = darkIcons
+        }
     }
 }
 
 @Composable
-private fun StatusBarColor(color: Color) {
+private fun SystemBarColors(statusBar: Color, navBar: Color) {
     val view = LocalView.current
     if (view.isInEditMode) return
     val window = (view.context as Activity).window
-    val argb = color.toArgb()
+    val statusArgb = statusBar.toArgb()
+    val navArgb = navBar.toArgb()
     SideEffect {
         @Suppress("DEPRECATION")
-        window.statusBarColor = argb
+        window.statusBarColor = statusArgb
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = navArgb
     }
 }
