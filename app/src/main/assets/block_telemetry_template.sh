@@ -7,8 +7,14 @@
 # boot, then a re-scan every __INTERVAL_MIN__ minutes, plus an extra burst
 # whenever an app is installed/removed (packages.list line count changes).
 #
+# Per-app opt-in: only packages listed in BLOCKLIST (one package name per
+# line, written by TelemetryController.setPackageBlocked from the app UI) are
+# touched. An app not in the list is left completely alone, even if it has a
+# telemetry prefs file - "Detect Apps" finds candidates, the checkbox is what
+# actually enrolls one.
+#
 # Surfaces neutralised (true -> false, injected where the SDK expects the file
-# but the app hasn't written the flag yet):
+# but the app hasn't written the flag yet), per enrolled package:
 #   - Crashlytics       firebase_crashlytics_collection_enabled
 #   - Analytics / GA     measurement_enabled, measurement_enabled_from_api,
 #                        firebase_analytics_collection_enabled
@@ -20,6 +26,7 @@
 # (which may sit in a different mount namespace).
 LOCK=/data/adb/.block_telemetry.lock
 PKGLIST=/data/system/packages.list
+BLOCKLIST=/data/adb/.telemetry_blocked
 INTERVAL_MIN=__INTERVAL_MIN__
 
 # Belt-and-braces PID lock: unlike a plain "kill -0 $PID" check (which can
@@ -35,31 +42,42 @@ fi
 echo $$ > "$LOCK"
 
 INNER='
+BLOCKLIST=/data/adb/.telemetry_blocked
+[ -s "$BLOCKLIST" ] || exit 0
+
 KEYS="firebase_crashlytics_collection_enabled firebase_analytics_collection_enabled firebase_performance_collection_enabled firebase_data_collection_default_enabled measurement_enabled measurement_enabled_from_api"
 RE=$(echo "$KEYS" | sed "s/ /|/g")
 
-# 1. flip any known telemetry flag from true to false wherever it is persisted.
-grep -rlE "\"($RE)\" value=\"true\"" /data/data/*/shared_prefs 2>/dev/null | while read f; do
-    [ -f "$f" ] || continue
-    for k in $KEYS; do
-        sed -i "s/\"$k\" value=\"true\"/\"$k\" value=\"false\"/g" "$f"
-    done
-done
+while IFS= read -r pkg; do
+    [ -n "$pkg" ] || continue
+    SP="/data/data/$pkg/shared_prefs"
+    [ -d "$SP" ] || continue
 
-# 2. inject the disable flag into the files the SDK reads on init, for apps that
-#    have the file but have not written the flag (fresh install / first run).
-find /data/data -name "com.google.firebase.crashlytics.xml" 2>/dev/null | while read f; do
-    [ -f "$f" ] || continue
-    grep -q "firebase_crashlytics_collection_enabled" "$f" || \
-        sed -i "s#</map>#    <boolean name=\"firebase_crashlytics_collection_enabled\" value=\"false\" />\n</map>#" "$f"
-done
-find /data/data -name "com.google.android.gms.measurement.prefs.xml" 2>/dev/null | while read f; do
-    [ -f "$f" ] || continue
-    grep -q "\"measurement_enabled\"" "$f" || \
-        sed -i "s#</map>#    <boolean name=\"measurement_enabled\" value=\"false\" />\n</map>#" "$f"
-    grep -q "\"measurement_enabled_from_api\"" "$f" || \
-        sed -i "s#</map>#    <boolean name=\"measurement_enabled_from_api\" value=\"false\" />\n</map>#" "$f"
-done
+    # 1. flip any known telemetry flag from true to false, anywhere in this
+    #    enrolled apps shared_prefs.
+    grep -lE "\"($RE)\" value=\"true\"" "$SP"/*.xml 2>/dev/null | while read f; do
+        [ -f "$f" ] || continue
+        for k in $KEYS; do
+            sed -i "s/\"$k\" value=\"true\"/\"$k\" value=\"false\"/g" "$f"
+        done
+    done
+
+    # 2. inject the disable flag into the files the SDK reads on init, when the
+    #    file exists but the app has not written the flag yet (fresh install /
+    #    first run of an enrolled app).
+    CF="$SP/com.google.firebase.crashlytics.xml"
+    if [ -f "$CF" ]; then
+        grep -q "firebase_crashlytics_collection_enabled" "$CF" || \
+            sed -i "s#</map>#    <boolean name=\"firebase_crashlytics_collection_enabled\" value=\"false\" />\n</map>#" "$CF"
+    fi
+    MF="$SP/com.google.android.gms.measurement.prefs.xml"
+    if [ -f "$MF" ]; then
+        grep -q "\"measurement_enabled\"" "$MF" || \
+            sed -i "s#</map>#    <boolean name=\"measurement_enabled\" value=\"false\" />\n</map>#" "$MF"
+        grep -q "\"measurement_enabled_from_api\"" "$MF" || \
+            sed -i "s#</map>#    <boolean name=\"measurement_enabled_from_api\" value=\"false\" />\n</map>#" "$MF"
+    fi
+done < "$BLOCKLIST"
 '
 
 apply_block() {

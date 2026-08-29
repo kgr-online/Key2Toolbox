@@ -10,10 +10,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,13 +46,17 @@ fun TelemetryScreen(onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var report by remember { mutableStateOf<List<TelemetryController.AppReport>>(emptyList()) }
-    var showDetails by remember { mutableStateOf(false) }
+    var blockedSet by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var hasDetected by remember { mutableStateOf(false) }
+    var detecting by remember { mutableStateOf(false) }
 
     fun refreshCounts() {
         scope.launch(Dispatchers.IO) {
             totalApps = TelemetryController.totalAffectedApps()
             blockedApps = TelemetryController.totalBlockedApps()
             report = TelemetryController.blockReport()
+            blockedSet = TelemetryController.blockedPackages(context)
+            hasDetected = true
         }
     }
 
@@ -62,6 +66,8 @@ fun TelemetryScreen(onBack: () -> Unit) {
             totalApps = TelemetryController.totalAffectedApps()
             blockedApps = TelemetryController.totalBlockedApps()
             report = TelemetryController.blockReport()
+            blockedSet = TelemetryController.blockedPackages(context)
+            hasDetected = true
             // Same class of bug as Extra Dim's schedule daemon: the watchdog can die
             // mid-session (e.g. the root shell that launched it got recycled), or be
             // alive but running a stale script from an older app build (which a bare
@@ -129,7 +135,7 @@ fun TelemetryScreen(onBack: () -> Unit) {
                 onClick = {
                     busy = true
                     scope.launch(Dispatchers.IO) {
-                        TelemetryController.applyLive()
+                        TelemetryController.blockAllDetected(context)
                         refreshCounts()
                         busy = false
                         statusMessage = context.getString(R.string.status_telemetry_toggled)
@@ -141,50 +147,93 @@ fun TelemetryScreen(onBack: () -> Unit) {
             }
         }
 
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Button(
+                enabled = !detecting,
+                onClick = {
+                    detecting = true
+                    scope.launch(Dispatchers.IO) {
+                        report = TelemetryController.blockReport()
+                        blockedSet = TelemetryController.blockedPackages(context)
+                        hasDetected = true
+                        detecting = false
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(stringResource(R.string.telemetry_detect_apps))
+            }
+        }
+
         statusMessage?.let {
             Text(it, style = MaterialTheme.typography.bodySmall)
         }
 
-        if (report.isNotEmpty()) {
-            TextButton(onClick = { showDetails = !showDetails }) {
-                Text(
-                    stringResource(
-                        if (showDetails) R.string.telemetry_hide_details
-                        else R.string.telemetry_show_details,
-                        report.size
-                    )
-                )
-            }
-        }
-        if (showDetails) {
+        if (hasDetected) {
             Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier
-                        .heightIn(max = 360.dp)
-                        .verticalScroll(rememberScrollState())
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    report.forEach { app ->
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(stringResource(R.string.telemetry_app_list_title), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(R.string.telemetry_app_list_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (report.isEmpty()) {
                         Text(
-                            app.pkg,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            stringResource(R.string.telemetry_app_list_empty),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 8.dp)
                         )
-                        app.surfaces.forEach { s ->
-                            Text(
-                                "  ${s.name.padEnd(12)} " + stringResource(
-                                    if (s.blocked) R.string.telemetry_surface_blocked
-                                    else R.string.telemetry_surface_leaking
-                                ),
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp,
-                                color = if (s.blocked)
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                else
-                                    MaterialTheme.colorScheme.error
-                            )
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .heightIn(max = 360.dp)
+                                .verticalScroll(rememberScrollState())
+                                .padding(top = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            report.forEach { app ->
+                                val blocked = blockedSet.contains(app.pkg)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Checkbox(
+                                        checked = blocked,
+                                        onCheckedChange = { checked ->
+                                            // optimistic UI update; TelemetryController mirrors
+                                            // to root + applies live on enable, in the background.
+                                            blockedSet = if (checked) blockedSet + app.pkg else blockedSet - app.pkg
+                                            scope.launch(Dispatchers.IO) {
+                                                TelemetryController.setPackageBlocked(context, app.pkg, checked)
+                                                blockedApps = TelemetryController.totalBlockedApps()
+                                            }
+                                        }
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            app.pkg,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            stringResource(
+                                                if (blocked) R.string.telemetry_app_status_blocked
+                                                else R.string.telemetry_app_status_unblocked
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (blocked)
+                                                MaterialTheme.colorScheme.primary
+                                            else
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

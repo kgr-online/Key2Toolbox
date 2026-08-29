@@ -1,6 +1,7 @@
 package com.kgr.key2toolbox.modules
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.core.ShellResult
@@ -28,6 +29,20 @@ object TelemetryController {
 
     /** How often the watchdog re-scans and re-blocks. */
     private const val INTERVAL_MIN = 10
+
+    /**
+     * Per-app opt-in enrollment: SharedPreferences is the source of truth (read
+     * by the UI in-process), mirrored to [BLOCKLIST_PATH] - a plain newline-
+     * separated package list, one per line - which is what the root watchdog
+     * script and any live apply actually read. A package not in this set is
+     * left completely untouched, even if "Detect Apps" found it.
+     */
+    private const val PREFS = "key2tweaks"
+    private const val KEY_BLOCKED_PACKAGES = "telemetry_blocked_packages"
+    private const val BLOCKLIST_PATH = "/data/adb/.telemetry_blocked"
+
+    private fun prefs(context: Context): SharedPreferences =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     /** Every persisted flag the block forces to false. */
     private val TELEMETRY_KEYS = listOf(
@@ -77,6 +92,89 @@ object TelemetryController {
         } else {
             AssetInstaller.removeFile(TARGET)
         }
+    }
+
+    /** Packages currently enrolled for per-app telemetry blocking. */
+    fun blockedPackages(context: Context): Set<String> =
+        prefs(context).getStringSet(KEY_BLOCKED_PACKAGES, emptySet()) ?: emptySet()
+
+    fun isPackageBlocked(context: Context, pkg: String): Boolean =
+        blockedPackages(context).contains(pkg)
+
+    /**
+     * Enroll / unenroll a single package. Persists to SharedPreferences,
+     * mirrors the full set to [BLOCKLIST_PATH] for the root watchdog, and - if
+     * newly enrolled - applies live immediately rather than waiting for the
+     * next watchdog pass. Unenrolling just stops future re-blocking; it does
+     * not attempt to flip the app's own flag back to true, since the SDK will
+     * naturally re-derive it from the manifest on the app's next cold start.
+     */
+    fun setPackageBlocked(context: Context, pkg: String, blocked: Boolean) {
+        val updated = blockedPackages(context).toMutableSet()
+        if (blocked) updated.add(pkg) else updated.remove(pkg)
+        prefs(context).edit().putStringSet(KEY_BLOCKED_PACKAGES, updated).apply()
+        mirrorBlocklist(updated)
+        if (blocked) applyLiveForPackage(pkg)
+    }
+
+    /** Enrolls every currently-detected package (see [blockReport]) in one go. */
+    fun blockAllDetected(context: Context) {
+        val all = blockReport().map { it.pkg }.toSet()
+        val updated = blockedPackages(context) + all
+        prefs(context).edit().putStringSet(KEY_BLOCKED_PACKAGES, updated).apply()
+        mirrorBlocklist(updated)
+        applyLive()
+    }
+
+    /**
+     * Writes the enrolled package set to [BLOCKLIST_PATH] as root, one package
+     * per line. Package names come from PackageManager / on-disk directory
+     * names, never free-form user text, so no shell-metacharacter risk from
+     * embedding them directly in the heredoc below.
+     */
+    private fun mirrorBlocklist(pkgs: Set<String>) {
+        val body = pkgs.joinToString("\n")
+        RootShell.run("cat > $BLOCKLIST_PATH << 'K2TB_EOF'\n$body\nK2TB_EOF")
+    }
+
+    /**
+     * Runs one telemetry-disable pass live, scoped to a single package - same
+     * flip/inject logic as [applyLive], just restricted to one app's
+     * shared_prefs so checking a box takes effect immediately without waiting
+     * for the watchdog's next interval.
+     */
+    fun applyLiveForPackage(pkg: String): ShellResult {
+        val keys = TELEMETRY_KEYS.joinToString(" ")
+        val re = TELEMETRY_KEYS.joinToString("|")
+        val d = "$" // keep $SP / $f / $k / $RE literal for the inner shell
+        val cmd = """
+            nsenter --mount=/proc/1/ns/mnt -- sh -c '
+            PKG="$pkg"
+            KEYS="$keys"
+            RE="$re"
+            SP="/data/data/${d}PKG/shared_prefs"
+            [ -d "${d}SP" ] || exit 0
+            grep -lE "\"(${d}RE)\" value=\"true\"" "${d}SP"/*.xml 2>/dev/null | while read f; do
+                [ -f "${d}f" ] || continue
+                for k in ${d}KEYS; do
+                    sed -i "s/\"${d}k\" value=\"true\"/\"${d}k\" value=\"false\"/g" "${d}f"
+                done
+            done
+            CF="${d}SP/com.google.firebase.crashlytics.xml"
+            if [ -f "${d}CF" ]; then
+                grep -q "firebase_crashlytics_collection_enabled" "${d}CF" || \
+                    sed -i "s#</map>#    <boolean name=\"firebase_crashlytics_collection_enabled\" value=\"false\" />\n</map>#" "${d}CF"
+            fi
+            MF="${d}SP/com.google.android.gms.measurement.prefs.xml"
+            if [ -f "${d}MF" ]; then
+                grep -q "\"measurement_enabled\"" "${d}MF" || \
+                    sed -i "s#</map>#    <boolean name=\"measurement_enabled\" value=\"false\" />\n</map>#" "${d}MF"
+                grep -q "\"measurement_enabled_from_api\"" "${d}MF" || \
+                    sed -i "s#</map>#    <boolean name=\"measurement_enabled_from_api\" value=\"false\" />\n</map>#" "${d}MF"
+            fi
+            '
+        """.trimIndent()
+        return RootShell.run(cmd)
     }
 
     /**
