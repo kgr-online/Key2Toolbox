@@ -19,6 +19,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Toolbelt: haptic feedback on the belt buttons. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <!-- Required by ZramBootCompletedReceiver to reapply persisted swappiness
          after the ROM's own init.rc overwrites it late in boot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -29,6 +32,22 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.Key2Toolbox"
         android:supportsRtl="true">
+
+        <!-- Xposed / LSPosed module metadata. Both hooks scope to the launcher:
+             the two-row Grid / Masonry Overview (RecentsHookInit) and the
+             nav-bar / bottom-gesture hiding for the Q20 Toolbelt (NavBarHookInit). -->
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="Two-row grid Overview for Launcher3, and nav-bar hiding for the Q20 Toolbelt" />
+        <meta-data
+            android:name="xposedminversion"
+            android:value="54" />
+        <meta-data
+            android:name="xposedscope"
+            android:resource="@array/xposed_scope" />
 
         <activity
             android:name=".MainActivity"

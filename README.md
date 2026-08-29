@@ -37,6 +37,14 @@ accessibility-service status
 - **Double-Tap to Wake** - (DT2W) Primarily needed for the 4.19 kernel. Setting in Gestures must also be toggled on
 - **Extra Dim** - dim below the system minimum brightness, with an optional
   night schedule
+- **Recents Layout** - two-row grid / staggered-tile Overview, and an Overview
+  background-transparency slider (LSPosed hook)
+- **Toolbelt** - a BlackBerry Q20-style bar of five customizable icons that
+  replaces the on-screen navigation. Per-slot icon + single/double/long-tap
+  actions, adjustable height / icon size / haptics, Fixed / Material You /
+  Transparent colour, optional pull-to-grab collapse (drag the belt away with
+  the finger, spring settle). Keeps the edge back-gesture; disables the bottom
+  swipe-up (LSPosed hook + accessibility service)
 
 **System**
 - **AdBlock** - systemless-hosts ad/tracker blocking, with search, add/remove,

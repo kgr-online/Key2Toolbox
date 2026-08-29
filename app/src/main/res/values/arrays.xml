@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- LSPosed scope for RecentsHookInit. Trebuchet is the LineageOS launcher
+         on the Key2; the other two are kept so the same module works on an
+         AOSP/Pixel launcher if the APK is ever reused. -->
+    <string-array name="xposed_scope">
+        <item>com.android.launcher3</item>
+        <item>org.lineageos.trebuchet</item>
+        <item>com.google.android.apps.nexuslauncher</item>
+    </string-array>
+</resources>

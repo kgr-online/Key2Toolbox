@@ -22,8 +22,8 @@ android {
         applicationId = "com.kgr.key2toolbox"
         minSdk = 28
         targetSdk = 34
-        versionCode = 31
-        versionName = "5.0.1"
+        versionCode = 33
+        versionName = "5.2"
     }
 
     signingConfigs {
@@ -96,6 +96,11 @@ dependencies {
 
     // Root shell access (https://github.com/topjohnwu/libsu)
     implementation("com.github.topjohnwu.libsu:core:5.2.2")
+
+    // Xposed / LSPosed API stub - compile-only, provided by the framework at runtime.
+    // Used by com.kgr.key2toolbox.xposed.RecentsHookInit to force the two-row Grid /
+    // Masonry Overview layout inside Trebuchet (org.lineageos.trebuchet).
+    compileOnly("de.robv.android.xposed:api:82")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

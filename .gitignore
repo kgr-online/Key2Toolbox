@@ -30,3 +30,7 @@ keystore.properties
 # Generated
 /app/release/
 /app/debug/
+
+# Python
+__pycache__/
+*.pyc

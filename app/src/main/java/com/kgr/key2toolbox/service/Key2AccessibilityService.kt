@@ -24,8 +24,11 @@ import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.inputfix.CalculatorInputFix
 import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
+import android.media.AudioManager
 import com.kgr.key2toolbox.modules.AutoFocusController
 import com.kgr.key2toolbox.modules.BatteryUsageController
+import com.kgr.key2toolbox.modules.ToolbeltController
+import com.kgr.key2toolbox.modules.ToolbeltController.ToolbeltAction
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
@@ -81,6 +84,9 @@ class Key2AccessibilityService : AccessibilityService() {
         @Volatile
         var instance: Key2AccessibilityService? = null
             private set
+
+        /** Coalesce window-event bursts into one immersive-state `dumpsys` probe. */
+        private const val FULLSCREEN_PROBE_DEBOUNCE_MS = 200L
 
         const val PREFS = "key2tweaks"
         const val KEY_NAV_LOCK = "nav_lock_enabled"
@@ -144,6 +150,8 @@ class Key2AccessibilityService : AccessibilityService() {
     @Volatile private var imeActive = false   // keyboard currently showing
     @Volatile private var imeBlockApplied = false // last show_ime value we pushed (true = suppressed)
     @Volatile private var foregroundPkg: String? = null // last seen foreground app package
+    @Volatile private var fullscreenCached = false       // last known immersive state of the foreground app
+    @Volatile private var fullscreenProbeInFlight = false
     private val lastNavTap = HashMap<Int, Long>() // keycode -> last short-tap time
     private var prefs: SharedPreferences? = null
     private var screenReceiver: BroadcastReceiver? = null
@@ -160,6 +168,107 @@ class Key2AccessibilityService : AccessibilityService() {
         }
         if (key == KEY_IME_BLOCK || key == KEY_IME_BLOCK_APPS) {
             reconcileImeBlock()
+        }
+        if (key.startsWith("toolbelt_")) {
+            // Anything that changes the reserved bottom inset needs a launcher
+            // restart - the taskbar only re-reads that on recreation on this build.
+            if (key == ToolbeltController.KEY_ENABLED ||
+                key == ToolbeltController.KEY_HEIGHT_DP ||
+                key == ToolbeltController.KEY_COLLAPSIBLE ||
+                key == ToolbeltController.KEY_COLLAPSED ||
+                key == ToolbeltController.KEY_COLOR_MODE
+            ) {
+                val on = prefs?.getBoolean(ToolbeltController.KEY_ENABLED, false) ?: false
+                worker.execute {
+                    if (key == ToolbeltController.KEY_ENABLED) {
+                        ToolbeltController.pushGlobalActive(on)
+                        ToolbeltController.syncNavMode(this)
+                    }
+                    // Only bounce the launcher if the reserved inset actually moved.
+                    if (ToolbeltController.pushInset(this)) ToolbeltController.restartLauncher()
+                }
+            }
+            refreshToolbelt(rebuild = true)
+        }
+    }
+
+    /** (Re)attach or detach the toolbelt overlay to match current settings. */
+    private fun refreshToolbelt(rebuild: Boolean = false) {
+        // Keep the belt off the lockscreen - its buttons would be dead there and
+        // it would sit on top of the PIN pad.
+        if (isDeviceLocked()) {
+            ToolbeltOverlayController.hide()
+            return
+        }
+        ToolbeltOverlayController.refresh(this, ::handleToolbeltAction, rebuild)
+    }
+
+    /** True while a cellular or VoIP call occupies the audio path. No permission needed. */
+    private fun isInCall(): Boolean {
+        val am = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        return am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
+    }
+
+    private fun handleToolbeltAction(action: ToolbeltAction, arg: String?) {
+        when (action) {
+            ToolbeltAction.NONE, ToolbeltAction.TOGGLE_BELT -> {} // handled in the overlay
+            ToolbeltAction.LAUNCH_APP -> launchApp(arg)
+            ToolbeltAction.HOME -> performGlobalAction(GLOBAL_ACTION_HOME)
+            ToolbeltAction.BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
+            ToolbeltAction.RECENTS -> performGlobalAction(GLOBAL_ACTION_RECENTS)
+            ToolbeltAction.NOTIFICATIONS -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+            ToolbeltAction.QUICK_SETTINGS -> performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+            ToolbeltAction.POWER_DIALOG -> performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+            ToolbeltAction.LOCK_SCREEN -> performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+            ToolbeltAction.SPLIT_SCREEN -> performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
+            ToolbeltAction.SCREENSHOT ->
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R)
+                    performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+                else worker.execute { RootShell.run("input keyevent 120") }
+            ToolbeltAction.VOICE_ASSIST -> launchVoiceAssist()
+            ToolbeltAction.DIALER -> {
+                try {
+                    startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) {
+                }
+            }
+            ToolbeltAction.LAST_APP -> {
+                // Open Overview, then trigger it again: AOSP returns to the
+                // previously focused task, i.e. "switch to last app".
+                performGlobalAction(GLOBAL_ACTION_RECENTS)
+                mainHandler.postDelayed({ performGlobalAction(GLOBAL_ACTION_RECENTS) }, 350)
+            }
+            ToolbeltAction.HANGUP -> worker.execute { RootShell.run("input keyevent 6") }
+            ToolbeltAction.HANGUP_OR_HOME ->
+                if (isInCall()) worker.execute { RootShell.run("input keyevent 6") }
+                else performGlobalAction(GLOBAL_ACTION_HOME)
+        }
+    }
+
+    private fun launchApp(pkg: String?) {
+        val target = pkg?.takeIf { it.isNotBlank() } ?: return
+        val intent = packageManager.getLaunchIntentForPackage(target)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        } ?: return
+        try {
+            startActivity(intent)
+        } catch (_: Exception) {
+            // app gone / not launchable
+        }
+    }
+
+    private fun launchVoiceAssist() {
+        val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                startActivity(Intent(Intent.ACTION_ASSIST).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: Exception) {
+                // no assistant installed
+            }
         }
     }
 
@@ -205,6 +314,14 @@ class Key2AccessibilityService : AccessibilityService() {
             val curIme = RootShell.run("settings get secure default_input_method")
                 .outString.trim()
             imeBlockApplied = (curIme == PASSTHRU_IME)
+
+            // Toolbelt: mirror the enabled state + live nav mode for the SystemUI
+            // hook, then bring the belt up if it's on.
+            val toolbeltOn = prefs?.getBoolean(ToolbeltController.KEY_ENABLED, false) ?: false
+            ToolbeltController.pushGlobalActive(toolbeltOn)
+            ToolbeltController.syncNavMode(this)
+            ToolbeltController.pushInset(this)
+            mainHandler.post { refreshToolbelt(rebuild = true) }
         }
 
         val rx = object : BroadcastReceiver() {
@@ -552,10 +669,20 @@ class Key2AccessibilityService : AccessibilityService() {
         reconcileNav()
 
         val pkg = foregroundAppPackage()
-        if (pkg != null && pkg != foregroundPkg) {
+        val pkgChanged = pkg != null && pkg != foregroundPkg
+        if (pkgChanged) {
             foregroundPkg = pkg
             reconcileImeBlock()
         }
+
+        // Toolbelt: keep the belt attached; slide it away while the soft keyboard
+        // is up or the foreground app is fullscreen/immersive. The immersive
+        // check is async + cached (see [scheduleFullscreenProbe]); every event
+        // just re-applies the last known value.
+        ToolbeltOverlayController.setImeVisible(imeActive)
+        ToolbeltOverlayController.setForegroundFullscreen(fullscreenCached)
+        refreshToolbelt()
+        scheduleFullscreenProbe(event, pkgChanged)
 
         // In-Call Shortcuts: open the dialpad tab the moment the in-call screen appears.
         if (inCallShortcutsEnabled() && isGoogleDialerForeground() &&
@@ -608,6 +735,84 @@ class Key2AccessibilityService : AccessibilityService() {
             }
         }
         return null
+    }
+
+    private val fullscreenProbeRunnable = Runnable { runFullscreenProbe() }
+
+    /**
+     * Ask for a fresh immersive-state probe, but only on window-shaped events
+     * (app switch, windows changed, window state changed) and coalesced through
+     * a short delay so a burst of events triggers one `dumpsys` at most.
+     */
+    private fun scheduleFullscreenProbe(event: AccessibilityEvent?, pkgChanged: Boolean) {
+        val t = event?.eventType
+        val windowish = pkgChanged ||
+            t == AccessibilityEvent.TYPE_WINDOWS_CHANGED ||
+            t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        if (!windowish) return
+        mainHandler.removeCallbacks(fullscreenProbeRunnable)
+        mainHandler.postDelayed(fullscreenProbeRunnable, FULLSCREEN_PROBE_DEBOUNCE_MS)
+    }
+
+    private fun runFullscreenProbe() {
+        if (fullscreenProbeInFlight) return
+        fullscreenProbeInFlight = true
+        val fallback = isForegroundFullscreenByStrip()
+        worker.execute {
+            val value = try { probeImmersiveViaDump() } catch (_: Exception) { null } ?: fallback
+            fullscreenProbeInFlight = false
+            if (value != fullscreenCached) {
+                fullscreenCached = value
+                mainHandler.post {
+                    ToolbeltOverlayController.setForegroundFullscreen(value)
+                    refreshToolbelt()
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether the focused app window is *requesting* an immersive
+     * (status-bar-hidden) layout, read from `dumpsys window`. `null` = the
+     * focused window couldn't be resolved, caller keeps the last value.
+     *
+     * This keys off the app's requested inset visibility, not whether a bar is
+     * on screen right now, so a transient status-bar reveal - the privacy chip
+     * flash on a location/mic/camera hit, or a deliberate swipe-to-peek - does
+     * not read as "left fullscreen" and does not bounce the belt back in. The
+     * belt only reappears when the foreground app itself drops the immersive
+     * request (e.g. a video player going from fullscreen to inline).
+     */
+    private fun probeImmersiveViaDump(): Boolean? {
+        val out = RootShell.run("dumpsys window windows").outString
+        if (out.isBlank()) return null
+        val hash = Regex("""mCurrentFocus=Window\{(\w+)""").find(out)?.groupValues?.get(1) ?: return null
+        val start = out.indexOf("Window{$hash")
+        if (start < 0) return null
+        val tail = out.substring(start)
+        val end = tail.indexOf("\n  Window #").let { if (it < 0) minOf(tail.length, 6000) else it }
+        val block = tail.substring(0, end)
+        return Regex("""Requested non-default-visibility types:[^\n]*\bstatusBars\b""").containsMatchIn(block) ||
+            Regex("""vsysui=[^\n]*(FULLSCREEN|IMMERSIVE)""").containsMatchIn(block) ||
+            Regex("""\bfl=[^\n]*\bFULLSCREEN\b""").containsMatchIn(block)
+    }
+
+    /**
+     * Fallback immersive check: the foreground app is fullscreen when the system
+     * status-bar strip is absent from the accessibility window list. Cheap and
+     * root-free, but fooled by a transient bar reveal - hence it only backs up
+     * [probeImmersiveViaDump] when the `dumpsys` parse fails.
+     */
+    private fun isForegroundFullscreenByStrip(): Boolean {
+        val list = try { windows ?: return false } catch (_: Exception) { return false }
+        if (list.none { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }) return false
+        val strip = (32 * resources.displayMetrics.density).toInt()
+        val hasStatusBar = list.any { w ->
+            if (w.type != AccessibilityWindowInfo.TYPE_SYSTEM) return@any false
+            val b = Rect().also { w.getBoundsInScreen(it) }
+            b.top <= 0 && b.height() in 1..strip
+        }
+        return !hasStatusBar
     }
 
     /** Switch to / from the passthrough IME based on the current foreground app. */
@@ -1071,7 +1276,20 @@ class Key2AccessibilityService : AccessibilityService() {
         isRunning = false
         writeNodeBlocking(true) // never leave nav buttons dead
         restoreImeBlock()       // never leave the soft keyboard globally suppressed
+        teardownToolbelt()      // never leave the real nav bar hidden with no belt to replace it
         return super.onUnbind(intent)
+    }
+
+    /**
+     * Drop the belt and tell the SystemUI hook to restore the real navigation
+     * bar: with no accessibility service there is no overlay to stand in for it.
+     * onServiceConnected pushes the flag back if the module is still enabled.
+     */
+    private fun teardownToolbelt() {
+        ToolbeltOverlayController.hide()
+        try {
+            RootShell.run("settings put global ${ToolbeltController.GLOBAL_ACTIVE} 0")
+        } catch (_: Exception) {}
     }
 
     /** Re-enable the soft keyboard if we'd suppressed it, run synchronously on teardown. */
@@ -1086,6 +1304,7 @@ class Key2AccessibilityService : AccessibilityService() {
         instance = null
         writeNodeBlocking(true)
         restoreImeBlock()
+        teardownToolbelt()
         prefs?.unregisterOnSharedPreferenceChangeListener(prefListener)
         screenReceiver?.let {
             try {

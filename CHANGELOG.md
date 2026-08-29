@@ -2,6 +2,120 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.2] - 2026-08-29
+
+### Fixed
+
+- **Toolbelt / Recents Layout: launcher crash-loop and stranded app
+  transitions.** With both modules active, `RecentsHookInit` forced
+  `DeviceProfile.isTablet = true` across the launcher process and cleared
+  `isTaskbarPresent` on every `DeviceProfile` - including the Taskbar's own.
+  On this build `NavButtonLayoutFactory.getUiLayoutter()` has no branch for
+  `(isTablet && !isTaskbarPresent)` and throws `"No layoutter found"` on every
+  Taskbar-window configuration change (entering / leaving fullscreen, rotation,
+  dark-mode toggle, IME), killing `com.android.launcher3` in a loop. The
+  Taskbar flashing over fullscreen apps and app transitions freezing
+  mid-animation (a `GestureState` crash in `AbsSwipeUpHandler` when the
+  launcher process dies during the recents animation) both followed from that.
+  The tablet override and the `isTaskbarPresent` clear now skip the Taskbar's
+  own `DeviceProfile`, and a guard on `getUiLayoutter()` flips
+  `isTaskbarPresent` on for the call if a profile still reaches the throwing
+  branch.
+
+- **Toolbelt reappearing over a fullscreen app.** The immersive check keyed off
+  whether a status-bar strip was on screen, so a transient reveal - the privacy
+  indicator on a location / mic / camera access, or a deliberate swipe from the
+  top edge - counted as "left fullscreen" and slid the belt back in. It now
+  reads the focused app window's *requested* inset visibility from
+  `dumpsys window` (cached, refreshed on window changes); a transient reveal
+  does not change the request, so the belt stays hidden and only returns when
+  the app itself drops immersive.
+
+- **Overview showing the launcher's own tile.** On a third-party-home setup
+  (KISS) QuickStep's Launcher / RecentsActivity task could leak into Overview
+  as a blank, thumbnail-less card. `RecentsView.applyLoadPlan` now drops any
+  task belonging to the launcher package or carrying a HOME intent.
+
+### Changed
+
+- **Toolbelt collapse is now a pull-to-grab gesture.** The grip strip and
+  handle pill drag the belt with the finger between shown and collapsed, with
+  an elastic pull past either end and a damped-spring settle on release (a
+  fling picks the direction, otherwise it snaps to the nearer state). A tap
+  still toggles. The fullscreen / IME auto-hide uses the same spring.
+
+## [5.1] - 2026-08-28
+
+### Added
+
+- **Toolbelt** (Display tab): a BlackBerry Q20-style bar of five customizable
+  icons pinned to the bottom of the screen that replaces the on-screen
+  navigation. It reserves its height like a real nav bar, so app content ends
+  above it. Q20 defaults: phone (dialer, long-press = voice assist), BlackBerry
+  logo (Recents), centre Home, Back (long-press = last app), hangup. Each
+  slot's icon and its single / double / long-tap actions are configurable
+  (Home, Back, Recents, Notifications, Quick Settings, Power dialog, Screenshot,
+  Lock, Split-screen, Voice assist, Dialer, Last app, Launch app, Toggle belt,
+  Hangup, Hangup-or-Home). "Launch app" opens an app picker. Hangup-or-Home
+  acts as Home unless a call is in progress (detected via `AudioManager.mode`,
+  no permission), then it ends the call with a root `KEYCODE_ENDCALL`.
+
+  Appearance settings: bar height (36-88 dp), icon size, haptic-feedback
+  strength (via the `Vibrator` API - `View.performHapticFeedback` does not fire
+  from an overlay window), and a colour mode - Fixed (black), Material You
+  (`system_neutral*`), or Transparent (a faint scrim so the app's own window
+  background shows through the reserved strip). Optional "Collapsible" mode adds
+  a grab strip: swipe down / tap / long-press to hide the belt and reclaim its
+  space, tap the strip to bring it back. The belt also auto-hides in fullscreen
+  apps, while the soft keyboard is up, and on the lockscreen.
+
+  The belt is a `TYPE_ACCESSIBILITY_OVERLAY` window drawn by
+  `Key2AccessibilityService` (same mechanism as the Ticker). Hiding the
+  on-screen nav bar, reserving the belt's inset and disabling the **bottom**
+  swipe-up gesture (home / recents / quickswitch - the **edge back-gesture is
+  deliberately left working**) is a second LSPosed hook,
+  `com.kgr.key2toolbox.xposed.NavBarHookInit`, scoped to the launcher and gated
+  on the world-readable `Settings.Global` keys `key2_toolbelt_active` /
+  `key2_toolbelt_inset_px`. On this device the nav bar is the Launcher3
+  Taskbar, so the hook overrides `TaskbarStashController` /
+  `TaskbarInsetsController` height reporting and skips
+  `TouchInteractionService.onInputEvent`. Verified by decompiling
+  `TrebuchetQuickStep.apk`. The taskbar only re-reads its inset on recreation,
+  so the app restarts the launcher when the reserved height changes (invisible
+  when a third-party launcher is the home app). Without an Xposed framework the
+  belt still draws but the nav bar / bottom gesture stay active.
+
+- **Recents Layout** (Display tab): a toggle that forces the launcher's
+  two-row grid Overview instead of the stock single row of task cards.
+  Implemented entirely as an LSPosed module
+  (`com.kgr.key2toolbox.xposed.RecentsHookInit`), scoped to
+  `com.android.launcher3` (the AOSP Launcher3 that LineageOS 22.2 ships on
+  the Key2). Needs an Xposed framework (LSPosed / APatch's built-in).
+
+  Verified by decompiling `TrebuchetQuickStep.apk`: Overview task geometry
+  branches on the `DeviceProfile.isTablet` field, not on
+  `RecentsView.showAsGrid()`, and `isTablet` is derived in the
+  `DeviceProfile` constructor from
+  `DisplayController.Info.isTablet(WindowBounds)`. The hook forces that
+  method to return `true` while the toggle is on, so every downstream metric
+  is computed on the tablet path. It also clears `isTaskbarPresent` /
+  `taskbarHeight` right after `DeviceProfile` construction to drop the
+  floating tablet nav bar that would otherwise come with it (the home
+  screen / hotseat may still shift slightly, since they share the profile).
+  `RecentsView.showAsGrid()` is pinned too, mainly to make the off state
+  deterministic. Includes an Overview background-transparency slider that
+  scales the scrim colour.
+
+  Config: two world-readable `Settings.Global` keys
+  (`key2_recents_layout_mode`, `key2_recents_scrim_alpha`) written with root,
+  read by the hook with no permission. Every hook logs to
+  `Key2Toolbox-Xposed`.
+
+  Not done: a real "masonry" varied-height mosaic. That layout does not
+  exist in AOSP Launcher3 (it was bespoke to BlackBerry's launcher), so it
+  would mean injecting a custom `TaskView` layout pass at runtime. Left for
+  a later pass.
+
 ## [5.0] - 2026-08-27
 
 Adds eleven modules, splits the bottom navigation, and localizes the whole

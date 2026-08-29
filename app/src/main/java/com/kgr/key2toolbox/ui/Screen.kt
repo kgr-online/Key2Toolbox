@@ -94,6 +94,14 @@ sealed class Screen(
         R.string.title_extra_dim, R.string.subtitle_extra_dim,
         listOf(AccessType.ROOT)
     )
+    data object Recents : Screen(
+        R.string.title_recents, R.string.subtitle_recents,
+        listOf(AccessType.ROOT)
+    )
+    data object Toolbelt : Screen(
+        R.string.title_toolbelt, R.string.subtitle_toolbelt,
+        listOf(AccessType.ACCESSIBILITY, AccessType.ROOT)
+    )
     data object Wifi5g : Screen(
         R.string.title_wifi5g, R.string.subtitle_wifi5g,
         listOf(AccessType.ROOT)
