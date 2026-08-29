@@ -98,7 +98,7 @@
     <string name="title_extra_dim">Atenuació extra</string>
     <string name="subtitle_extra_dim">Atenua per sota del mínim del sistema, amb un horari nocturn opcional</string>
     <string name="title_telemetry">Bloqueig global de telemetria</string>
-    <string name="subtitle_telemetry">Desactiva Firebase Crashlytics a tot el sistema</string>
+    <string name="subtitle_telemetry">Desactiva Firebase Crashlytics, Analytics i Performance a tot el sistema</string>
     <string name="title_wireless_adb">ADB sense fils persistent</string>
     <string name="subtitle_wireless_adb">Port fix, sobreviu al reinici</string>
     <string name="title_wifi5g">Solució per al punt d\'accés 5GHz</string>
@@ -298,7 +298,7 @@
     <string name="extra_dim_starts_at">Comença a les</string>
     <string name="extra_dim_ends_at">Acaba a les</string>
     <string name="desc_extra_dim">Redueix la brillantor de la pantalla per sota del nivell mínim estàndard del sistema. Perfecte per llegir amb poca llum i estalviar bateria a la nit.</string>
-    <string name="desc_telemetry">Desactiva globalment la recollida de Firebase Crashlytics a tot el sistema. Això atura l\'empaquetament de registres de fallades en segon pla i els activadors de pujada, estalviant dades mòbils, RAM i cicles de despertar.</string>
+    <string name="desc_telemetry">Força globalment la desactivació de la recollida de dades de Firebase a tot el sistema — Crashlytics, Analytics / Google Analytics i Performance Monitoring — mantenint els seus indicadors d\'exclusió persistits. Un vigilant ho torna a aplicar cada pocs minuts i després de cada instal·lació d\'app, ja que els SDK reinicien els indicadors a cada arrencada en fred. Atura l\'empaquetament i la pujada en segon pla de registres de fallada i analítiques, i estalvia dades mòbils, RAM i desperts.</string>
     <string name="telemetry_protection_status">Estat de protecció</string>
     <string name="telemetry_status_fully_protected">Estat: Totalment protegit</string>
     <string name="telemetry_status_partially_protected">Estat: Parcialment protegit</string>
@@ -524,4 +524,66 @@
     <string name="settings_backup_module_zram">ZRAM</string>
     <string name="settings_backup_module_adblock">AdBlock</string>
 
-</resources>
+
+    <!-- Toolbelt + Recents Layout (localized) -->
+    <string name="title_recents">Disposició de Recents</string>
+    <string name="subtitle_recents">Vista general en graella de dues files / mosaic via LSPosed</string>
+    <string name="title_toolbelt">Toolbelt</string>
+    <string name="subtitle_toolbelt">Barra inferior a l\'estil BlackBerry Q20 que substitueix la navegació del sistema</string>
+    <string name="recents_intro">Fa que Recents/Vista general mostri dues files de targetes de tasca més petites, com en una tauleta, en lloc de la fila única de sèrie. Funciona íntegrament amb un hook d\'LSPosed dins del launcher; aquesta pantalla només desa l\'ajust i reinicia el launcher.</string>
+    <string name="recents_section_lsposed">Cal LSPosed</string>
+    <string name="recents_xposed_ok">Mòdul d\'LSPosed actiu.</string>
+    <string name="recents_xposed_missing">Mòdul d\'LSPosed no actiu.</string>
+    <string name="recents_xposed_hint">Obre el teu gestor d\'Xposed (LSPosed / Vector), activa \"Key2 Toolbox\", marca el launcher (com.android.launcher3) i aquesta app al seu àmbit i després força l\'aturada del launcher. Necessita un entorn Xposed sobre APatch / KernelSU / Magisk.</string>
+    <string name="recents_grid_title">Disposició de la Vista general</string>
+    <string name="recents_grid_desc">Graella força la disposició de tauleta a dues files per a Recents (la pantalla d\'inici i el dock es poden desplaçar una mica, ja que comparteixen el perfil de disposició). Mosaic és Graella amb alçades de tessel·la esglaonades.</string>
+    <string name="recents_mode_stock">De sèrie (una fila)</string>
+    <string name="recents_mode_grid">Graella (dues files)</string>
+    <string name="recents_mode_masonry">Mosaic (dues files, esglaonat)</string>
+    <string name="recents_transparency_title">Transparència del fons</string>
+    <string name="recents_transparency_desc">Quant fons de pantalla es veu darrere de les targetes de la Vista general. Reinicia el launcher per aplicar-ho.</string>
+    <string name="recents_restart_launcher">Reinicia el launcher</string>
+    <string name="recents_restart_systemui">Reinicia la SystemUI</string>
+    <string name="recents_debug_hint">No funciona després d\'activar-ho? Executa: adb logcat | grep Key2Toolbox-Xposed i cada hook registra si s\'ha enganxat. Els noms dels mètodes de Launcher3 poden canviar entre versions de LineageOS.</string>
+    <string name="toolbelt_intro">Una fila fixa de cinc icones ancorada a la part inferior de la pantalla, a l\'estil del toolbelt de la BlackBerry Q20. La barra la dibuixa el servei d\'accessibilitat i flota sobre l\'app, que es mostra a pantalla completa al darrere. Amagar la barra de navegació i desactivar el gest de lliscament inferior (inici / recents) necessita el hook d\'LSPosed, limitat al launcher; el gest de tornar des de la vora es manté. Llisca cap avall a l\'ansa de sobre la barra (o fes servir la icona central) per plegar-la fins a l\'ansa.</string>
+    <string name="toolbelt_xposed_ok">Hook d\'LSPosed actiu.</string>
+    <string name="toolbelt_xposed_missing">Hook d\'LSPosed no actiu. La barra encara es mostra, però la barra de navegació / gest inferior no es desactiven.</string>
+    <string name="toolbelt_xposed_hint">Obre el teu gestor d\'Xposed (LSPosed / Vector), activa \"Key2 Toolbox\", marca el launcher (com.android.launcher3) i aquesta app al seu àmbit i després reinicia el launcher.</string>
+    <string name="toolbelt_navmode_current">Navegació actual del sistema: %1$s</string>
+    <string name="toolbelt_navmode_gesture">barra de gestos</string>
+    <string name="toolbelt_navmode_2button">2 botons</string>
+    <string name="toolbelt_navmode_3button">barra de 3 botons</string>
+    <string name="toolbelt_autohide_fullscreen">Amaga la barra automàticament a les apps a pantalla completa</string>
+    <string name="toolbelt_collapsible">Plegable</string>
+    <string name="toolbelt_collapsible_hint">Afegeix una tira per agafar a sobre de la barra: llisca cap avall per amagar-la, toca o llisca cap amunt per tornar-la. Cada amagar/mostrar reinicia breument el launcher per recuperar l\'espai.</string>
+    <string name="toolbelt_appearance_section">Aparença</string>
+    <string name="toolbelt_height">Alçada de la barra</string>
+    <string name="toolbelt_icon_size">Mida de les icones</string>
+    <string name="toolbelt_haptics">Resposta hàptica</string>
+    <string name="toolbelt_color">Color de la barra</string>
+    <string name="toolbelt_slots_section">Ranures</string>
+    <string name="toolbelt_slot_n">Ranura %1$d</string>
+    <string name="toolbelt_field_icon">Icona</string>
+    <string name="toolbelt_field_tap">Toc</string>
+    <string name="toolbelt_field_double">Doble</string>
+    <string name="toolbelt_field_long">Llarg</string>
+    <string name="toolbelt_field_app">App</string>
+    <string name="toolbelt_pick_app">Tria una app…</string>
+    <string name="toolbelt_reset">Restableix a Q20</string>
+    <string name="toolbelt_restart_systemui">Reinicia el launcher</string>
+    <string name="toolbelt_debug_hint">La barra de navegació no s\'amaga després d\'activar-ho? Executa: adb logcat | grep Key2Toolbox-Xposed i cada hook registra si s\'ha enganxat. Els noms de classe del launcher poden canviar entre versions de LineageOS; cal reiniciar el launcher perquè la barra de navegació es torni a col·locar.</string>
+    <string name="settings_import_script_modules_restored"> També restaurats i aplicats en directe: %1$s.</string>
+    <string-array name="toolbelt_haptic_levels">
+        <item>Desactivat</item>
+        <item>Lleuger</item>
+        <item>Mitjà</item>
+        <item>Fort</item>
+    </string-array>
+    <string-array name="toolbelt_color_modes">
+        <item>Fix (negre)</item>
+        <item>Material You</item>
+        <item>Translúcid</item>
+    </string-array>    <string name="telemetry_show_details">Mostra l\'estat per app (%1$d)</string>
+    <string name="telemetry_hide_details">Amaga l\'estat per app</string>
+    <string name="telemetry_surface_blocked">blocat</string>
+    <string name="telemetry_surface_leaking">filtrant</string></resources>

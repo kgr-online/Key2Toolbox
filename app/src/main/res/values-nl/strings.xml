@@ -98,7 +98,7 @@
     <string name="title_extra_dim">Extra dimmen</string>
     <string name="subtitle_extra_dim">Dim onder het systeemminimum, met optioneel nachtschema</string>
     <string name="title_telemetry">Globale telemetrieblokkade</string>
-    <string name="subtitle_telemetry">Schakel Firebase Crashlytics systeembreed uit</string>
+    <string name="subtitle_telemetry">Firebase Crashlytics, Analytics en Performance systeembreed uitschakelen</string>
     <string name="title_wireless_adb">Permanente draadloze ADB</string>
     <string name="subtitle_wireless_adb">Vaste poort, blijft behouden na herstart</string>
     <string name="title_wifi5g">5GHz-hotspot workaround</string>
@@ -298,7 +298,7 @@
     <string name="extra_dim_starts_at">Begint om</string>
     <string name="extra_dim_ends_at">Eindigt om</string>
     <string name="desc_extra_dim">Verlaagt de schermhelderheid onder het standaard systeemminimum. Perfect voor lezen bij weinig licht en om \'s nachts batterij te besparen.</string>
-    <string name="desc_telemetry">Deactiveert systeembreed het verzamelen van Firebase Crashlytics-gegevens. Dit stopt het op de achtergrond verpakken van crashlogs en upload-triggers, en bespaart mobiele data, RAM en wake-upcycli.</string>
+    <string name="desc_telemetry">Forceert systeembreed het uitschakelen van Firebase-gegevensverzameling — Crashlytics, Analytics / Google Analytics en Performance Monitoring — door hun opgeslagen opt-out-vlaggen vast te houden. Een watchdog past het elke paar minuten en na elke app-installatie opnieuw toe, omdat de SDK\'s de vlaggen bij elke koude start terugzetten. Stopt het samenstellen en uploaden van crashlogs en analytische gegevens op de achtergrond en bespaart mobiele data, RAM en wekmomenten.</string>
     <string name="telemetry_protection_status">Beschermingsstatus</string>
     <string name="telemetry_status_fully_protected">Status: Volledig beschermd</string>
     <string name="telemetry_status_partially_protected">Status: Gedeeltelijk beschermd</string>
@@ -524,4 +524,66 @@
     <string name="settings_backup_module_zram">ZRAM</string>
     <string name="settings_backup_module_adblock">AdBlock</string>
 
-</resources>
+
+    <!-- Toolbelt + Recents Layout (localized) -->
+    <string name="title_recents">Overzicht-indeling</string>
+    <string name="subtitle_recents">Overzicht in raster met twee rijen / mozaïek via LSPosed</string>
+    <string name="title_toolbelt">Toolbelt</string>
+    <string name="subtitle_toolbelt">Onderbalk in BlackBerry Q20-stijl die de systeemnavigatie vervangt</string>
+    <string name="recents_intro">Laat het Overzicht twee rijen kleinere app-kaarten tonen, zoals op een tablet, in plaats van de standaard enkele rij. Werkt volledig via een LSPosed-hook in de launcher; dit scherm slaat alleen de instelling op en herstart de launcher.</string>
+    <string name="recents_section_lsposed">LSPosed vereist</string>
+    <string name="recents_xposed_ok">LSPosed-module actief.</string>
+    <string name="recents_xposed_missing">LSPosed-module niet actief.</string>
+    <string name="recents_xposed_hint">Open je Xposed-manager (LSPosed / Vector), schakel \"Key2 Toolbox\" in, vink de launcher (com.android.launcher3) en deze app aan in het bereik en forceer daarna het stoppen van de launcher. Vereist een Xposed-framework op APatch / KernelSU / Magisk.</string>
+    <string name="recents_grid_title">Indeling van het Overzicht</string>
+    <string name="recents_grid_desc">Raster forceert de tablet-indeling met twee rijen voor het Overzicht (het startscherm en de hotseat kunnen iets verschuiven, omdat ze het indelingsprofiel delen). Mozaïek is Raster met versprongen tegelhoogtes.</string>
+    <string name="recents_mode_stock">Standaard (één rij)</string>
+    <string name="recents_mode_grid">Raster (twee rijen)</string>
+    <string name="recents_mode_masonry">Mozaïek (twee rijen, versprongen)</string>
+    <string name="recents_transparency_title">Transparantie van de achtergrond</string>
+    <string name="recents_transparency_desc">Hoeveel achtergrond zichtbaar is achter de kaarten van het Overzicht. Herstart de launcher om het toe te passen.</string>
+    <string name="recents_restart_launcher">Launcher herstarten</string>
+    <string name="recents_restart_systemui">SystemUI herstarten</string>
+    <string name="recents_debug_hint">Werkt het niet na inschakelen? Voer uit: adb logcat | grep Key2Toolbox-Xposed en elke hook logt of hij is aangehaakt. De methodenamen van Launcher3 kunnen verschillen tussen LineageOS-builds.</string>
+    <string name="toolbelt_intro">Een vaste rij van vijf pictogrammen onderaan het scherm verankerd, in de stijl van de BlackBerry Q20-toolbelt. De balk wordt getekend door de toegankelijkheidsdienst en zweeft boven de app, die er schermvullend achter wordt weergegeven. Het verbergen van de navigatiebalk en het uitschakelen van de veeg-omhoog-beweging onderaan (start / overzicht) vereist de LSPosed-hook, beperkt tot de launcher; de terug-beweging vanaf de rand blijft werken. Veeg omlaag op de greep boven de balk (of gebruik het middelste pictogram) om hem in te klappen tot alleen de greep.</string>
+    <string name="toolbelt_xposed_ok">LSPosed-hook actief.</string>
+    <string name="toolbelt_xposed_missing">LSPosed-hook niet actief. De balk wordt nog steeds getoond, maar de navigatiebalk / veeg onderaan worden niet uitgeschakeld.</string>
+    <string name="toolbelt_xposed_hint">Open je Xposed-manager (LSPosed / Vector), schakel \"Key2 Toolbox\" in, vink de launcher (com.android.launcher3) en deze app aan in het bereik en herstart daarna de launcher.</string>
+    <string name="toolbelt_navmode_current">Huidige systeemnavigatie: %1$s</string>
+    <string name="toolbelt_navmode_gesture">gebarenbalkje</string>
+    <string name="toolbelt_navmode_2button">2 knoppen</string>
+    <string name="toolbelt_navmode_3button">balk met 3 knoppen</string>
+    <string name="toolbelt_autohide_fullscreen">Balk automatisch verbergen in schermvullende apps</string>
+    <string name="toolbelt_collapsible">Inklapbaar</string>
+    <string name="toolbelt_collapsible_hint">Voegt een greepstrook boven de balk toe: veeg omlaag om te verbergen, tik of veeg omhoog om terug te halen. Elk verbergen/tonen herstart de launcher kort om de ruimte terug te winnen.</string>
+    <string name="toolbelt_appearance_section">Weergave</string>
+    <string name="toolbelt_height">Balkhoogte</string>
+    <string name="toolbelt_icon_size">Pictogramgrootte</string>
+    <string name="toolbelt_haptics">Haptische feedback</string>
+    <string name="toolbelt_color">Balkkleur</string>
+    <string name="toolbelt_slots_section">Plaatsen</string>
+    <string name="toolbelt_slot_n">Plaats %1$d</string>
+    <string name="toolbelt_field_icon">Pictogram</string>
+    <string name="toolbelt_field_tap">Tik</string>
+    <string name="toolbelt_field_double">Dubbel</string>
+    <string name="toolbelt_field_long">Lang</string>
+    <string name="toolbelt_field_app">App</string>
+    <string name="toolbelt_pick_app">Kies een app…</string>
+    <string name="toolbelt_reset">Terug naar Q20</string>
+    <string name="toolbelt_restart_systemui">Launcher herstarten</string>
+    <string name="toolbelt_debug_hint">Verdwijnt de navigatiebalk niet na inschakelen? Voer uit: adb logcat | grep Key2Toolbox-Xposed en elke hook logt of hij is aangehaakt. De klassennamen van de launcher kunnen verschillen tussen LineageOS-builds; een herstart van de launcher is nodig om de navigatiebalk opnieuw in te delen.</string>
+    <string name="settings_import_script_modules_restored"> Ook hersteld en live toegepast: %1$s.</string>
+    <string-array name="toolbelt_haptic_levels">
+        <item>Uit</item>
+        <item>Licht</item>
+        <item>Gemiddeld</item>
+        <item>Sterk</item>
+    </string-array>
+    <string-array name="toolbelt_color_modes">
+        <item>Vast (zwart)</item>
+        <item>Material You</item>
+        <item>Doorschijnend</item>
+    </string-array>    <string name="telemetry_show_details">Status per app tonen (%1$d)</string>
+    <string name="telemetry_hide_details">Status per app verbergen</string>
+    <string name="telemetry_surface_blocked">geblokkeerd</string>
+    <string name="telemetry_surface_leaking">actief</string></resources>

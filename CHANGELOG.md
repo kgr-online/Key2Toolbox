@@ -2,6 +2,44 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.3] - 2026-08-29
+
+### Added
+
+- **Global Telemetry Block — per-app viewer.** The Telemetry screen gets a
+  "Show per-app status" list: every app carrying a Crashlytics / Analytics /
+  Performance prefs file, and for each surface whether collection is currently
+  forced off or still leaking (leaking apps listed first).
+- **Backup/Restore now covers Toolbelt and Recents Layout.** The eight Toolbelt
+  config keys join the per-key backup map under a new *Toolbelt* module; Recents
+  Layout (which lives in two `Settings.Global` keys, not prefs) gets its own
+  backup section. On restore the launcher-hook mirror is re-pushed so a restored
+  belt takes effect without a manual toggle.
+
+### Changed
+
+- **Global Telemetry Block — broader and faster.** The watchdog now also
+  neutralises Firebase / Google Analytics (`measurement_enabled` /
+  `measurement_enabled_from_api` / `firebase_analytics_collection_enabled`),
+  Performance Monitoring and the Firebase master data-collection flag — not just
+  Crashlytics — flipping every occurrence to false and injecting the opt-out
+  into the Crashlytics and GMS-measurement prefs of apps that don't have one.
+  Re-scan interval 30 → 10 minutes, with a burst of passes after boot and
+  immediately after any app install/removal, so new apps are covered in about a
+  minute instead of up to half an hour.
+- **Toolbelt slots respond instantly.** A slot with no double-tap action fires
+  on finger-up instead of waiting out the ~300 ms double-tap timeout, and the
+  haptic fires on touch-down.
+- **Toolbelt in the Key2 Toolbox app itself** now paints the reserved
+  navigation-bar strip with the app's own Material You surface tint, so the
+  Translucent belt reads as part of the app chrome rather than sitting on a flat
+  black/white band.
+
+### Fixed
+
+- Toolbelt and Recents Layout are now translated into all seven shipped
+  languages (both were English-only since 5.1).
+
 ## [5.2] - 2026-08-29
 
 ### Fixed

@@ -98,7 +98,7 @@
     <string name="title_extra_dim">Extra Dim</string>
     <string name="subtitle_extra_dim">Attenua sotto il minimo di sistema, con una pianificazione notturna opzionale</string>
     <string name="title_telemetry">Blocco telemetria globale</string>
-    <string name="subtitle_telemetry">Disabilita Firebase Crashlytics a livello di sistema</string>
+    <string name="subtitle_telemetry">Disattiva Firebase Crashlytics, Analytics e Performance a livello di sistema</string>
     <string name="title_wireless_adb">ADB Wireless persistente</string>
     <string name="subtitle_wireless_adb">Porta statica, sopravvive al riavvio</string>
     <string name="title_wifi5g">Soluzione hotspot 5GHz</string>
@@ -298,7 +298,7 @@
     <string name="extra_dim_starts_at">Inizia alle</string>
     <string name="extra_dim_ends_at">Finisce alle</string>
     <string name="desc_extra_dim">Riduce la luminosità dello schermo sotto il livello minimo standard di sistema. Perfetto per leggere in condizioni di scarsa luce e risparmiare batteria di notte.</string>
-    <string name="desc_telemetry">Disattiva globalmente la raccolta di Firebase Crashlytics a livello di sistema. Questo blocca l\'impacchettamento dei log di crash in background e i trigger di caricamento, risparmiando dati mobili, RAM e cicli di riattivazione.</string>
+    <string name="desc_telemetry">Forza globalmente la disattivazione della raccolta dati di Firebase a livello di sistema — Crashlytics, Analytics / Google Analytics e Performance Monitoring — mantenendo i loro flag di rifiuto persistiti. Un watchdog la riapplica ogni pochi minuti e dopo ogni installazione di app, poiché gli SDK reimpostano i flag a ogni avvio a freddo. Interrompe l\'impacchettamento e l\'invio in background di report di crash e analitiche, e risparmia dati mobili, RAM e risvegli.</string>
     <string name="telemetry_protection_status">Stato protezione</string>
     <string name="telemetry_status_fully_protected">Stato: Completamente protetto</string>
     <string name="telemetry_status_partially_protected">Stato: Parzialmente protetto</string>
@@ -524,4 +524,66 @@
     <string name="settings_backup_module_zram">ZRAM</string>
     <string name="settings_backup_module_adblock">AdBlock</string>
 
-</resources>
+
+    <!-- Toolbelt + Recents Layout (localized) -->
+    <string name="title_recents">Layout Panoramica</string>
+    <string name="subtitle_recents">Panoramica a griglia su due righe / mosaico tramite LSPosed</string>
+    <string name="title_toolbelt">Toolbelt</string>
+    <string name="subtitle_toolbelt">Barra inferiore in stile BlackBerry Q20 che sostituisce la navigazione di sistema</string>
+    <string name="recents_intro">Fa mostrare alla Panoramica due righe di schede attività più piccole, come su un tablet, invece della singola riga predefinita. Funziona interamente tramite un hook LSPosed nel launcher; questa schermata salva solo l\'impostazione e riavvia il launcher.</string>
+    <string name="recents_section_lsposed">Serve LSPosed</string>
+    <string name="recents_xposed_ok">Modulo LSPosed attivo.</string>
+    <string name="recents_xposed_missing">Modulo LSPosed non attivo.</string>
+    <string name="recents_xposed_hint">Apri il tuo gestore Xposed (LSPosed / Vector), attiva \"Key2 Toolbox\", spunta il launcher (com.android.launcher3) e questa app nel suo ambito, poi forza l\'arresto del launcher. Richiede un framework Xposed su APatch / KernelSU / Magisk.</string>
+    <string name="recents_grid_title">Layout della Panoramica</string>
+    <string name="recents_grid_desc">Griglia forza il layout tablet a due righe per la Panoramica (la schermata Home e la hotseat possono spostarsi leggermente, poiché condividono il profilo di layout). Mosaico è Griglia con altezze delle tessere sfalsate.</string>
+    <string name="recents_mode_stock">Predefinito (una riga)</string>
+    <string name="recents_mode_grid">Griglia (due righe)</string>
+    <string name="recents_mode_masonry">Mosaico (due righe, sfalsato)</string>
+    <string name="recents_transparency_title">Trasparenza dello sfondo</string>
+    <string name="recents_transparency_desc">Quanto sfondo traspare dietro le schede della Panoramica. Riavvia il launcher per applicare.</string>
+    <string name="recents_restart_launcher">Riavvia il launcher</string>
+    <string name="recents_restart_systemui">Riavvia la SystemUI</string>
+    <string name="recents_debug_hint">Non funziona dopo l\'attivazione? Esegui: adb logcat | grep Key2Toolbox-Xposed e ogni hook registra se si è agganciato. I nomi dei metodi di Launcher3 possono cambiare tra le build di LineageOS.</string>
+    <string name="toolbelt_intro">Una riga fissa di cinque icone ancorata in fondo allo schermo, in stile toolbelt BlackBerry Q20. La barra è disegnata dal servizio di accessibilità e galleggia sopra l\'app, che viene mostrata a schermo intero dietro di essa. Nascondere la barra di navigazione e disattivare il gesto di scorrimento dal basso (home / panoramica) richiede l\'hook LSPosed, limitato al launcher; il gesto Indietro dal bordo resta attivo. Scorri verso il basso sulla maniglia sopra la barra (o usa l\'icona centrale) per ridurla alla sola maniglia.</string>
+    <string name="toolbelt_xposed_ok">Hook LSPosed attivo.</string>
+    <string name="toolbelt_xposed_missing">Hook LSPosed non attivo. La barra viene comunque mostrata, ma la barra di navigazione / il gesto dal basso non vengono disattivati.</string>
+    <string name="toolbelt_xposed_hint">Apri il tuo gestore Xposed (LSPosed / Vector), attiva \"Key2 Toolbox\", spunta il launcher (com.android.launcher3) e questa app nel suo ambito, poi riavvia il launcher.</string>
+    <string name="toolbelt_navmode_current">Navigazione di sistema attuale: %1$s</string>
+    <string name="toolbelt_navmode_gesture">barra dei gesti</string>
+    <string name="toolbelt_navmode_2button">2 pulsanti</string>
+    <string name="toolbelt_navmode_3button">barra a 3 pulsanti</string>
+    <string name="toolbelt_autohide_fullscreen">Nascondi la barra automaticamente nelle app a schermo intero</string>
+    <string name="toolbelt_collapsible">Comprimibile</string>
+    <string name="toolbelt_collapsible_hint">Aggiunge una striscia da afferrare sopra la barra: scorri verso il basso per nasconderla, tocca o scorri verso l\'alto per riportarla. Ogni nascondi/mostra riavvia brevemente il launcher per recuperare lo spazio.</string>
+    <string name="toolbelt_appearance_section">Aspetto</string>
+    <string name="toolbelt_height">Altezza della barra</string>
+    <string name="toolbelt_icon_size">Dimensione delle icone</string>
+    <string name="toolbelt_haptics">Feedback aptico</string>
+    <string name="toolbelt_color">Colore della barra</string>
+    <string name="toolbelt_slots_section">Slot</string>
+    <string name="toolbelt_slot_n">Slot %1$d</string>
+    <string name="toolbelt_field_icon">Icona</string>
+    <string name="toolbelt_field_tap">Tocco</string>
+    <string name="toolbelt_field_double">Doppio</string>
+    <string name="toolbelt_field_long">Lungo</string>
+    <string name="toolbelt_field_app">App</string>
+    <string name="toolbelt_pick_app">Scegli un\'app…</string>
+    <string name="toolbelt_reset">Ripristina Q20</string>
+    <string name="toolbelt_restart_systemui">Riavvia il launcher</string>
+    <string name="toolbelt_debug_hint">La barra di navigazione non si nasconde dopo l\'attivazione? Esegui: adb logcat | grep Key2Toolbox-Xposed e ogni hook registra se si è agganciato. I nomi delle classi del launcher possono cambiare tra le build di LineageOS; serve un riavvio del launcher perché la barra di navigazione venga riposizionata.</string>
+    <string name="settings_import_script_modules_restored"> Ripristinati e applicati in tempo reale anche: %1$s.</string>
+    <string-array name="toolbelt_haptic_levels">
+        <item>Disattivato</item>
+        <item>Leggero</item>
+        <item>Medio</item>
+        <item>Forte</item>
+    </string-array>
+    <string-array name="toolbelt_color_modes">
+        <item>Fisso (nero)</item>
+        <item>Material You</item>
+        <item>Traslucido</item>
+    </string-array>    <string name="telemetry_show_details">Mostra stato per app (%1$d)</string>
+    <string name="telemetry_hide_details">Nascondi stato per app</string>
+    <string name="telemetry_surface_blocked">bloccato</string>
+    <string name="telemetry_surface_leaking">attivo</string></resources>

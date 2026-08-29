@@ -9,8 +9,10 @@ import com.kgr.key2toolbox.modules.BatteryUsageController
 import com.kgr.key2toolbox.modules.BtIdleController
 import com.kgr.key2toolbox.modules.ExtraDimController
 import com.kgr.key2toolbox.modules.LocationIdleController
+import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.TelemetryController
 import com.kgr.key2toolbox.modules.TickerController
+import com.kgr.key2toolbox.modules.ToolbeltController
 import com.kgr.key2toolbox.modules.ZramController
 import com.kgr.key2toolbox.service.Key2AccessibilityService
 import org.json.JSONArray
@@ -30,9 +32,13 @@ import java.util.Locale
  * Supports SELECTIVE backup/restore per [BackupModule] - the caller passes
  * which modules to include. "key2tweaks" is a single SharedPreferences file
  * shared by many modules (PinKeyboard, NavLock, ImeBlock, Calculator,
- * ImeSuggestions, ChatComposer, InCallShortcuts, AutoFocus, BatteryUsage),
- * so individual KEYS within it are filtered by [KEY2TWEAKS_MODULE_MAP]
- * rather than the whole file being an all-or-nothing unit.
+ * ImeSuggestions, ChatComposer, InCallShortcuts, AutoFocus, BatteryUsage,
+ * Toolbelt), so individual KEYS within it are filtered by
+ * [KEY2TWEAKS_MODULE_MAP] rather than the whole file being an all-or-nothing
+ * unit.
+ *
+ * Recents Layout keeps its state in two `Settings.Global` keys, not a
+ * SharedPreferences file - backed up in the "recents" section.
  *
  * JSON shape - selection only affects which keys/sections get written or
  * applied, not the document structure:
@@ -56,7 +62,8 @@ import java.util.Locale
  *   "bt_idle": { "timeout_min": 15 },
  *   "location_idle": { "timeout_min": 15 },
  *   "extra_dim_schedule": { "start_minutes": 1320, "end_minutes": 420 },
- *   "telemetry": { "enabled": true }
+ *   "telemetry": { "enabled": true },
+ *   "recents": { "layout_mode": 1, "scrim_alpha": 0.65 }
  * }
  *
  * K2ProdFix and Play Store Tagger are intentionally NOT supported here
@@ -87,7 +94,9 @@ object SettingsBackup {
         LOCATION_IDLE(R.string.title_location_idle),
         EXTRA_DIM(R.string.title_extra_dim),
         TELEMETRY(R.string.title_telemetry),
-        TICKER_NOTIFICATIONS(R.string.title_ticker_notifications)
+        TICKER_NOTIFICATIONS(R.string.title_ticker_notifications),
+        TOOLBELT(R.string.title_toolbelt),
+        RECENTS_LAYOUT(R.string.title_recents)
     }
 
     /** Which BackupModule owns each key in the shared "key2tweaks" prefs file. */
@@ -105,7 +114,16 @@ object SettingsBackup {
         Key2AccessibilityService.KEY_IN_CALL_SHORTCUTS to BackupModule.IN_CALL_SHORTCUTS,
         AutoFocusController.KEY_AUTO_FOCUS to BackupModule.AUTO_FOCUS,
         AutoFocusController.KEY_AUTO_FOCUS_APPS to BackupModule.AUTO_FOCUS,
-        BatteryUsageController.KEY_RESET_THRESHOLD to BackupModule.BATTERY_USAGE
+        BatteryUsageController.KEY_RESET_THRESHOLD to BackupModule.BATTERY_USAGE,
+        // Toolbelt: all config keys except KEY_COLLAPSED (transient UI state).
+        ToolbeltController.KEY_ENABLED to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_SLOTS to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_AUTOHIDE_FULLSCREEN to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_COLLAPSIBLE to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_HEIGHT_DP to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_ICON_SCALE to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_HAPTIC to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_COLOR_MODE to BackupModule.TOOLBELT
     )
 
     private const val KEY2TWEAKS_PREFS = "key2tweaks"
@@ -250,6 +268,20 @@ object SettingsBackup {
             root.put("telemetry", JSONObject().put("enabled", true))
         }
 
+        // Recents Layout: two Settings.Global values (root-read). Only include
+        // when selected and set to something other than the stock layout.
+        if (BackupModule.RECENTS_LAYOUT in modules) {
+            val mode = RecentsController.getLayoutMode()
+            if (mode != RecentsController.LayoutMode.STOCK) {
+                root.put(
+                    "recents",
+                    JSONObject()
+                        .put("layout_mode", mode.value)
+                        .put("scrim_alpha", RecentsController.getScrimAlpha().toDouble())
+                )
+            }
+        }
+
         return root
     }
 
@@ -285,6 +317,22 @@ object SettingsBackup {
                 if (applyPrefEntry(editor, key, entry)) restoredKeys++
             }
             editor.apply()
+
+            // Toolbelt: the plain pref restore covers its settings, but the
+            // launcher hook reads a Settings.Global mirror, not the prefs - push
+            // it so a restored belt actually replaces the nav bar (mirrors what
+            // the accessibility service's pref listener does on a live change).
+            if (BackupModule.TOOLBELT in modules && key2tweaksJson.has(ToolbeltController.KEY_ENABLED)) {
+                try {
+                    val enabled = context.getSharedPreferences(KEY2TWEAKS_PREFS, Context.MODE_PRIVATE)
+                        .getBoolean(ToolbeltController.KEY_ENABLED, false)
+                    ToolbeltController.pushGlobalActive(enabled)
+                    ToolbeltController.syncNavMode(context)
+                    if (ToolbeltController.pushInset(context)) ToolbeltController.restartLauncher()
+                } catch (e: Exception) {
+                    // Prefs already restored - a failed mirror push shouldn't fail the import.
+                }
+            }
         }
 
         // led_notify: whole file is one module.
@@ -446,6 +494,27 @@ object SettingsBackup {
                     try {
                         TelemetryController.setEnabled(context, true)
                         scriptModulesRestored += BackupModule.TELEMETRY
+                    } catch (e: Exception) {
+                        // Leave it unset - don't fail the whole import.
+                    }
+                }
+            }
+        }
+
+        // Recents Layout: restore the two Settings.Global values. setLayoutMode()
+        // also restarts the launcher so the hook re-reads them.
+        if (BackupModule.RECENTS_LAYOUT in modules) {
+            root.optJSONObject("recents")?.let { j ->
+                val mode = RecentsController.LayoutMode.fromValue(
+                    j.optInt("layout_mode", RecentsController.LayoutMode.STOCK.value)
+                )
+                if (mode != RecentsController.LayoutMode.STOCK) {
+                    try {
+                        if (j.has("scrim_alpha")) {
+                            RecentsController.setScrimAlpha(j.optDouble("scrim_alpha", 1.0).toFloat())
+                        }
+                        RecentsController.setLayoutMode(mode)
+                        scriptModulesRestored += BackupModule.RECENTS_LAYOUT
                     } catch (e: Exception) {
                         // Leave it unset - don't fail the whole import.
                     }
