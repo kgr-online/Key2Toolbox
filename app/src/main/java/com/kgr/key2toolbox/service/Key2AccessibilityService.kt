@@ -117,6 +117,16 @@ class Key2AccessibilityService : AccessibilityService() {
         private const val LONG_PRESS_MS = 350L
         private const val DOUBLE_TAP_MS = 300L
 
+        /**
+         * BB physical-keyboard suggestion strip renders as its own short
+         * TYPE_INPUT_METHOD window - same window type as a real soft keyboard, just
+         * much shorter. Anything under this height doesn't count as "the IME is up"
+         * for Nav Lock / Toolbelt auto-hide, so the strip alone won't hide the belt
+         * or gate nav buttons. Tune after checking actual on-device heights via
+         * `adb logcat | grep isImeVisible`.
+         */
+        private const val MIN_IME_HEIGHT_DP = 100
+
         // Auto-Focus timing.
         private const val AUTO_FOCUS_FOCUS_TIMEOUT_MS = 1000L
         private const val AUTO_FOCUS_SETTLE_MS = 150L
@@ -882,7 +892,15 @@ class Key2AccessibilityService : AccessibilityService() {
         } catch (_: Exception) {
             return false
         }
-        return windowList.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+        val imeWindows = windowList.filter { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+        if (imeWindows.isEmpty()) return false
+
+        val minPx = (MIN_IME_HEIGHT_DP * resources.displayMetrics.density).toInt()
+        val tallest = imeWindows.maxOf { w ->
+            Rect().also { w.getBoundsInScreen(it) }.height()
+        }
+        Log.d("Key2Toolbox", "isImeVisible: tallest IME window height=${tallest}px, threshold=${minPx}px")
+        return tallest >= minPx
     }
 
     private fun applyNavDisabled(disabled: Boolean) {
