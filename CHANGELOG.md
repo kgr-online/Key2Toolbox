@@ -2,6 +2,33 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.3.1] - 2026-08-29
+
+### Added
+
+- **Toolbelt: "Suppress the location privacy icon".** New toggle on the Toolbelt
+  screen. Every time an app reads location, Android briefly forces the
+  navigation bar back over the current fullscreen app to show the status-bar
+  location icon — which pops the belt back on top of the app. The toggle turns
+  that icon off system-wide (`device_config privacy
+  location_indicators_enabled=false`) and freezes feature-flag sync so it
+  survives a reboot. Disclaimer spells out the trade-offs (no GPS-in-use cue, no
+  further device_config server updates; mic/camera indicators unaffected). Root
+  only; covered by Backup/Restore (Toolbelt module); translated into all seven
+  languages.
+
+### Fixed
+
+- **Nav Lock: capacitive keys coming back to life after unlocking.** The
+  synaptics touch controller reloads its firmware default (keys enabled)
+  whenever the panel powers back up, and on this device that reload can land
+  seconds after the wake broadcast — past the old fixed retry ladder — after
+  which nothing re-asserted because the reconcile path trusted a stale cache.
+  The wake path now runs a self-verifying poll that re-reads the real sysfs
+  node and re-pushes until it confirms the keys are off, and the
+  accessibility-event path re-checks the node (throttled) whenever the keys are
+  meant to be disabled.
+
 ## [5.3] - 2026-08-29
 
 ### Added

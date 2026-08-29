@@ -41,6 +41,14 @@ object ToolbeltController {
     const val KEY_ICON_SCALE = "toolbelt_icon_scale"       // icon size, percent of row height
     const val KEY_HAPTIC = "toolbelt_haptic"               // 0 off / 1 light / 2 medium / 3 strong
     const val KEY_COLOR_MODE = "toolbelt_color_mode"       // 0 fixed / 1 material-you / 2 follow-app
+    const val KEY_PRIVACY_INDICATOR_OFF = "toolbelt_privacy_indicator_off" // suppress the location privacy icon
+
+    // device_config knob for the status-bar location icon. When an app reads
+    // location while a fullscreen app is foreground, the system forces a transient
+    // system-bar reveal to show this icon - which pops the nav bar / belt back on
+    // top of the app. Turning it off system-wide stops that.
+    private const val DC_PRIVACY_NS = "privacy"
+    private const val DC_LOCATION_INDICATOR = "location_indicators_enabled"
 
     // --- Settings.Global mirror (read by the launcher hook, written with root) ---
     const val GLOBAL_ACTIVE = "key2_toolbelt_active"       // 1 = replace the nav bar
@@ -219,6 +227,41 @@ object ToolbeltController {
 
     fun pushGlobalActive(active: Boolean) {
         RootShell.run("settings put global $GLOBAL_ACTIVE ${if (active) 1 else 0}")
+    }
+
+    // --- location privacy indicator suppression -------------------------
+
+    fun isPrivacyIndicatorOff(sp: SharedPreferences): Boolean =
+        sp.getBoolean(KEY_PRIVACY_INDICATOR_OFF, false)
+
+    /** Parse a `device_config get` line into on/off/unknown. */
+    private fun parseFlag(raw: String): Boolean? = when (raw.trim()) {
+        "true" -> true
+        "false" -> false
+        else -> null
+    }
+
+    /** The live value of the location-indicator flag, read with root. `null` = couldn't read. */
+    fun readLocationIndicatorEnabled(): Boolean? =
+        parseFlag(RootShell.run("device_config get $DC_PRIVACY_NS $DC_LOCATION_INDICATOR").outString)
+
+    /**
+     * Turn the status-bar location icon off (or back on) system-wide with root.
+     * When suppressing, also freezes device_config server sync so the flag isn't
+     * refreshed back on a reboot or a Phenotype push. Persists the intent to
+     * [KEY_PRIVACY_INDICATOR_OFF] and returns the flag value read back afterwards
+     * (`true` = icon still on, `false` = suppressed, `null` = read failed).
+     */
+    fun applyLocationIndicator(context: Context, suppress: Boolean): Boolean? {
+        prefs(context).edit().putBoolean(KEY_PRIVACY_INDICATOR_OFF, suppress).apply()
+        val target = if (suppress) "false" else "true"
+        val cmd = buildString {
+            if (suppress) append("device_config set_sync_disabled_for_tests persistent; ")
+            append("device_config put $DC_PRIVACY_NS $DC_LOCATION_INDICATOR $target; ")
+            append("device_config get $DC_PRIVACY_NS $DC_LOCATION_INDICATOR")
+        }
+        val lastLine = RootShell.run(cmd).outString.trim().lines().lastOrNull().orEmpty()
+        return parseFlag(lastLine)
     }
 
     /**

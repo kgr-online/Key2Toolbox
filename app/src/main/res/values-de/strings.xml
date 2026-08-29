@@ -571,6 +571,8 @@
     <string name="toolbelt_pick_app">App auswählen…</string>
     <string name="toolbelt_reset">Auf Q20 zurücksetzen</string>
     <string name="toolbelt_restart_systemui">Launcher neu starten</string>
+    <string name="toolbelt_privacy_indicator">Standort-Datenschutzsymbol unterdrücken</string>
+    <string name="toolbelt_privacy_indicator_hint">Jedes Mal, wenn eine App deinen Standort abruft, blendet Android die Navigationsleiste kurz wieder über der aktuellen Vollbild-App ein, um das Standortsymbol in der Statusleiste zu zeigen. Dies schaltet dieses Symbol systemweit aus (device_config privacy location_indicators_enabled = false) und friert die Flag-Synchronisierung ein, damit es einen Neustart übersteht. Kompromisse: Du verlierst den visuellen Hinweis, dass eine App GPS nutzt, und kein anderes device_config-Flag wird mehr vom Server aktualisiert. Die Mikrofon- und Kamerasymbole sind nicht betroffen. Benötigt Root.</string>
     <string name="toolbelt_debug_hint">Navigationsleiste wird nach dem Aktivieren nicht ausgeblendet? Führe aus: adb logcat | grep Key2Toolbox-Xposed - jeder Hook protokolliert, ob er sich eingehängt hat. Die Klassennamen des Launchers können sich zwischen LineageOS-Builds ändern; ein Launcher-Neustart ist nötig, damit die Navigationsleiste neu angeordnet wird.</string>
     <string name="settings_import_script_modules_restored"> Ebenfalls wiederhergestellt und live angewendet: %1$s.</string>
     <string-array name="toolbelt_haptic_levels">

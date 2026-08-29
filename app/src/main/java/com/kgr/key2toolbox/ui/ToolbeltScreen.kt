@@ -74,6 +74,9 @@ fun ToolbeltScreen(onBack: () -> Unit) {
     var haptic by remember { mutableStateOf(ToolbeltController.hapticLevel(prefs)) }
     var collapsible by remember { mutableStateOf(ToolbeltController.isCollapsible(prefs)) }
     var colorMode by remember { mutableStateOf(ToolbeltController.colorMode(prefs)) }
+    var privacyIndicatorOff by remember {
+        mutableStateOf(ToolbeltController.isPrivacyIndicatorOff(prefs))
+    }
     var xposedActive by remember { mutableStateOf(ToolbeltController.isXposedActive()) }
     var navMode by remember { mutableStateOf(-1) }
     val slots: SnapshotStateList<Slot> =
@@ -84,10 +87,13 @@ fun ToolbeltScreen(onBack: () -> Unit) {
         withContext(Dispatchers.IO) {
             val m = ToolbeltController.syncNavMode(context)
             val a = loadLaunchableApps(context)
+            val liveIndicator = ToolbeltController.readLocationIndicatorEnabled()
             withContext(Dispatchers.Main) {
                 navMode = m
                 xposedActive = ToolbeltController.isXposedActive()
                 apps = a
+                // Ground-truth the switch against the live flag when we can read it.
+                if (liveIndicator != null) privacyIndicatorOff = !liveIndicator
             }
         }
     }
@@ -167,6 +173,29 @@ fun ToolbeltScreen(onBack: () -> Unit) {
             }
             Text(
                 stringResource(R.string.toolbelt_collapsible_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.toolbelt_privacy_indicator), modifier = Modifier.weight(1f))
+                Switch(
+                    checked = privacyIndicatorOff,
+                    onCheckedChange = { on ->
+                        privacyIndicatorOff = on
+                        scope.launch(Dispatchers.IO) {
+                            val readBack = ToolbeltController.applyLocationIndicator(context, on)
+                            if (readBack != null) {
+                                withContext(Dispatchers.Main) { privacyIndicatorOff = !readBack }
+                            }
+                        }
+                    }
+                )
+            }
+            Text(
+                stringResource(R.string.toolbelt_privacy_indicator_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

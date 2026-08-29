@@ -545,6 +545,8 @@
     <string name="toolbelt_pick_app">Escolhe uma app…</string>
     <string name="toolbelt_reset">Repor para Q20</string>
     <string name="toolbelt_restart_systemui">Reiniciar o launcher</string>
+    <string name="toolbelt_privacy_indicator">Ocultar o ícone de privacidade de localização</string>
+    <string name="toolbelt_privacy_indicator_hint">Sempre que uma app lê a tua localização, o Android volta a forçar brevemente a barra de navegação sobre a app em ecrã inteiro para mostrar o ícone de localização na barra de estado. Isto desativa esse ícone em todo o sistema (device_config privacy location_indicators_enabled = false) e congela a sincronização de flags para que sobreviva a um reinício. Compromissos: perdes o aviso visual de que uma app está a usar o GPS, e nenhuma outra flag de device_config será atualizada a partir do servidor. Os ícones de microfone e câmara não são afetados. Precisa de root.</string>
     <string name="toolbelt_debug_hint">A barra de navegação não se oculta depois de ativar? Executa: adb logcat | grep Key2Toolbox-Xposed e cada hook regista se foi anexado. Os nomes de classe do launcher podem mudar entre versões do LineageOS; é preciso reiniciar o launcher para a barra de navegação se reposicionar.</string>
     <string name="settings_import_script_modules_restored"> Também restaurados e aplicados em direto: %1$s.</string>
     <string-array name="toolbelt_haptic_levels">

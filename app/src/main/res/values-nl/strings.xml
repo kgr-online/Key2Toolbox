@@ -571,6 +571,8 @@
     <string name="toolbelt_pick_app">Kies een app…</string>
     <string name="toolbelt_reset">Terug naar Q20</string>
     <string name="toolbelt_restart_systemui">Launcher herstarten</string>
+    <string name="toolbelt_privacy_indicator">Het privacypictogram voor locatie onderdrukken</string>
+    <string name="toolbelt_privacy_indicator_hint">Elke keer dat een app je locatie opvraagt, dwingt Android de navigatiebalk kort terug boven de huidige schermvullende app om het locatiepictogram in de statusbalk te tonen. Dit schakelt dat pictogram systeembreed uit (device_config privacy location_indicators_enabled = false) en bevriest de flag-synchronisatie zodat het een herstart overleeft. Nadelen: je verliest de visuele aanwijzing dat een app gps gebruikt, en geen enkele andere device_config-flag wordt nog vanaf de server bijgewerkt. De microfoon- en camerapictogrammen worden niet beïnvloed. Vereist root.</string>
     <string name="toolbelt_debug_hint">Verdwijnt de navigatiebalk niet na inschakelen? Voer uit: adb logcat | grep Key2Toolbox-Xposed en elke hook logt of hij is aangehaakt. De klassennamen van de launcher kunnen verschillen tussen LineageOS-builds; een herstart van de launcher is nodig om de navigatiebalk opnieuw in te delen.</string>
     <string name="settings_import_script_modules_restored"> Ook hersteld en live toegepast: %1$s.</string>
     <string-array name="toolbelt_haptic_levels">

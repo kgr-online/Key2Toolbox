@@ -587,6 +587,8 @@
     <string name="toolbelt_pick_app">Pick an app…</string>
     <string name="toolbelt_reset">Reset to Q20</string>
     <string name="toolbelt_restart_systemui">Restart launcher</string>
+    <string name="toolbelt_privacy_indicator">Suppress the location privacy icon</string>
+    <string name="toolbelt_privacy_indicator_hint">Every time an app reads your location, Android briefly forces the navigation bar back on top of the current fullscreen app to show the status-bar location icon. This turns that icon off system-wide (device_config privacy location_indicators_enabled = false) and freezes feature-flag sync so it survives a reboot. Trade-offs: you lose the visual cue that an app is using GPS, and no other device_config flag will update from the server. The microphone and camera indicators are not affected. Needs root.</string>
     <string name="toolbelt_debug_hint">Nav bar not hiding after enabling? Run: adb logcat | grep Key2Toolbox-Xposed and each hook logs whether it attached. Launcher class names can drift between LineageOS builds; a launcher restart is needed for the nav bar to relayout.</string>
 
 </resources>
