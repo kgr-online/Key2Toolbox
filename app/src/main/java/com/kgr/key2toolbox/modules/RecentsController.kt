@@ -27,7 +27,15 @@ object RecentsController {
         GRID(1),
 
         /** Grid layout plus staggered per-tile heights (see RecentsHookInit). */
-        MASONRY(2);
+        MASONRY(2),
+
+        /**
+         * Standalone vertical task list - see [com.kgr.key2toolbox.service.SlimRecentsOverlayController].
+         * Unlike the other three, this never touches the launcher process or
+         * RecentsHookInit; showing it is intercepted entirely in
+         * Key2AccessibilityService before GLOBAL_ACTION_RECENTS would fire.
+         */
+        SLIM_LIST(3);
 
         companion object {
             fun fromValue(v: Int?): LayoutMode = entries.firstOrNull { it.value == v } ?: STOCK

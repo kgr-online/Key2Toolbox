@@ -100,11 +100,13 @@ class RecentsHookInit : IXposedHookLoadPackage {
         MODE_STOCK
     }
 
-    /** Grid or Masonry: both need the tablet two-row Overview path. */
+    /** Grid or Masonry: both need the tablet two-row Overview path. SLIM_LIST (and STOCK) do not. */
     private fun gridActive(): Boolean {
         val ctx = currentApplication() ?: return false
-        return mode(ctx) != MODE_STOCK
+        return gridLikeMode(mode(ctx))
     }
+
+    private fun gridLikeMode(m: Int): Boolean = m == MODE_GRID || m == MODE_MASONRY
 
     private fun scrimAlpha(context: Context): Float = try {
         Settings.Global.getFloat(context.contentResolver, PREF_SCRIM_ALPHA, 1.0f)
@@ -284,7 +286,7 @@ class RecentsHookInit : IXposedHookLoadPackage {
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val ctx = (param.thisObject as? View)?.context ?: return
-                        param.result = mode(ctx) != MODE_STOCK
+                        param.result = gridLikeMode(mode(ctx))
                     }
                 }
             )

@@ -27,6 +27,8 @@ import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
 import android.media.AudioManager
 import com.kgr.key2toolbox.modules.AutoFocusController
 import com.kgr.key2toolbox.modules.BatteryUsageController
+import com.kgr.key2toolbox.modules.RecentsController
+import com.kgr.key2toolbox.modules.SlimRecentsController
 import com.kgr.key2toolbox.modules.ToolbeltController
 import com.kgr.key2toolbox.modules.ToolbeltController.ToolbeltAction
 import java.util.Locale
@@ -234,13 +236,35 @@ class Key2AccessibilityService : AccessibilityService() {
         return am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
     }
 
+    /**
+     * Every "open Recents" trigger (Toolbelt slot, physical app-switch key)
+     * routes through here. [RecentsController.getLayoutMode] and
+     * [SlimRecentsController.listTasks] both run a root shell command, so this
+     * always dispatches off [worker] - never call performGlobalAction's
+     * stock-Overview branch or build the overlay on the calling thread.
+     */
+    private fun openRecents() {
+        worker.execute {
+            try {
+                if (RecentsController.getLayoutMode() == RecentsController.LayoutMode.SLIM_LIST) {
+                    val tasks = SlimRecentsController.listTasks(this)
+                    mainHandler.post { SlimRecentsOverlayController.show(this, tasks) }
+                } else {
+                    performGlobalAction(GLOBAL_ACTION_RECENTS)
+                }
+            } catch (t: Throwable) {
+                Log.e("Key2Toolbox", "openRecents failed", t)
+            }
+        }
+    }
+
     private fun handleToolbeltAction(action: ToolbeltAction, arg: String?) {
         when (action) {
             ToolbeltAction.NONE, ToolbeltAction.TOGGLE_BELT -> {} // handled in the overlay
             ToolbeltAction.LAUNCH_APP -> launchApp(arg)
             ToolbeltAction.HOME -> performGlobalAction(GLOBAL_ACTION_HOME)
             ToolbeltAction.BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
-            ToolbeltAction.RECENTS -> performGlobalAction(GLOBAL_ACTION_RECENTS)
+            ToolbeltAction.RECENTS -> openRecents()
             ToolbeltAction.NOTIFICATIONS -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
             ToolbeltAction.QUICK_SETTINGS -> performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
             ToolbeltAction.POWER_DIALOG -> performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
@@ -352,6 +376,14 @@ class Key2AccessibilityService : AccessibilityService() {
         val rx = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 Log.d("Key2Toolbox", "Screen state changed: ${intent?.action}")
+                if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                    // A TYPE_ACCESSIBILITY_OVERLAY window can render above the
+                    // keyguard and doesn't tear itself down just because the
+                    // screen locked - close it immediately so it can never be
+                    // sitting in front of the lock screen on wake.
+                    SlimRecentsOverlayController.hide()
+                    return
+                }
                 forceReconcile()
                 // The touch driver can reload 0dbutton = enabled some seconds after
                 // the wake, so verify against the real node and keep re-pushing
@@ -362,6 +394,7 @@ class Key2AccessibilityService : AccessibilityService() {
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_USER_PRESENT)
+            addAction(Intent.ACTION_SCREEN_OFF)
         }
         try {
             ContextCompat.registerReceiver(this, rx, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
@@ -1008,6 +1041,34 @@ class Key2AccessibilityService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent?): Boolean {
         if (event == null) return false
         val kc = event.keyCode
+
+        // Slim List escape hatch: while the overlay is showing, Back/Home/
+        // app-switch always close it, unconditionally, before any other
+        // feature's gating below gets a look at the key. This has to be first
+        // and unconditional - the overlay is FLAG_NOT_FOCUSABLE so it can't
+        // otherwise receive keys, and every other consumer of these keycodes
+        // is gated behind its own settings (Nav Lock's gesture mode, etc.)
+        // that may not be active, which would otherwise leave the overlay
+        // with no way to dismiss at all.
+        if (SlimRecentsOverlayController.isShowing()) {
+            when (kc) {
+                KeyEvent.KEYCODE_BACK -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) SlimRecentsOverlayController.hide()
+                    return true
+                }
+                KeyEvent.KEYCODE_HOME -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) {
+                        SlimRecentsOverlayController.hide()
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+                    }
+                    return true
+                }
+                KeyEvent.KEYCODE_APP_SWITCH -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) openRecents() // re-show with a fresh task list
+                    return true
+                }
+            }
+        }
 
         // IME suggestion shortcuts: Ctrl+W/E/R picks suggestion 1/2/3 from the keyboard's
         // candidate strip. Only consumes the key if a suggestion was actually found and

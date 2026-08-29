@@ -115,7 +115,8 @@ fun RecentsScreen(onBack: () -> Unit) {
                 val options = listOf(
                     LayoutMode.STOCK to R.string.recents_mode_stock,
                     LayoutMode.GRID to R.string.recents_mode_grid,
-                    LayoutMode.MASONRY to R.string.recents_mode_masonry
+                    LayoutMode.MASONRY to R.string.recents_mode_masonry,
+                    LayoutMode.SLIM_LIST to R.string.recents_mode_slim
                 )
                 options.forEach { (value, labelRes) ->
                     Row(
@@ -129,6 +130,14 @@ fun RecentsScreen(onBack: () -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(labelRes), style = MaterialTheme.typography.bodyMedium)
                     }
+                }
+                if (mode == LayoutMode.SLIM_LIST) {
+                    Text(
+                        stringResource(R.string.recents_slim_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         }

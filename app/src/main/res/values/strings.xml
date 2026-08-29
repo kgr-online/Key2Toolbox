@@ -550,6 +550,11 @@
     <string name="recents_mode_stock">Stock (single row)</string>
     <string name="recents_mode_grid">Grid (two rows)</string>
     <string name="recents_mode_masonry">Masonry (two rows, staggered)</string>
+    <string name="recents_mode_slim">Slim List (vertical, no snapshots)</string>
+    <string name="recents_slim_note">Standalone list - doesn\'t need the LSPosed module below.</string>
+    <string name="recents_slim_empty">Nothing else to switch to.</string>
+    <string name="recents_slim_close_all">Close all</string>
+    <string name="recents_slim_app_info">App info</string>
     <string name="recents_transparency_title">Background transparency</string>
     <string name="recents_transparency_desc">How much wallpaper shows through behind the Overview cards. Restarts the launcher to apply.</string>
     <string name="recents_restart_launcher">Restart launcher</string>
