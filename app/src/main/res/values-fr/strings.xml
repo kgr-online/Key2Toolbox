@@ -571,6 +571,8 @@
     <string name="toolbelt_pick_app">Choisir une app…</string>
     <string name="toolbelt_reset">Réinitialiser en Q20</string>
     <string name="toolbelt_restart_systemui">Redémarrer le launcher</string>
+    <string name="toolbelt_privacy_indicator">Masquer l\'icône de confidentialité de localisation</string>
+    <string name="toolbelt_privacy_indicator_hint">Chaque fois qu\'une app lit ta position, Android réaffiche brièvement la barre de navigation par-dessus l\'app en plein écran pour montrer l\'icône de localisation dans la barre d\'état. Ceci désactive cette icône pour tout le système (device_config privacy location_indicators_enabled = false) et fige la synchronisation des flags pour qu\'elle survive à un redémarrage. Compromis : tu perds l\'indice visuel qu\'une app utilise le GPS, et aucun autre flag device_config ne sera mis à jour depuis le serveur. Les icônes de micro et de caméra ne sont pas concernées. Nécessite le root.</string>
     <string name="toolbelt_debug_hint">La barre de navigation ne se masque pas après activation ? Lance : adb logcat | grep Key2Toolbox-Xposed et chaque hook indique dans le journal s\'il s\'est accroché. Les noms de classe du launcher peuvent changer d\'une build LineageOS à l\'autre ; un redémarrage du launcher est nécessaire pour que la barre de navigation se réagence.</string>
     <string name="settings_import_script_modules_restored"> Également restaurés et appliqués en direct : %1$s.</string>
     <string-array name="toolbelt_haptic_levels">

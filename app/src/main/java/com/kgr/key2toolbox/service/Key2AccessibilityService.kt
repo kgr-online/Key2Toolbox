@@ -134,6 +134,19 @@ class Key2AccessibilityService : AccessibilityService() {
 
         private const val ALWAYS_OFF_SCRIPT = "nav_always_off.sh"
         private const val ALWAYS_OFF_TARGET = "/data/adb/service.d/$ALWAYS_OFF_SCRIPT"
+
+        // Nav Lock re-assert on screen wake. The synaptics touch controller reloads
+        // its firmware default (0dbutton = enabled) whenever the panel powers back
+        // up, and on this device that reload can land seconds after ACTION_SCREEN_ON
+        // / ACTION_USER_PRESENT - well past a fixed retry ladder. So instead of
+        // firing a few blind writes we poll the real node and keep re-pushing the
+        // desired state until a read-back confirms it stuck.
+        private const val NAV_REASSERT_INTERVAL_MS = 1000L
+        private const val NAV_REASSERT_MAX_ATTEMPTS = 20   // ~20s ceiling
+        // Cheap safety net on the hot accessibility-event path: when the keys are
+        // meant to be OFF but our cache already says so, re-read the kernel node at
+        // most this often and re-push if the driver silently flipped it back.
+        private const val NAV_VERIFY_THROTTLE_MS = 3000L
     }
 
     private val worker: ExecutorService = Executors.newSingleThreadExecutor()
@@ -158,6 +171,8 @@ class Key2AccessibilityService : AccessibilityService() {
 
     @Volatile private var navDisabled = false // last state pushed to kernel
     @Volatile private var imeActive = false   // keyboard currently showing
+    @Volatile private var navReassertAttempts = 0 // remaining wake re-assert polls
+    @Volatile private var lastNavVerifyMs = 0L    // throttle for the hot-path kernel read-back
     @Volatile private var imeBlockApplied = false // last show_ime value we pushed (true = suppressed)
     @Volatile private var foregroundPkg: String? = null // last seen foreground app package
     @Volatile private var fullscreenCached = false       // last known immersive state of the foreground app
@@ -338,10 +353,10 @@ class Key2AccessibilityService : AccessibilityService() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 Log.d("Key2Toolbox", "Screen state changed: ${intent?.action}")
                 forceReconcile()
-                mainHandler.postDelayed({ forceReconcile() }, 300)
-                mainHandler.postDelayed({ forceReconcile() }, 600)
-                mainHandler.postDelayed({ forceReconcile() }, 1200)
-                mainHandler.postDelayed({ forceReconcile() }, 2500)
+                // The touch driver can reload 0dbutton = enabled some seconds after
+                // the wake, so verify against the real node and keep re-pushing
+                // until it sticks instead of firing a fixed ladder of blind writes.
+                startNavReassert()
             }
         }
         val filter = IntentFilter().apply {
@@ -861,28 +876,75 @@ class Key2AccessibilityService : AccessibilityService() {
         }
     }
 
+    /** The capacitive-button state the current settings call for (true = keys OFF). */
+    private fun desiredNavDisabled(): Boolean = when {
+        alwaysOff() -> true                          // permanently disabled
+        !navLockEnabled() || gestureMode() -> false   // buttons stay live (gesture mode gates in onKeyEvent)
+        else -> imeActive                             // disable-while-typing mode
+    }
+
     /** Compute and apply the desired capacitive-button state from current settings. */
     private fun reconcileNav() {
-        val desired = when {
-            alwaysOff() -> true                          // permanently disabled
-            !navLockEnabled() || gestureMode() -> false   // buttons stay live (gesture mode gates in onKeyEvent)
-            else -> imeActive                             // disable-while-typing mode
-        }
+        val desired = desiredNavDisabled()
         Log.d("Key2Toolbox", "reconcileNav: desired=$desired, currentCache=$navDisabled, alwaysOff=${alwaysOff()}, imeActive=$imeActive")
-        if (desired != navDisabled) applyNavDisabled(desired)
+        if (desired != navDisabled) {
+            applyNavDisabled(desired)
+            return
+        }
+        // Cache already matches - but the touch driver silently reloads
+        // 0dbutton = enabled on panel wake, so when the keys are meant to be OFF,
+        // periodically re-read the real node and re-push if it drifted back.
+        if (desired && SystemClock.uptimeMillis() - lastNavVerifyMs > NAV_VERIFY_THROTTLE_MS) {
+            lastNavVerifyMs = SystemClock.uptimeMillis()
+            worker.execute {
+                if (readNavDisabledFromKernel() == false) {
+                    Log.d("Key2Toolbox", "reconcileNav: kernel drifted back to enabled, re-pushing disable")
+                    navDisabled = true
+                    runRoot("0")
+                }
+            }
+        }
     }
 
     private fun forceReconcile() {
         worker.execute {
-            val desired = when {
-                alwaysOff() -> true                          // permanently disabled
-                !navLockEnabled() || gestureMode() -> false   // buttons stay live (gesture mode gates in onKeyEvent)
-                else -> imeActive                             // disable-while-typing mode
-            }
+            val desired = desiredNavDisabled()
             Log.d("Key2Toolbox", "forceReconcile: desired=$desired, alwaysOff=${alwaysOff()}, imeActive=$imeActive")
             // Always apply directly to the hardware to override any driver/kernel-level resets
             navDisabled = desired
             runRoot(if (desired) "0" else "1")
+        }
+    }
+
+    /**
+     * Start (or restart) the post-wake re-assert poll: every
+     * [NAV_REASSERT_INTERVAL_MS] check the real 0dbutton node against the desired
+     * state and re-push on mismatch, giving up once it has been confirmed to stick
+     * or after [NAV_REASSERT_MAX_ATTEMPTS]. Cheap - one `cat` per tick, and only
+     * while a wake just happened.
+     */
+    private fun startNavReassert() {
+        navReassertAttempts = NAV_REASSERT_MAX_ATTEMPTS
+        mainHandler.removeCallbacks(navReassertRunnable)
+        mainHandler.post(navReassertRunnable)
+    }
+
+    private val navReassertRunnable = object : Runnable {
+        override fun run() {
+            worker.execute {
+                val desired = desiredNavDisabled()
+                val actual = readNavDisabledFromKernel()   // true=off, false=on, null=unknown
+                if (actual != desired) {
+                    Log.d("Key2Toolbox", "navReassert: actual=$actual desired=$desired, re-pushing")
+                    navDisabled = desired
+                    runRoot(if (desired) "0" else "1")
+                }
+                val settled = actual == desired
+                val left = --navReassertAttempts
+                if (!settled && left > 0) {
+                    mainHandler.postDelayed(this, NAV_REASSERT_INTERVAL_MS)
+                }
+            }
         }
     }
 

@@ -123,7 +123,8 @@ object SettingsBackup {
         ToolbeltController.KEY_HEIGHT_DP to BackupModule.TOOLBELT,
         ToolbeltController.KEY_ICON_SCALE to BackupModule.TOOLBELT,
         ToolbeltController.KEY_HAPTIC to BackupModule.TOOLBELT,
-        ToolbeltController.KEY_COLOR_MODE to BackupModule.TOOLBELT
+        ToolbeltController.KEY_COLOR_MODE to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_PRIVACY_INDICATOR_OFF to BackupModule.TOOLBELT
     )
 
     private const val KEY2TWEAKS_PREFS = "key2tweaks"
@@ -331,6 +332,20 @@ object SettingsBackup {
                     if (ToolbeltController.pushInset(context)) ToolbeltController.restartLauncher()
                 } catch (e: Exception) {
                     // Prefs already restored - a failed mirror push shouldn't fail the import.
+                }
+            }
+
+            // Toolbelt: the location-privacy-icon suppression is a device_config
+            // write, not a pref the hook reads - re-apply it from the restored pref.
+            if (BackupModule.TOOLBELT in modules &&
+                key2tweaksJson.has(ToolbeltController.KEY_PRIVACY_INDICATOR_OFF)
+            ) {
+                try {
+                    val off = context.getSharedPreferences(KEY2TWEAKS_PREFS, Context.MODE_PRIVATE)
+                        .getBoolean(ToolbeltController.KEY_PRIVACY_INDICATOR_OFF, false)
+                    ToolbeltController.applyLocationIndicator(context, off)
+                } catch (e: Exception) {
+                    // best-effort; don't fail the import over it
                 }
             }
         }
