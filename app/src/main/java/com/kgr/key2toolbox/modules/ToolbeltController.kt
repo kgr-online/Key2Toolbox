@@ -79,8 +79,15 @@ object ToolbeltController {
         LOCK_SCREEN("lock_screen"),
         SPLIT_SCREEN("split_screen"),
         VOICE_ASSIST("voice_assist"),
-        /** Open the default phone app (ACTION_DIAL). */
-        DIALER("dialer"),
+        /** Open the default phone app straight to the dialpad (ACTION_DIAL). */
+        DIALER_KEYPAD("dialer_keypad"),
+        /**
+         * Open the default phone app's own home/last-used tab (Favorites/Recents),
+         * via its launcher intent - not the dialpad. Keeps the pref id "dialer"
+         * from before this action was split in two, so existing saved slot
+         * configs (and DEFAULT_SLOTS) keep pointing at this behavior unchanged.
+         */
+        DIALER_HOME("dialer"),
         /** Switch back to the most recently used app. */
         LAST_APP("last_app"),
         /** Collapse / expand the belt (only when "Collapsible" is on). */
@@ -141,7 +148,7 @@ object ToolbeltController {
      *  - hangup: Home, or end-call while in a call (the Q20 "end" key)
      */
     val DEFAULT_SLOTS: List<Slot> = listOf(
-        Slot(ToolbeltIcon.PHONE, ToolbeltAction.DIALER, ToolbeltAction.NONE, ToolbeltAction.VOICE_ASSIST),
+        Slot(ToolbeltIcon.PHONE, ToolbeltAction.DIALER_HOME, ToolbeltAction.NONE, ToolbeltAction.VOICE_ASSIST),
         Slot(ToolbeltIcon.LOGO, ToolbeltAction.RECENTS, ToolbeltAction.NONE, ToolbeltAction.QUICK_SETTINGS),
         Slot(ToolbeltIcon.HOME, ToolbeltAction.HOME, ToolbeltAction.NONE, ToolbeltAction.NOTIFICATIONS),
         Slot(ToolbeltIcon.BACK, ToolbeltAction.BACK, ToolbeltAction.NONE, ToolbeltAction.LAST_APP),

@@ -14,6 +14,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.os.Handler
 import android.os.Looper
+import android.telecom.TelecomManager
 import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
@@ -283,9 +284,24 @@ class Key2AccessibilityService : AccessibilityService() {
                     performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
                 else worker.execute { RootShell.run("input keyevent 120") }
             ToolbeltAction.VOICE_ASSIST -> launchVoiceAssist()
-            ToolbeltAction.DIALER -> {
+            ToolbeltAction.DIALER_KEYPAD -> {
                 try {
                     startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Exception) {
+                }
+            }
+            ToolbeltAction.DIALER_HOME -> {
+                try {
+                    val telecom = getSystemService(Context.TELECOM_SERVICE) as? TelecomManager
+                    val dialerPkg = telecom?.defaultDialerPackage
+                    val launchIntent = dialerPkg?.let { packageManager.getLaunchIntentForPackage(it) }
+                    if (launchIntent != null) {
+                        startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    } else {
+                        // Fallback if we can't resolve a default dialer for some reason -
+                        // ACTION_DIAL always opens the keypad tab, but it's better than nothing.
+                        startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
                 } catch (_: Exception) {
                 }
             }

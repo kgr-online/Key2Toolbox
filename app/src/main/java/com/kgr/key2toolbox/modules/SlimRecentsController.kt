@@ -56,16 +56,17 @@ object SlimRecentsController {
     /**
      * Live, ordered (most-recent-first, matching the dump's own order) list of
      * switchable tasks. `type=standard` already excludes home/recents/assistant
-     * entries; [EXCLUDED_PACKAGES] and the caller's own package are dropped as
-     * a second belt-and-braces filter in case a ROM variant reports those
-     * differently. Blocking (runs a root shell command) - call off the main
-     * thread.
+     * entries; [EXCLUDED_PACKAGES] is dropped as a second belt-and-braces filter
+     * in case a ROM variant reports those differently. K2TB's own task is
+     * intentionally included - Slim List is a standalone overlay that can be
+     * triggered while any app (including K2TB itself) is foreground, so K2TB
+     * is just as switchable-to as anything else. Blocking (runs a root shell
+     * command) - call off the main thread.
      */
     fun listTasks(context: Context): List<SlimTask> {
         val dump = RootShell.run("dumpsys activity recents").outString
         val chunks = splitIntoTaskChunks(dump)
         val pm = context.packageManager
-        val selfPkg = context.packageName
 
         val out = ArrayList<SlimTask>(chunks.size)
         for (chunk in chunks) {
@@ -76,7 +77,7 @@ object SlimRecentsController {
 
             val topComponent = topComponentOf(chunk) ?: continue
             val pkg = topComponent.substringBefore("/")
-            if (pkg.isEmpty() || pkg == selfPkg || pkg in EXCLUDED_PACKAGES) continue
+            if (pkg.isEmpty() || pkg in EXCLUDED_PACKAGES) continue
 
             val (label, icon) = labelAndIcon(pm, pkg)
             out.add(SlimTask(taskId, pkg, topComponent, label, icon))
