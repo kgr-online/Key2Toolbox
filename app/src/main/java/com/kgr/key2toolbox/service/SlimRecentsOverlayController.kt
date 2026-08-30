@@ -339,12 +339,23 @@ object SlimRecentsOverlayController {
             return
         }
 
-        tasks.forEach { task ->
+        // Reversed on purpose: most recent sits at the bottom (near the
+        // thumb/Close-all button), oldest at the top - scroll up for older
+        // entries. currentTasks stays in the original most-recent-first order
+        // since dismissAll etc. don't care about render order.
+        tasks.asReversed().forEach { task ->
             list.addView(
                 buildRow(svc, task),
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { bottomMargin = px(4) }
             )
+        }
+
+        // Land on the most recent entries (the bottom) rather than the oldest
+        // (the top) when the list first opens. Posted so it runs after this
+        // layout pass actually measures the new content height.
+        (list.parent as? ScrollView)?.post {
+            (list.parent as? ScrollView)?.fullScroll(View.FOCUS_DOWN)
         }
     }
 
