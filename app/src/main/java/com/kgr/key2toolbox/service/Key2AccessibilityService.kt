@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.BatteryManager
 import android.os.Bundle
@@ -230,12 +231,25 @@ class Key2AccessibilityService : AccessibilityService() {
      * stock-Overview branch or build the overlay on the calling thread.
      */
     private fun openRecents() {
+        // Mode read is non-root (world-readable Global key) so it never adds
+        // shell-spawn latency to this path.
+        val mode = RecentsController.getLayoutMode(this)
         worker.execute {
             try {
-                if (RecentsController.getLayoutMode() == RecentsController.LayoutMode.SLIM_LIST) {
+                if (mode.isOverlay) {
+                    val cards = mode == RecentsController.LayoutMode.MASONRY
                     val tasks = SlimRecentsController.listTasks(this)
+                    // The foreground app has no fresh task snapshot (those are
+                    // taken on background), so its tile would be black/stale.
+                    // Grab a live screenshot for it - before the overlay's own
+                    // window goes up, so the scrim isn't in the shot.
+                    val liveTop = if (cards && tasks.isNotEmpty()) captureForRecents() else null
+                    val topId = tasks.firstOrNull()?.taskId
                     mainHandler.post {
-                        SlimRecentsOverlayController.show(this, tasks)
+                        SlimRecentsOverlayController.show(this, tasks, cards)
+                        if (liveTop != null && topId != null) {
+                            SlimRecentsOverlayController.fillSnapshots(mapOf(topId to liveTop))
+                        }
                         // Slim List's window just attached above the Toolbelt's
                         // in z-order (both are TYPE_ACCESSIBILITY_OVERLAY from
                         // this app; whichever attaches most recently wins).
@@ -247,6 +261,15 @@ class Key2AccessibilityService : AccessibilityService() {
                         ToolbeltOverlayController.hide()
                         ToolbeltOverlayController.refresh(this, ::handleToolbeltAction)
                     }
+                    // Masonry: window is already up with placeholders; load the
+                    // file snapshots for the rest and stream them in. The top
+                    // tile keeps its live screenshot when we got one.
+                    if (cards && tasks.isNotEmpty()) {
+                        val ids = if (liveTop != null) tasks.drop(1).map { it.taskId }
+                        else tasks.map { it.taskId }
+                        val snaps = SlimRecentsController.loadSnapshots(ids)
+                        mainHandler.post { SlimRecentsOverlayController.fillSnapshots(snaps) }
+                    }
                 } else {
                     performGlobalAction(GLOBAL_ACTION_RECENTS)
                 }
@@ -254,6 +277,22 @@ class Key2AccessibilityService : AccessibilityService() {
                 Log.e("Key2Toolbox", "openRecents failed", t)
             }
         }
+    }
+
+    /**
+     * A live screenshot of the current screen for the Masonry "hero" tile - the
+     * foreground app has no fresh stored snapshot. Trims the status bar and the
+     * toolbelt strip. Blocking (root screencap) - call off the main thread and
+     * before the overlay attaches. `null` on failure -> caller falls back to the
+     * stored snapshot.
+     */
+    private fun captureForRecents(): Bitmap? {
+        val sbId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        val top = if (sbId > 0) resources.getDimensionPixelSize(sbId) else 0
+        val belt = prefs?.let {
+            (ToolbeltController.reservedDp(it) * resources.displayMetrics.density).toInt()
+        } ?: 0
+        return SlimRecentsController.captureScreen(top, belt)
     }
 
     private fun handleToolbeltAction(action: ToolbeltAction, arg: String?) {
@@ -760,8 +799,10 @@ class Key2AccessibilityService : AccessibilityService() {
         // Toolbelt: keep the belt attached; slide it away while the soft keyboard
         // is up or the foreground app is fullscreen/immersive. The immersive
         // check is async + cached (see [scheduleFullscreenProbe]); every event
-        // just re-applies the last known value.
-        ToolbeltOverlayController.setImeVisible(imeActive)
+        // just re-applies the last known value. `anyImeWindow` also catches the
+        // short physical-keyboard toolbar strip - the belt hides for that too in
+        // translucent mode, where it would otherwise show through.
+        ToolbeltOverlayController.setImeVisible(imeActive, anyImeWindow())
         ToolbeltOverlayController.setForegroundFullscreen(fullscreenCached)
         refreshToolbelt()
         scheduleFullscreenProbe(event, pkgChanged)
@@ -956,6 +997,13 @@ class Key2AccessibilityService : AccessibilityService() {
             navDisabled = desired
             runRoot(if (desired) "0" else "1")
         }
+    }
+
+    /** Any TYPE_INPUT_METHOD window at all, regardless of height. */
+    private fun anyImeWindow(): Boolean = try {
+        windows?.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD } ?: false
+    } catch (_: Exception) {
+        false
     }
 
     private fun isImeVisible(): Boolean {

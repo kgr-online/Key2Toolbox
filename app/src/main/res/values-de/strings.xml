@@ -532,19 +532,25 @@
 
     <!-- Toolbelt + Recents Layout (localized) -->
     <string name="title_recents">Übersicht-Layout</string>
-    <string name="subtitle_recents">Zweizeilige Raster-/Mosaik-Übersicht über LSPosed</string>
+    <string name="subtitle_recents">Raster, vertikales Mosaik oder schmale Liste</string>
     <string name="title_toolbelt">Toolbelt</string>
     <string name="subtitle_toolbelt">Untere Leiste im BlackBerry-Q20-Stil, die die Systemnavigation ersetzt</string>
-    <string name="recents_intro">Lässt die Übersicht zwei Reihen kleinerer App-Karten anzeigen, wie auf einem Tablet, statt der einzelnen Standardreihe. Läuft vollständig über einen LSPosed-Hook im Launcher; dieser Bildschirm speichert nur die Einstellung und startet den Launcher neu.</string>
-    <string name="recents_section_lsposed">LSPosed erforderlich</string>
+    <string name="recents_intro">Vier Arten, die Übersicht anzuzeigen. Stock und die beiden eigenständigen Layouts (Schmale Liste, Mosaik) laufen allein; nur das Tablet-Raster-Layout braucht einen LSPosed-Hook im Launcher.</string>
+    <string name="recents_section_lsposed">LSPosed (nur Raster-Modus)</string>
     <string name="recents_xposed_ok">LSPosed-Modul aktiv.</string>
     <string name="recents_xposed_missing">LSPosed-Modul nicht aktiv.</string>
     <string name="recents_xposed_hint">Öffne deinen Xposed-Manager (LSPosed / Vector), aktiviere \"Key2 Toolbox\", hake den Launcher (com.android.launcher3) und diese App im Geltungsbereich an und erzwinge dann das Stoppen des Launchers. Erfordert ein Xposed-Framework auf APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Übersicht-Layout</string>
-    <string name="recents_grid_desc">Raster erzwingt das zweizeilige Tablet-Layout für die Übersicht (Startbildschirm und Hotseat können sich leicht verschieben, da sie dasselbe Layoutprofil nutzen). Mosaik ist Raster mit gestaffelten Kachelhöhen.</string>
+    <string name="recents_grid_desc">Raster erzwingt das zweizeilige Tablet-Layout für die Übersicht (Startbildschirm und Hotseat können sich leicht verschieben, da sie dasselbe Layoutprofil nutzen). Mosaik und Schmale Liste werden als eigenes Overlay gezeichnet und fassen den Launcher nie an.</string>
     <string name="recents_mode_stock">Standard (eine Reihe)</string>
     <string name="recents_mode_grid">Raster (zwei Reihen)</string>
-    <string name="recents_mode_masonry">Mosaik (zwei Reihen, gestaffelt)</string>
+    <string name="recents_mode_masonry">Mosaik (Vorschau-Quilt)</string>
+    <string name="recents_mode_slim">Schmale Liste (vertikal, ohne Vorschau)</string>
+    <string name="recents_slim_note">Eigenständige Liste - kein LSPosed nötig.</string>
+    <string name="recents_slim_empty">Nichts anderes zum Wechseln.</string>
+    <string name="recents_slim_close_all">Alle schließen</string>
+    <string name="recents_slim_app_info">App-Info</string>
+    <string name="recents_masonry_note">Eigenständiges 3-spaltiges Quilt aus quadratischen Kacheln: die zuletzt genutzte App ist eine große 3x3-Kachel, der Rest 2x2 oder 1x1, jeweils mit der letzten Vorschau der App unter einer Namensleiste in der App-Farbe. Kein LSPosed nötig; braucht Root zum Lesen der Vorschauen.</string>
     <string name="recents_transparency_title">Hintergrund-Transparenz</string>
     <string name="recents_transparency_desc">Wie viel Hintergrundbild hinter den Übersicht-Karten durchscheint. Startet den Launcher neu, um es anzuwenden.</string>
     <string name="recents_restart_launcher">Launcher neu starten</string>

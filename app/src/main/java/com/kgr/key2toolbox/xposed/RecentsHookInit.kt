@@ -39,13 +39,11 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage
  *
  * Config (world-readable `Settings.Global`, written with root by
  * [com.kgr.key2toolbox.modules.RecentsController]):
- *   - key2_recents_layout_mode : 0 = Stock, 1 = Grid, 2 = Masonry
+ *   - key2_recents_layout_mode : 1 = Grid (this hook). 0 Stock / 2 Masonry /
+ *     3 Slim List are all no-ops here - 2 and 3 are drawn as our own overlay
+ *     ([com.kgr.key2toolbox.service.SlimRecentsOverlayController]), not by
+ *     bending Launcher3.
  *   - key2_recents_scrim_alpha : 0.0 .. 1.0  (Overview background opacity)
- *
- * Masonry is Grid plus per-tile height variation ([mosaicTileHeights]): same
- * two-row scrollable layout, but each task box is shortened by a fixed factor
- * keyed on its task id, and Launcher3's own grid code re-centres it vertically,
- * giving a staggered-mosaic look without touching the scroll / dismiss maths.
  *
  * Debug on device:  `adb logcat | grep Key2Toolbox-Xposed`
  */
@@ -60,10 +58,6 @@ class RecentsHookInit : IXposedHookLoadPackage {
 
         const val MODE_STOCK = 0
         const val MODE_GRID = 1
-        const val MODE_MASONRY = 2
-
-        /** Per-tile height multipliers for Masonry, indexed by task id modulo size. */
-        private val MOSAIC_FACTORS = floatArrayOf(1.0f, 0.78f, 0.93f, 0.70f, 0.86f, 0.74f)
 
         // LineageOS 22 ships AOSP Launcher3 under its own package name; the
         // Trebuchet name is kept only as a guard against a future rename.
@@ -87,8 +81,6 @@ class RecentsHookInit : IXposedHookLoadPackage {
         guardNavButtonLayoutFactory(cl)
         forceShowAsGrid(cl)
         filterLauncherFromOverview(cl)
-        mosaicTileHeights(cl)
-        squareTaskCorners(cl)
         scaleOverviewScrim(cl)
     }
 
@@ -100,13 +92,11 @@ class RecentsHookInit : IXposedHookLoadPackage {
         MODE_STOCK
     }
 
-    /** Grid or Masonry: both need the tablet two-row Overview path. SLIM_LIST (and STOCK) do not. */
+    /** Grid is the only mode this hook acts on. STOCK / Masonry / Slim List all fall through. */
     private fun gridActive(): Boolean {
         val ctx = currentApplication() ?: return false
-        return gridLikeMode(mode(ctx))
+        return mode(ctx) == MODE_GRID
     }
-
-    private fun gridLikeMode(m: Int): Boolean = m == MODE_GRID || m == MODE_MASONRY
 
     private fun scrimAlpha(context: Context): Float = try {
         Settings.Global.getFloat(context.contentResolver, PREF_SCRIM_ALPHA, 1.0f)
@@ -286,7 +276,7 @@ class RecentsHookInit : IXposedHookLoadPackage {
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val ctx = (param.thisObject as? View)?.context ?: return
-                        param.result = gridLikeMode(mode(ctx))
+                        param.result = mode(ctx) == MODE_GRID
                     }
                 }
             )
@@ -347,68 +337,6 @@ class RecentsHookInit : IXposedHookLoadPackage {
             if (intent.hasCategory(android.content.Intent.CATEGORY_HOME)) return true
         }
         return false
-    }
-
-    /**
-     * Masonry: after `TaskView.updateTaskSize` has sized a task box to the
-     * uniform grid rect, shorten it by [MOSAIC_FACTORS] keyed on the task id.
-     * `RecentsView.updateTaskSize()` calls this for every task and then runs
-     * `updateGridProperties()`, which re-derives each tile's vertical offset
-     * from its own `LayoutParams.height` (it centres the tile in the full task
-     * slot), so the shorter tiles simply end up staggered. Width is left alone,
-     * so column positions, paging and swipe-to-dismiss are unchanged. The
-     * focused large tile is skipped.
-     */
-    private fun mosaicTileHeights(cl: ClassLoader) {
-        try {
-            XposedHelpers.findAndHookMethod(
-                "com.android.quickstep.views.TaskView", cl, "updateTaskSize",
-                "android.graphics.Rect", "android.graphics.Rect", "android.graphics.Rect",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val tv = param.thisObject as? View ?: return
-                        if (mode(tv.context) != MODE_MASONRY) return
-                        if (XposedHelpers.callMethod(tv, "isLargeTile") == true) return
-                        val lp = tv.layoutParams ?: return
-                        if (lp.height <= 0) return
-                        val id = (XposedHelpers.callMethod(tv, "getTaskViewId") as? Int) ?: return
-                        val f = MOSAIC_FACTORS[((id % MOSAIC_FACTORS.size) + MOSAIC_FACTORS.size) % MOSAIC_FACTORS.size]
-                        val newH = (lp.height * f).toInt()
-                        if (newH <= 0 || newH == lp.height) return
-                        lp.height = newH
-                        tv.layoutParams = lp
-                        runCatching { XposedHelpers.callMethod(tv, "updateThumbnailSize") }
-                    }
-                }
-            )
-            XposedBridge.log("[$TAG] hooked TaskView.updateTaskSize (masonry)")
-        } catch (t: Throwable) {
-            XposedBridge.log("[$TAG] masonry hook failed: ${t.message}")
-        }
-    }
-
-    /**
-     * Masonry only: `com.android.quickstep.util.TaskCornerRadius.get(Context)`
-     * feeds every task tile's corner radius. Return 0 so the mosaic tiles are
-     * square-edged, closer to the BlackBerry productivity-tab look. Grid mode
-     * keeps the stock rounded corners.
-     */
-    private fun squareTaskCorners(cl: ClassLoader) {
-        try {
-            XposedHelpers.findAndHookMethod(
-                "com.android.quickstep.util.TaskCornerRadius", cl, "get",
-                "android.content.Context",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        val ctx = param.args.getOrNull(0) as? Context ?: return
-                        if (mode(ctx) == MODE_MASONRY) param.result = 0f
-                    }
-                }
-            )
-            XposedBridge.log("[$TAG] hooked TaskCornerRadius.get (masonry)")
-        } catch (t: Throwable) {
-            XposedBridge.log("[$TAG] TaskCornerRadius hook failed: ${t.message}")
-        }
     }
 
     /**

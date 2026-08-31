@@ -26,6 +26,7 @@ import android.widget.TextView
 import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.SlimRecentsController
 import com.kgr.key2toolbox.modules.SlimRecentsController.SlimTask
+import com.kgr.key2toolbox.modules.ToolbeltController
 import java.util.concurrent.Executors
 
 /**
@@ -42,8 +43,16 @@ import java.util.concurrent.Executors
  */
 object SlimRecentsOverlayController {
 
-    /** Row corner radius, matching stock Overview card rounding. */
+    /** Lean-row corner radius, matching stock Overview card rounding. Masonry
+     *  cards are square (BlackBerry productivity-tab look). */
     private const val CORNER_RADIUS_DP = 20
+
+    /** Masonry: a 3-wide quilt of SQUARE tiles - span 1 = 1x1, span 2 = 2x2,
+     *  span 3 = 3x3 (the most-recent "hero"). */
+    private const val MASONRY_COLUMNS = 3
+
+    /** Fixed name-strip height (dp) - icon + name + close, above the snapshot. */
+    private const val CARD_HEADER_DP = 30
 
     // Resume / dismiss issue root shell commands - never run those on the
     // main thread that's servicing row touch events.
@@ -52,6 +61,9 @@ object SlimRecentsOverlayController {
     private var windowManager: WindowManager? = null
     private var root: FrameLayout? = null
     private var currentTasks: List<SlimTask> = emptyList()
+    private var currentSnapshots: Map<Int, android.graphics.Bitmap> = emptyMap()
+    private var cardsMode: Boolean = false
+    private val thumbViews = HashMap<Int, ImageView>()
     private var menuScrim: View? = null
     private var menuCard: View? = null
 
@@ -180,8 +192,27 @@ object SlimRecentsOverlayController {
         menuScrim = null
     }
 
-    /** [tasks] must already be fetched off the main thread - see [SlimRecentsController.listTasks]. */
-    fun show(svc: AccessibilityService, tasks: List<SlimTask>) = safeUi {
+    /**
+     * [tasks] must already be fetched off the main thread - see
+     * [SlimRecentsController.listTasks]. [snapshots] (Masonry mode) maps task id
+     * to its last snapshot bitmap - also loaded off the main thread; empty for
+     * Slim List, and any task missing from it just renders a lean, thumbnail-
+     * free row.
+     */
+    /**
+     * Show (or refresh) the list. [cards] = Masonry (two-column snapshot grid);
+     * false = Slim List (lean rows). In Masonry mode the window comes up right
+     * away with placeholder cards - snapshots are loaded off the main thread and
+     * pushed in afterwards via [fillSnapshots].
+     */
+    fun show(
+        svc: AccessibilityService,
+        tasks: List<SlimTask>,
+        cards: Boolean = false,
+    ) = safeUi {
+        cardsMode = cards
+        if (!cards) currentSnapshots = emptyMap()
+        Log.d("Key2Toolbox", "SlimRecents.show: ${tasks.size} tasks, mode=${if (cards) "cards" else "lean"}")
         if (root != null) {
             rebuildRows(svc, tasks)
         } else {
@@ -191,6 +222,8 @@ object SlimRecentsOverlayController {
 
     fun hide() = safeUi {
         closeIconMenu()
+        currentSnapshots = emptyMap()
+        thumbViews.clear()
         val v = root
         root = null
         if (v != null) {
@@ -203,8 +236,17 @@ object SlimRecentsOverlayController {
 
     // ------------------------------------------------------------- internals
 
+    /** Reserved height (px) of the toolbelt, or 0 when it's off - the list and
+     *  Close-all button keep clear of it. */
+    private fun beltInsetPx(ctx: Context): Int {
+        val sp = ctx.getSharedPreferences(ToolbeltController.PREFS, Context.MODE_PRIVATE)
+        if (!ToolbeltController.isEnabled(sp)) return 0
+        return (ToolbeltController.reservedDp(sp) * ctx.resources.displayMetrics.density).toInt()
+    }
+
     private fun attach(svc: AccessibilityService, tasks: List<SlimTask>) {
         val wm = svc.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val belt = beltInsetPx(svc)
 
         val container = FrameLayout(svc).apply {
             setBackgroundColor(Color.argb(200, 0, 0, 0))
@@ -213,7 +255,8 @@ object SlimRecentsOverlayController {
         val list = LinearLayout(svc).apply {
             orientation = LinearLayout.VERTICAL
             val pad = (16 * svc.resources.displayMetrics.density).toInt()
-            val bottomClearance = (88 * svc.resources.displayMetrics.density).toInt() // room for the Close All button
+            // room for the Close All button + the toolbelt strip below it
+            val bottomClearance = (88 * svc.resources.displayMetrics.density).toInt() + belt
             setPadding(pad, pad, pad, bottomClearance)
         }
         val scroller = ScrollView(svc).apply {
@@ -285,7 +328,7 @@ object SlimRecentsOverlayController {
             closeAll,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                bottomMargin = px(24)
+                bottomMargin = px(24) + belt
             }
         )
 
@@ -323,6 +366,7 @@ object SlimRecentsOverlayController {
     private fun buildRows(svc: AccessibilityService, list: LinearLayout, tasks: List<SlimTask>) {
         closeIconMenu()
         currentTasks = tasks
+        thumbViews.clear()
         list.removeAllViews()
         val density = svc.resources.displayMetrics.density
         fun px(dp: Int) = (dp * density).toInt()
@@ -339,30 +383,143 @@ object SlimRecentsOverlayController {
             return
         }
 
-        // Reversed on purpose: most recent sits at the bottom (near the
-        // thumb/Close-all button), oldest at the top - scroll up for older
-        // entries. currentTasks stays in the original most-recent-first order
-        // since dismissAll etc. don't care about render order.
+        if (cardsMode) buildCardMasonry(svc, list, tasks, ::px)
+        else buildLeanColumn(svc, list, tasks, ::px)
+    }
+
+    /** Slim List: one vertical column, most recent at the bottom (thumb reach). */
+    private fun buildLeanColumn(
+        svc: AccessibilityService, list: LinearLayout, tasks: List<SlimTask>, px: (Int) -> Int,
+    ) {
         tasks.asReversed().forEach { task ->
             list.addView(
-                buildRow(svc, task),
+                buildLeanRow(svc, task),
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { bottomMargin = px(4) }
             )
         }
+        (list.parent as? ScrollView)?.let(::landAtBottom)
+    }
 
-        // Land on the most recent entries (the bottom) rather than the oldest
-        // (the top) when the list first opens. Posted so it runs after this
-        // layout pass actually measures the new content height.
-        (list.parent as? ScrollView)?.post {
-            (list.parent as? ScrollView)?.fullScroll(View.FOCUS_DOWN)
+    /** Jump to the bottom (newest) before the first frame draws - no visible auto-scroll. */
+    private fun landAtBottom(sv: ScrollView) {
+        sv.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                sv.viewTreeObserver.removeOnPreDrawListener(this)
+                sv.scrollTo(0, sv.getChildAt(0)?.height ?: 0)
+                return true
+            }
+        })
+    }
+
+    /** A tile placed within a 3-wide block: grid position + span (in grid cells). */
+    private data class Tile(val task: SlimTask, val col: Int, val row: Int, val w: Int, val h: Int)
+
+    /** A gap-free 3-column-wide strip of tiles, [rows] cells tall (1 or 2). */
+    private data class Block(val tiles: List<Tile>, val rows: Int)
+
+    /**
+     * Pack tasks (most-recent-first) into gap-free 3-wide blocks: the newest is
+     * a 3x2 hero, then repeating {2x2 + two 1x1} / {two 1x1 + 2x2} / rows of
+     * 1x1 for variety. Blocks render bottom-to-top so the newest sits at the
+     * bottom near the thumb.
+     */
+    private fun packBlocks(tasks: List<SlimTask>): List<Block> {
+        val q = ArrayDeque(tasks)
+        val out = ArrayList<Block>()
+        q.removeFirstOrNull()?.let { out.add(Block(listOf(Tile(it, 0, 0, 3, 2)), 2)) }
+
+        var idx = 0
+        while (q.isNotEmpty()) {
+            when {
+                q.size >= 3 -> when (idx % 3) {
+                    0 -> out.add(
+                        Block(
+                            listOf(
+                                Tile(q.removeFirst(), 0, 0, 2, 2),
+                                Tile(q.removeFirst(), 2, 0, 1, 1),
+                                Tile(q.removeFirst(), 2, 1, 1, 1),
+                            ), 2,
+                        )
+                    )
+                    1 -> out.add(
+                        Block(
+                            listOf(
+                                Tile(q.removeFirst(), 0, 0, 1, 1),
+                                Tile(q.removeFirst(), 0, 1, 1, 1),
+                                Tile(q.removeFirst(), 1, 0, 2, 2),
+                            ), 2,
+                        )
+                    )
+                    else -> {
+                        val n = minOf(6, q.size)
+                        out.add(Block((0 until n).map { i -> Tile(q.removeFirst(), i % 3, i / 3, 1, 1) }, if (n > 3) 2 else 1))
+                    }
+                }
+                q.size == 2 -> out.add(
+                    Block(listOf(Tile(q.removeFirst(), 0, 0, 1, 1), Tile(q.removeFirst(), 1, 0, 2, 1)), 1)
+                )
+                else -> out.add(Block(listOf(Tile(q.removeFirst(), 0, 0, 3, 1)), 1)) // lone oldest -> full-width strip
+            }
+            idx++
+        }
+        return out
+    }
+
+    /**
+     * Masonry: a gap-free 3-wide quilt of blocks, newest at the bottom (scroll
+     * up for older). Positioned absolutely in a FrameLayout; snapshots stream in
+     * later via [fillSnapshots].
+     */
+    private fun buildCardMasonry(
+        svc: AccessibilityService, list: LinearLayout, tasks: List<SlimTask>, px: (Int) -> Int,
+    ) {
+        val gap = px(3)
+        val contentW = svc.resources.displayMetrics.widthPixels - list.paddingLeft - list.paddingRight
+        val colW = ((contentW - gap * (MASONRY_COLUMNS - 1)) / MASONRY_COLUMNS).coerceAtLeast(px(48))
+        fun cell(n: Int) = n * colW + (n - 1) * gap
+
+        val quilt = FrameLayout(svc)
+        list.addView(quilt, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+
+        val blocks = packBlocks(tasks)
+        val totalH = blocks.sumOf { cell(it.rows) + gap } - gap
+        var blockTop = totalH
+        for (block in blocks) { // blocks[0] = hero, goes at the very bottom
+            blockTop -= cell(block.rows)
+            for (t in block.tiles) {
+                quilt.addView(
+                    buildCard(svc, t.task, px, cell(t.w), cell(t.h)),
+                    FrameLayout.LayoutParams(cell(t.w), cell(t.h)).apply {
+                        leftMargin = t.col * (colW + gap)
+                        topMargin = blockTop + t.row * (colW + gap)
+                    },
+                )
+            }
+            blockTop -= gap
+        }
+        quilt.minimumHeight = totalH.coerceAtLeast(0)
+        (list.parent as? ScrollView)?.let(::landAtBottom)
+    }
+
+    /** Fill (or update) the streamed-in snapshots. Missing ids keep their placeholder. */
+    fun fillSnapshots(snapshots: Map<Int, android.graphics.Bitmap>) = safeUi {
+        Log.d("Key2Toolbox", "SlimRecents.fillSnapshots: ${snapshots.size} in, ${thumbViews.size} slots")
+        currentSnapshots = currentSnapshots + snapshots // merge - callers stream partial sets
+        snapshots.forEach { (id, bmp) ->
+            thumbViews[id]?.apply {
+                setImageBitmap(bmp)
+                setBackgroundColor(Color.TRANSPARENT)
+            }
         }
     }
 
-    private fun buildRow(svc: AccessibilityService, task: SlimTask): View {
+    // --- one task's view ------------------------------------------------
+
+    /** Slim List row: a rounded dark pill, icon + label + close, horizontal. */
+    private fun buildLeanRow(svc: AccessibilityService, task: SlimTask): View {
         val density = svc.resources.displayMetrics.density
         fun px(dp: Int) = (dp * density).toInt()
-
         val row = LinearLayout(svc).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -373,62 +530,106 @@ object SlimRecentsOverlayController {
             setPadding(px(16), px(14), px(16), px(14))
             isClickable = true
         }
+        row.addView(
+            appIcon(svc, task, px(40)),
+            LinearLayout.LayoutParams(px(40), px(40)).apply { rightMargin = px(16) },
+        )
+        row.addView(appLabel(svc, task, 16f), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(closeBtn(svc, task) { row }, LinearLayout.LayoutParams(px(40), px(40)).apply { leftMargin = px(8) })
+        wireRow(svc, row, task)
+        return row
+    }
 
-        val icon = ImageView(svc).apply {
+    /**
+     * Masonry tile of an explicit [w] x [h]: a name strip tinted with the app's
+     * muted icon colour, above the snapshot filling the rest of the tile.
+     */
+    private fun buildCard(svc: AccessibilityService, task: SlimTask, px: (Int) -> Int, w: Int, h: Int): View {
+        val headerPx = px(CARD_HEADER_DP)
+        val card = LinearLayout(svc).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply { cornerRadius = 0f; setColor(Color.rgb(18, 18, 18)) }
+            clipToOutline = true
+            isClickable = true
+        }
+
+        val header = LinearLayout(svc).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setBackgroundColor(SlimRecentsController.bannerColor(task.packageName, task.icon))
+            setPadding(px(8), 0, px(2), 0)
+        }
+        header.addView(
+            appIcon(svc, task, px(18)),
+            LinearLayout.LayoutParams(px(18), px(18)).apply { rightMargin = px(6) },
+        )
+        header.addView(appLabel(svc, task, 12f), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        header.addView(closeBtn(svc, task) { card }, LinearLayout.LayoutParams(headerPx, headerPx))
+        card.addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, headerPx))
+
+        val thumb = ImageView(svc).apply {
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            setBackgroundColor(Color.rgb(30, 30, 30)) // placeholder until fillSnapshots
+            currentSnapshots[task.taskId]?.let { setImageBitmap(it); setBackgroundColor(Color.TRANSPARENT) }
+        }
+        thumbViews[task.taskId] = thumb
+        card.addView(thumb, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (h - headerPx).coerceAtLeast(0)))
+
+        wireRow(svc, card, task)
+        return card
+    }
+
+    // --- shared row pieces --------------------------------------------
+
+    private fun selectableBg(svc: AccessibilityService, borderless: Boolean) = TypedValue().let { out ->
+        val attr = if (borderless) android.R.attr.selectableItemBackgroundBorderless
+        else android.R.attr.selectableItemBackground
+        if (svc.theme.resolveAttribute(attr, out, true)) svc.getDrawable(out.resourceId) else null
+    }
+
+    private fun appIcon(svc: AccessibilityService, task: SlimTask, @Suppress("UNUSED_PARAMETER") size: Int) =
+        ImageView(svc).apply {
             task.icon?.let { setImageDrawable(it) }
             isClickable = true
-            background = TypedValue().let { out ->
-                if (svc.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, out, true)) {
-                    svc.getDrawable(out.resourceId)
-                } else null
-            }
+            background = selectableBg(svc, borderless = true)
             setOnClickListener { safeUi { showIconMenu(svc, this, task) } }
         }
-        row.addView(icon, LinearLayout.LayoutParams(px(40), px(40)).apply { rightMargin = px(16) })
 
-        val label = TextView(svc).apply {
-            text = task.label
-            setTextColor(Color.WHITE)
-            textSize = 16f
-        }
-        row.addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+    private fun appLabel(svc: AccessibilityService, task: SlimTask, sizeSp: Float) = TextView(svc).apply {
+        text = task.label
+        setTextColor(Color.WHITE)
+        textSize = sizeSp
+        maxLines = 1
+        ellipsize = android.text.TextUtils.TruncateAt.END
+    }
 
-        // Explicit close button - claims its own tap area the same way the
-        // icon does, so it doesn't also trigger the row's resume click.
-        val closeButton = TextView(svc).apply {
-            text = "\u2715"
-            setTextColor(Color.LTGRAY)
-            textSize = 18f
-            gravity = Gravity.CENTER
-            isClickable = true
-            background = TypedValue().let { out ->
-                if (svc.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, out, true)) {
-                    svc.getDrawable(out.resourceId)
-                } else null
-            }
-            setOnClickListener {
-                safeUi {
-                    runSafely { SlimRecentsController.dismissTask(task) }
-                    (row.parent as? ViewGroup)?.removeView(row)
-                }
+    private fun closeBtn(svc: AccessibilityService, task: SlimTask, rowOf: () -> View) = TextView(svc).apply {
+        text = "\u2715"
+        setTextColor(Color.LTGRAY)
+        textSize = 16f
+        gravity = Gravity.CENTER
+        isClickable = true
+        background = selectableBg(svc, borderless = true)
+        setOnClickListener {
+            safeUi {
+                runSafely { SlimRecentsController.dismissTask(task) }
+                val v = rowOf()
+                (v.parent as? ViewGroup)?.removeView(v)
             }
         }
-        row.addView(closeButton, LinearLayout.LayoutParams(px(40), px(40)).apply { leftMargin = px(8) })
+    }
 
-        // Anywhere on the row other than the icon resumes the task - the icon
-        // claims taps that start on it (see openAppInfo above), so this only
-        // fires for the label/background area.
+    /**
+     * Tap (not on the icon / X) resumes the task; a horizontal drag past a
+     * width fraction or a fast fling dismisses it, otherwise it springs back.
+     */
+    private fun wireRow(svc: AccessibilityService, row: View, task: SlimTask) {
         row.setOnClickListener {
             safeUi {
                 runSafely { SlimRecentsController.resumeTask(task) }
                 hide()
             }
         }
-
-        // Swipe-to-dismiss: horizontal drag follows the finger; release past a
-        // width-fraction threshold or a fast fling closes the task and removes
-        // the row, otherwise it springs back. A plain tap (never crosses slop)
-        // falls through to the click listener above.
         val slop = ViewConfiguration.get(svc).scaledTouchSlop
         var downX = 0f
         var downY = 0f
@@ -438,9 +639,7 @@ object SlimRecentsOverlayController {
             try {
                 when (ev.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
-                        downX = ev.rawX
-                        downY = ev.rawY
-                        moved = false
+                        downX = ev.rawX; downY = ev.rawY; moved = false
                         vt = VelocityTracker.obtain().apply { addMovement(ev) }
                         false
                     }
@@ -450,19 +649,11 @@ object SlimRecentsOverlayController {
                         val dy = ev.rawY - downY
                         if (!moved && kotlin.math.abs(dx) > slop && kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
                             moved = true
-                            // Claim the gesture before the parent ScrollView's own
-                            // vertical-scroll interception kicks in. Without this, a
-                            // real swipe's inevitable small vertical wobble gets
-                            // intercepted by the list as a scroll before the row
-                            // ever accumulates enough horizontal movement to count -
-                            // the row springs back immediately because it never
-                            // actually saw the drag through.
                             v.parent?.requestDisallowInterceptTouchEvent(true)
                         }
                         if (moved) {
                             v.translationX = dx
-                            val w = v.width.coerceAtLeast(1)
-                            v.alpha = (1f - kotlin.math.abs(dx) / w).coerceIn(0.2f, 1f)
+                            v.alpha = (1f - kotlin.math.abs(dx) / v.width.coerceAtLeast(1)).coerceIn(0.2f, 1f)
                         }
                         moved
                     }
@@ -473,8 +664,7 @@ object SlimRecentsOverlayController {
                         if (moved) {
                             v.parent?.requestDisallowInterceptTouchEvent(false)
                             val w = v.width.coerceAtLeast(1)
-                            val dismiss = kotlin.math.abs(v.translationX) > w * 0.4f || kotlin.math.abs(vx) > 1200f
-                            if (dismiss) {
+                            if (kotlin.math.abs(v.translationX) > w * 0.4f || kotlin.math.abs(vx) > 1200f) {
                                 runSafely { SlimRecentsController.dismissTask(task) }
                                 (v.parent as? ViewGroup)?.removeView(v)
                             } else {
@@ -490,7 +680,5 @@ object SlimRecentsOverlayController {
                 false
             }
         }
-
-        return row
     }
 }

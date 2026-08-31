@@ -532,19 +532,25 @@
 
     <!-- Toolbelt + Recents Layout (localized) -->
     <string name="title_recents">Layout Panoramica</string>
-    <string name="subtitle_recents">Panoramica a griglia su due righe / mosaico tramite LSPosed</string>
+    <string name="subtitle_recents">Griglia, mosaico verticale o elenco sottile</string>
     <string name="title_toolbelt">Toolbelt</string>
     <string name="subtitle_toolbelt">Barra inferiore in stile BlackBerry Q20 che sostituisce la navigazione di sistema</string>
-    <string name="recents_intro">Fa mostrare alla Panoramica due righe di schede attività più piccole, come su un tablet, invece della singola riga predefinita. Funziona interamente tramite un hook LSPosed nel launcher; questa schermata salva solo l\'impostazione e riavvia il launcher.</string>
-    <string name="recents_section_lsposed">Serve LSPosed</string>
+    <string name="recents_intro">Quattro modi di mostrare la Panoramica. Stock e i due layout autonomi (Elenco Sottile, Mosaico) funzionano da soli; solo il layout Griglia tablet richiede un hook LSPosed nel launcher.</string>
+    <string name="recents_section_lsposed">LSPosed (solo modalità Griglia)</string>
     <string name="recents_xposed_ok">Modulo LSPosed attivo.</string>
     <string name="recents_xposed_missing">Modulo LSPosed non attivo.</string>
     <string name="recents_xposed_hint">Apri il tuo gestore Xposed (LSPosed / Vector), attiva \"Key2 Toolbox\", spunta il launcher (com.android.launcher3) e questa app nel suo ambito, poi forza l\'arresto del launcher. Richiede un framework Xposed su APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Layout della Panoramica</string>
-    <string name="recents_grid_desc">Griglia forza il layout tablet a due righe per la Panoramica (la schermata Home e la hotseat possono spostarsi leggermente, poiché condividono il profilo di layout). Mosaico è Griglia con altezze delle tessere sfalsate.</string>
+    <string name="recents_grid_desc">Griglia forza il layout tablet a due righe per la Panoramica (la schermata Home e la hotseat possono spostarsi leggermente, poiché condividono il profilo di layout). Mosaico ed Elenco Sottile sono disegnati come overlay proprio e non toccano mai il launcher.</string>
     <string name="recents_mode_stock">Predefinito (una riga)</string>
     <string name="recents_mode_grid">Griglia (due righe)</string>
-    <string name="recents_mode_masonry">Mosaico (due righe, sfalsato)</string>
+    <string name="recents_mode_masonry">Mosaico (quilt di istantanee)</string>
+    <string name="recents_mode_slim">Elenco Sottile (verticale, senza istantanee)</string>
+    <string name="recents_slim_note">Elenco autonomo - nessun LSPosed necessario.</string>
+    <string name="recents_slim_empty">Nient\'altro a cui passare.</string>
+    <string name="recents_slim_close_all">Chiudi tutto</string>
+    <string name="recents_slim_app_info">Info app</string>
+    <string name="recents_masonry_note">Quilt autonomo a 3 colonne di tessere quadrate: l\'app più recente è una grande tessera 3x3, le altre 2x2 o 1x1, ognuna mostra l\'ultima istantanea dell\'app sotto una striscia del nome tinta con il colore dell\'app. Nessun LSPosed necessario; richiede root per leggere le istantanee.</string>
     <string name="recents_transparency_title">Trasparenza dello sfondo</string>
     <string name="recents_transparency_desc">Quanto sfondo traspare dietro le schede della Panoramica. Riavvia il launcher per applicare.</string>
     <string name="recents_restart_launcher">Riavvia il launcher</string>
