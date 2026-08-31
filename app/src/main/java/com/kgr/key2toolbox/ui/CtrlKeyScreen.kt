@@ -2,6 +2,7 @@ package com.kgr.key2toolbox.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -26,9 +27,13 @@ import kotlinx.coroutines.withContext
 fun CtrlKeyScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val prefs = remember {
+        context.getSharedPreferences(CtrlKeyController.PREFS, android.content.Context.MODE_PRIVATE)
+    }
 
     var keymapState by remember { mutableStateOf(CtrlKeyController.State.UNKNOWN) }
     var ctrlPersisted by remember { mutableStateOf(false) }
+    var source by remember { mutableStateOf(CtrlKeyController.getSource(prefs)) }
     var symState by remember { mutableStateOf(CtrlKeyController.SymState.UNKNOWN) }
     var symPersisted by remember { mutableStateOf(false) }
     var symApplicable by remember { mutableStateOf(true) }
@@ -53,6 +58,48 @@ fun CtrlKeyScreen(onBack: () -> Unit) {
                 stringResource(if (ctrlPersisted) R.string.generic_yes else R.string.generic_no)
             )
         )
+
+        Text(
+            stringResource(R.string.ctrl_key_source_label),
+            style = MaterialTheme.typography.bodySmall
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CtrlKeyController.SourceKey.entries.forEach { opt ->
+                FilterChip(
+                    selected = source == opt,
+                    enabled = !busy,
+                    onClick = {
+                        source = opt
+                        busy = true
+                        scope.launch(Dispatchers.IO) {
+                            CtrlKeyController.setSource(prefs, opt)
+                            // Re-apply so switching source never leaves a stale remap.
+                            val result = CtrlKeyController.applyOn(context).takeIf { ctrlPersisted }
+                            keymapState = CtrlKeyController.currentKeymapState()
+                            ctrlPersisted = CtrlKeyController.isPersisted()
+                            busy = false
+                            statusMessage = result?.outString
+                                ?: context.getString(
+                                    when (opt) {
+                                        CtrlKeyController.SourceKey.FUNCTION -> R.string.ctrl_key_source_set_fn
+                                        CtrlKeyController.SourceKey.CURRENCY -> R.string.ctrl_key_source_set_currency
+                                    }
+                                )
+                        }
+                    },
+                    label = {
+                        Text(
+                            stringResource(
+                                when (opt) {
+                                    CtrlKeyController.SourceKey.FUNCTION -> R.string.ctrl_key_source_fn
+                                    CtrlKeyController.SourceKey.CURRENCY -> R.string.ctrl_key_source_currency
+                                }
+                            )
+                        )
+                    }
+                )
+            }
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.ctrl_key_enable_ctrl_remap))

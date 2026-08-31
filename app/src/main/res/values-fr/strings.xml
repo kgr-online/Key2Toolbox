@@ -405,6 +405,11 @@
     <string name="ctrl_key_live_ctrl_keymap">Keymap Ctrl en direct : %1$s</string>
     <string name="ctrl_key_ctrl_persisted">Ctrl persisté : %1$s</string>
     <string name="ctrl_key_enable_ctrl_remap">Activer le remappage Ctrl</string>
+    <string name="ctrl_key_source_label">Quelle touche devient Ctrl :</string>
+    <string name="ctrl_key_source_fn">Commodité / Fn</string>
+    <string name="ctrl_key_source_currency">Devise ($)</string>
+    <string name="ctrl_key_source_set_fn">Ctrl sera pris sur la touche Commodité/Fn.</string>
+    <string name="ctrl_key_source_set_currency">Ctrl sera pris sur la touche Devise.</string>
     <string name="ctrl_key_status_ctrl_enable_failed">Échec de l\'activation du remappage Ctrl : %1$s</string>
     <string name="ctrl_key_status_ctrl_disable_failed">Échec de la désactivation du remappage Ctrl : %1$s</string>
     <string name="ctrl_key_status_ctrl_staged">Remappage Ctrl préparé. Redémarrez votre appareil pour qu\'il prenne effet.</string>

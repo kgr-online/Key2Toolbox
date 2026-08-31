@@ -405,6 +405,11 @@
     <string name="ctrl_key_live_ctrl_keymap">Live-Strg-Keymap: %1$s</string>
     <string name="ctrl_key_ctrl_persisted">Strg gespeichert: %1$s</string>
     <string name="ctrl_key_enable_ctrl_remap">Strg-Umbelegung aktivieren</string>
+    <string name="ctrl_key_source_label">Welche Taste wird zu Strg:</string>
+    <string name="ctrl_key_source_fn">Komfort / Fn</string>
+    <string name="ctrl_key_source_currency">Währung ($)</string>
+    <string name="ctrl_key_source_set_fn">Strg wird von der Komfort-/Fn-Taste genommen.</string>
+    <string name="ctrl_key_source_set_currency">Strg wird von der Währungstaste genommen.</string>
     <string name="ctrl_key_status_ctrl_enable_failed">Aktivieren der Strg-Umbelegung fehlgeschlagen: %1$s</string>
     <string name="ctrl_key_status_ctrl_disable_failed">Deaktivieren der Strg-Umbelegung fehlgeschlagen: %1$s</string>
     <string name="ctrl_key_status_ctrl_staged">Strg-Umbelegung vorgemerkt. Starte dein Gerät neu, damit dies wirksam wird.</string>

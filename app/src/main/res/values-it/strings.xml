@@ -405,6 +405,11 @@
     <string name="ctrl_key_live_ctrl_keymap">Keymap Ctrl live: %1$s</string>
     <string name="ctrl_key_ctrl_persisted">Ctrl persistito: %1$s</string>
     <string name="ctrl_key_enable_ctrl_remap">Abilita rimappatura Ctrl</string>
+    <string name="ctrl_key_source_label">Quale tasto diventa Ctrl:</string>
+    <string name="ctrl_key_source_fn">Comodità / Fn</string>
+    <string name="ctrl_key_source_currency">Valuta ($)</string>
+    <string name="ctrl_key_source_set_fn">Ctrl verrà preso dal tasto Comodità/Fn.</string>
+    <string name="ctrl_key_source_set_currency">Ctrl verrà preso dal tasto Valuta.</string>
     <string name="ctrl_key_status_ctrl_enable_failed">Impossibile abilitare la rimappatura Ctrl: %1$s</string>
     <string name="ctrl_key_status_ctrl_disable_failed">Impossibile disabilitare la rimappatura Ctrl: %1$s</string>
     <string name="ctrl_key_status_ctrl_staged">Rimappatura Ctrl preparata. Riavvia il dispositivo affinché abbia effetto.</string>
