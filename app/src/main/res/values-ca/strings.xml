@@ -405,6 +405,11 @@
     <string name="ctrl_key_live_ctrl_keymap">Mapa de tecles Ctrl en viu: %1$s</string>
     <string name="ctrl_key_ctrl_persisted">Ctrl persistit: %1$s</string>
     <string name="ctrl_key_enable_ctrl_remap">Activa el remapatge de Ctrl</string>
+    <string name="ctrl_key_source_label">Quina tecla passa a ser Ctrl:</string>
+    <string name="ctrl_key_source_fn">Conveniència / Fn</string>
+    <string name="ctrl_key_source_currency">Moneda ($)</string>
+    <string name="ctrl_key_source_set_fn">Ctrl s\'agafarà de la tecla Conveniència/Fn.</string>
+    <string name="ctrl_key_source_set_currency">Ctrl s\'agafarà de la tecla de moneda.</string>
     <string name="ctrl_key_status_ctrl_enable_failed">No s\'ha pogut activar el remapatge de Ctrl: %1$s</string>
     <string name="ctrl_key_status_ctrl_disable_failed">No s\'ha pogut desactivar el remapatge de Ctrl: %1$s</string>
     <string name="ctrl_key_status_ctrl_staged">Remapatge de Ctrl preparat. Reinicia el dispositiu perquè tingui efecte.</string>

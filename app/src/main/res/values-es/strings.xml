@@ -405,6 +405,11 @@
     <string name="ctrl_key_live_ctrl_keymap">Keymap de Ctrl en vivo: %1$s</string>
     <string name="ctrl_key_ctrl_persisted">Ctrl persistido: %1$s</string>
     <string name="ctrl_key_enable_ctrl_remap">Activar remapeo de Ctrl</string>
+    <string name="ctrl_key_source_label">Qué tecla pasa a ser Ctrl:</string>
+    <string name="ctrl_key_source_fn">Conveniencia / Fn</string>
+    <string name="ctrl_key_source_currency">Moneda ($)</string>
+    <string name="ctrl_key_source_set_fn">Ctrl se tomará de la tecla Conveniencia/Fn.</string>
+    <string name="ctrl_key_source_set_currency">Ctrl se tomará de la tecla de moneda.</string>
     <string name="ctrl_key_status_ctrl_enable_failed">No se pudo activar el remapeo de Ctrl: %1$s</string>
     <string name="ctrl_key_status_ctrl_disable_failed">No se pudo desactivar el remapeo de Ctrl: %1$s</string>
     <string name="ctrl_key_status_ctrl_staged">Remapeo de Ctrl preparado. Reinicia el dispositivo para que surta efecto.</string>

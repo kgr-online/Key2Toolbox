@@ -2,6 +2,33 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.3.6] - 2026-08-31
+
+### Fixed
+
+- **Ctrl / SYM key remap no longer risks bricking the physical keyboard.** The
+  old mechanism ran a non-atomic in-place `sed -i` on the vendor keylayout
+  file; a reset caught mid-write left it as garbage and the physical keyboard
+  dead until it was rebuilt by hand (the capacitive nav keys are a separate
+  input device and kept working), and a boot script re-ran the same `sed` every
+  boot without ever repairing it. The feature now resolves the keyboard's real
+  `KeyLayoutFile` from `dumpsys input` and edits it safely: build the new
+  keylayout from a pristine golden copy, validate it, write it to a temp file
+  and `mv` (atomic rename) - never in place. A hardened boot script re-applies
+  it every boot and self-heals a corrupt keylayout from the golden copy first.
+  Takes effect live via a `uevent` remove/add, no reboot. (An APatch module
+  overlay of `/vendor` was tried and does not mount on the Key2's partitions.)
+- **Ctrl / SYM remap no longer disables SELinux.** The old scripts wrapped the
+  keylayout edit in `setenforce 0` / `setenforce 1`, making the whole system
+  permissive for a moment on every boot. Verified on-device that the root
+  domain can remount `/vendor` rw, write the keylayout and relabel it with
+  SELinux enforcing, so the `setenforce` calls are gone.
+
+### Added
+
+- **Ctrl remap: pick which key becomes Ctrl** - the Convenience/Fn key
+  (scancode 110) or the Currency key (scancode 5). Previously fixed to Fn.
+
 ## [5.3.1] - 2026-08-29
 
 ### Added

@@ -419,6 +419,11 @@
     <string name="ctrl_key_live_ctrl_keymap">Live Ctrl keymap: %1$s</string>
     <string name="ctrl_key_ctrl_persisted">Ctrl persisted: %1$s</string>
     <string name="ctrl_key_enable_ctrl_remap">Enable Ctrl remap</string>
+    <string name="ctrl_key_source_label">Which key becomes Ctrl:</string>
+    <string name="ctrl_key_source_fn">Convenience / Fn</string>
+    <string name="ctrl_key_source_currency">Currency ($)</string>
+    <string name="ctrl_key_source_set_fn">Ctrl will be sourced from the Convenience/Fn key.</string>
+    <string name="ctrl_key_source_set_currency">Ctrl will be sourced from the Currency key.</string>
     <string name="ctrl_key_status_ctrl_enable_failed">Failed to enable Ctrl remap: %1$s</string>
     <string name="ctrl_key_status_ctrl_disable_failed">Failed to disable Ctrl remap: %1$s</string>
     <string name="ctrl_key_status_ctrl_staged">Ctrl remap staged. Reboot your device for this to take effect.</string>
