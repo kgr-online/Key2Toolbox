@@ -2,6 +2,35 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.3.7] - 2026-08-31
+
+### Changed
+
+- **Masonry Recents is now a standalone snapshot quilt, no Xposed.** It used to
+  force Launcher3's tablet two-row grid via LSPosed hooks; it is now drawn as
+  our own accessibility overlay (the same window as Slim List). A gap-free
+  3-column quilt of square tiles, newest at the bottom (scroll up for older):
+  the most recent app is a wide 3x2 "hero", the rest pack into 2x2 + 1x1 blocks
+  that each fill a full 3-wide strip. Each tile is the app's last snapshot under
+  a name strip tinted with the app's own (desaturated) icon colour. The hero
+  gets a **live screenshot** (the foreground app has no fresh stored snapshot),
+  the rest come from the system snapshot cache
+  (`/data/system_ce/<user>/snapshots/`, root - the same images stock Overview
+  uses), decoded half-size and cached per session so reopening is instant.
+  Resume / swipe-to-dismiss / close-all are shared with Slim List. Grid is now
+  the only Recents mode that touches the launcher process; the two
+  masonry-only launcher hooks are gone.
+
+### Fixed
+
+- **Slim List / Masonry: the list and Close-all button now clear the toolbelt**
+  instead of sitting under it.
+- **Translucent toolbelt: the belt now hides while typing.** The short
+  physical-keyboard toolbar strip (hide-keyboard / language switch) used to
+  show through the see-through belt; the belt now slides away for any input
+  method window in translucent mode (other colour modes are unchanged - they
+  still only hide for a full soft keyboard).
+
 ## [5.3.6] - 2026-08-31
 
 ### Fixed

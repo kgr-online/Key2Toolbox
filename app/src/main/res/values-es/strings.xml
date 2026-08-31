@@ -532,19 +532,25 @@
 
     <!-- Toolbelt + Recents Layout (localized) -->
     <string name="title_recents">Disposición de Recientes</string>
-    <string name="subtitle_recents">Vista general en cuadrícula de dos filas / mosaico mediante LSPosed</string>
+    <string name="subtitle_recents">Cuadrícula, mosaico vertical o lista fina</string>
     <string name="title_toolbelt">Toolbelt</string>
     <string name="subtitle_toolbelt">Barra inferior al estilo BlackBerry Q20 que sustituye la navegación del sistema</string>
-    <string name="recents_intro">Hace que Recientes/Vista general muestre dos filas de tarjetas de tarea más pequeñas, como en una tableta, en lugar de la fila única de serie. Funciona íntegramente mediante un hook de LSPosed dentro del launcher; esta pantalla solo guarda el ajuste y reinicia el launcher.</string>
-    <string name="recents_section_lsposed">Se necesita LSPosed</string>
+    <string name="recents_intro">Cuatro formas de mostrar Recientes. Stock y las dos disposiciones independientes (Lista Fina, Mosaico) funcionan solas; solo la disposición de Cuadrícula de tableta necesita un hook LSPosed en el launcher.</string>
+    <string name="recents_section_lsposed">LSPosed (solo modo Cuadrícula)</string>
     <string name="recents_xposed_ok">Módulo de LSPosed activo.</string>
     <string name="recents_xposed_missing">Módulo de LSPosed no activo.</string>
     <string name="recents_xposed_hint">Abre tu gestor de Xposed (LSPosed / Vector), activa \"Key2 Toolbox\", marca el launcher (com.android.launcher3) y esta app en su ámbito y luego fuerza la detención del launcher. Necesita un framework Xposed sobre APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Disposición de la Vista general</string>
-    <string name="recents_grid_desc">Cuadrícula fuerza la disposición de tableta a dos filas para Recientes (la pantalla de inicio y el dock pueden desplazarse un poco, ya que comparten el perfil de disposición). Mosaico es Cuadrícula con alturas de celda escalonadas.</string>
+    <string name="recents_grid_desc">Cuadrícula fuerza la disposición de tableta a dos filas para Recientes (la pantalla de inicio y el dock pueden desplazarse un poco, ya que comparten el perfil de disposición). Mosaico y Lista Fina se dibujan como su propia superposición y nunca tocan el launcher.</string>
     <string name="recents_mode_stock">De serie (una fila)</string>
     <string name="recents_mode_grid">Cuadrícula (dos filas)</string>
-    <string name="recents_mode_masonry">Mosaico (dos filas, escalonado)</string>
+    <string name="recents_mode_masonry">Mosaico (mosaico de capturas)</string>
+    <string name="recents_mode_slim">Lista Fina (vertical, sin capturas)</string>
+    <string name="recents_slim_note">Lista independiente: no hace falta LSPosed.</string>
+    <string name="recents_slim_empty">No hay nada más a lo que cambiar.</string>
+    <string name="recents_slim_close_all">Cerrar todo</string>
+    <string name="recents_slim_app_info">Información de la app</string>
+    <string name="recents_masonry_note">Mosaico de 3 columnas de piezas cuadradas: la app más reciente es una pieza grande de 3x3, el resto son de 2x2 o 1x1, cada una mostrando la última captura de la app bajo una franja de nombre teñida con el color de la app. No hace falta LSPosed; necesita root para leer las capturas.</string>
     <string name="recents_transparency_title">Transparencia del fondo</string>
     <string name="recents_transparency_desc">Cuánto fondo de pantalla se ve detrás de las tarjetas de la Vista general. Reinicia el launcher para aplicarlo.</string>
     <string name="recents_restart_launcher">Reiniciar el launcher</string>

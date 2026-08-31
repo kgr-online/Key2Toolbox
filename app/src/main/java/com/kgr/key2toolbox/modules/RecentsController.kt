@@ -1,5 +1,7 @@
 package com.kgr.key2toolbox.modules
 
+import android.content.Context
+import android.provider.Settings
 import com.kgr.key2toolbox.core.RootShell
 
 /**
@@ -24,18 +26,31 @@ object RecentsController {
 
     enum class LayoutMode(val value: Int) {
         STOCK(0),
+
+        /** The only launcher-hooked mode: forces Launcher3's tablet two-row grid
+         *  Overview via [com.kgr.key2toolbox.xposed.RecentsHookInit]. */
         GRID(1),
 
-        /** Grid layout plus staggered per-tile heights (see RecentsHookInit). */
+        /**
+         * Standalone vertical card list: each row carries its app's last
+         * snapshot and a staggered height, drawn by
+         * [com.kgr.key2toolbox.service.SlimRecentsOverlayController]. Was a
+         * launcher hook (Grid + staggered tiles) through 5.3.5; now an overlay
+         * like [SLIM_LIST], with no launcher involvement.
+         */
         MASONRY(2),
 
         /**
-         * Standalone vertical task list - see [com.kgr.key2toolbox.service.SlimRecentsOverlayController].
-         * Unlike the other three, this never touches the launcher process or
-         * RecentsHookInit; showing it is intercepted entirely in
-         * Key2AccessibilityService before GLOBAL_ACTION_RECENTS would fire.
+         * Standalone vertical task list, thumbnail-free - see
+         * [com.kgr.key2toolbox.service.SlimRecentsOverlayController]. Like
+         * [MASONRY], never touches the launcher process; showing it is
+         * intercepted in Key2AccessibilityService before GLOBAL_ACTION_RECENTS
+         * would fire.
          */
         SLIM_LIST(3);
+
+        /** True for the two modes drawn as our own overlay (no launcher hook). */
+        val isOverlay: Boolean get() = this == MASONRY || this == SLIM_LIST
 
         companion object {
             fun fromValue(v: Int?): LayoutMode = entries.firstOrNull { it.value == v } ?: STOCK
@@ -52,6 +67,15 @@ object RecentsController {
 
     fun getLayoutMode(): LayoutMode = LayoutMode.fromValue(
         RootShell.run("settings get global $LAYOUT_MODE_KEY").outString.trim().toIntOrNull()
+    )
+
+    /**
+     * Non-root read of the mode - the `Settings.Global` key is world-readable,
+     * so this is instant and safe to call on every "open Recents" (the root
+     * variant spins up a `su` shell, ~100 ms, on a latency-sensitive path).
+     */
+    fun getLayoutMode(context: Context): LayoutMode = LayoutMode.fromValue(
+        runCatching { Settings.Global.getInt(context.contentResolver, LAYOUT_MODE_KEY) }.getOrNull()
     )
 
     fun setLayoutMode(mode: LayoutMode) {

@@ -532,19 +532,25 @@
 
     <!-- Toolbelt + Recents Layout (localized) -->
     <string name="title_recents">Disposició de Recents</string>
-    <string name="subtitle_recents">Vista general en graella de dues files / mosaic via LSPosed</string>
+    <string name="subtitle_recents">Graella, mosaic vertical o llista prima</string>
     <string name="title_toolbelt">Toolbelt</string>
     <string name="subtitle_toolbelt">Barra inferior a l\'estil BlackBerry Q20 que substitueix la navegació del sistema</string>
-    <string name="recents_intro">Fa que Recents/Vista general mostri dues files de targetes de tasca més petites, com en una tauleta, en lloc de la fila única de sèrie. Funciona íntegrament amb un hook d\'LSPosed dins del launcher; aquesta pantalla només desa l\'ajust i reinicia el launcher.</string>
-    <string name="recents_section_lsposed">Cal LSPosed</string>
+    <string name="recents_intro">Quatre maneres de mostrar Recents. Stock i les dues disposicions independents (Llista Prima, Mosaic) funcionen soles; només la disposició Graella de tauleta necessita un hook LSPosed al launcher.</string>
+    <string name="recents_section_lsposed">LSPosed (només mode Graella)</string>
     <string name="recents_xposed_ok">Mòdul d\'LSPosed actiu.</string>
     <string name="recents_xposed_missing">Mòdul d\'LSPosed no actiu.</string>
     <string name="recents_xposed_hint">Obre el teu gestor d\'Xposed (LSPosed / Vector), activa \"Key2 Toolbox\", marca el launcher (com.android.launcher3) i aquesta app al seu àmbit i després força l\'aturada del launcher. Necessita un entorn Xposed sobre APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Disposició de la Vista general</string>
-    <string name="recents_grid_desc">Graella força la disposició de tauleta a dues files per a Recents (la pantalla d\'inici i el dock es poden desplaçar una mica, ja que comparteixen el perfil de disposició). Mosaic és Graella amb alçades de tessel·la esglaonades.</string>
+    <string name="recents_grid_desc">Graella força la disposició de tauleta a dues files per a Recents (la pantalla d\'inici i el dock es poden desplaçar una mica, ja que comparteixen el perfil de disposició). El Mosaic i la Llista Prima es dibuixen com a superposició pròpia i no toquen mai el launcher.</string>
     <string name="recents_mode_stock">De sèrie (una fila)</string>
     <string name="recents_mode_grid">Graella (dues files)</string>
-    <string name="recents_mode_masonry">Mosaic (dues files, esglaonat)</string>
+    <string name="recents_mode_masonry">Mosaic (mosaic de captures)</string>
+    <string name="recents_mode_slim">Llista Prima (vertical, sense captures)</string>
+    <string name="recents_slim_note">Llista independent: no cal LSPosed.</string>
+    <string name="recents_slim_empty">No hi ha res més on canviar.</string>
+    <string name="recents_slim_close_all">Tanca-ho tot</string>
+    <string name="recents_slim_app_info">Informació de l\'app</string>
+    <string name="recents_masonry_note">Mosaic de 3 columnes de peces quadrades: l\'app més recent és una peça gran de 3x3, la resta són de 2x2 o 1x1, cadascuna mostrant l\'última captura de l\'app sota una franja de nom tenyida amb el color de l\'app. No cal LSPosed; necessita root per llegir les captures.</string>
     <string name="recents_transparency_title">Transparència del fons</string>
     <string name="recents_transparency_desc">Quant fons de pantalla es veu darrere de les targetes de la Vista general. Reinicia el launcher per aplicar-ho.</string>
     <string name="recents_restart_launcher">Reinicia el launcher</string>

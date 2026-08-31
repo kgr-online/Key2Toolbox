@@ -532,19 +532,25 @@
 
     <!-- Toolbelt + Recents Layout (localized) -->
     <string name="title_recents">Overzicht-indeling</string>
-    <string name="subtitle_recents">Overzicht in raster met twee rijen / mozaïek via LSPosed</string>
+    <string name="subtitle_recents">Raster, verticaal mozaïek of slanke lijst</string>
     <string name="title_toolbelt">Toolbelt</string>
     <string name="subtitle_toolbelt">Onderbalk in BlackBerry Q20-stijl die de systeemnavigatie vervangt</string>
-    <string name="recents_intro">Laat het Overzicht twee rijen kleinere app-kaarten tonen, zoals op een tablet, in plaats van de standaard enkele rij. Werkt volledig via een LSPosed-hook in de launcher; dit scherm slaat alleen de instelling op en herstart de launcher.</string>
-    <string name="recents_section_lsposed">LSPosed vereist</string>
+    <string name="recents_intro">Vier manieren om Overzicht te tonen. Stock en de twee zelfstandige indelingen (Slanke lijst, Mozaïek) werken op zichzelf; alleen de tablet-rasterindeling heeft een LSPosed-hook in de launcher nodig.</string>
+    <string name="recents_section_lsposed">LSPosed (alleen Raster-modus)</string>
     <string name="recents_xposed_ok">LSPosed-module actief.</string>
     <string name="recents_xposed_missing">LSPosed-module niet actief.</string>
     <string name="recents_xposed_hint">Open je Xposed-manager (LSPosed / Vector), schakel \"Key2 Toolbox\" in, vink de launcher (com.android.launcher3) en deze app aan in het bereik en forceer daarna het stoppen van de launcher. Vereist een Xposed-framework op APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Indeling van het Overzicht</string>
-    <string name="recents_grid_desc">Raster forceert de tablet-indeling met twee rijen voor het Overzicht (het startscherm en de hotseat kunnen iets verschuiven, omdat ze het indelingsprofiel delen). Mozaïek is Raster met versprongen tegelhoogtes.</string>
+    <string name="recents_grid_desc">Raster forceert de tablet-indeling met twee rijen voor het Overzicht (het startscherm en de hotseat kunnen iets verschuiven, omdat ze het indelingsprofiel delen). Mozaïek en Slanke lijst worden als eigen overlay getekend en raken de launcher nooit aan.</string>
     <string name="recents_mode_stock">Standaard (één rij)</string>
     <string name="recents_mode_grid">Raster (twee rijen)</string>
-    <string name="recents_mode_masonry">Mozaïek (twee rijen, versprongen)</string>
+    <string name="recents_mode_masonry">Mozaïek (momentopname-quilt)</string>
+    <string name="recents_mode_slim">Slanke lijst (verticaal, geen momentopnames)</string>
+    <string name="recents_slim_note">Zelfstandige lijst - geen LSPosed nodig.</string>
+    <string name="recents_slim_empty">Niets anders om naar te wisselen.</string>
+    <string name="recents_slim_close_all">Alles sluiten</string>
+    <string name="recents_slim_app_info">App-info</string>
+    <string name="recents_masonry_note">Zelfstandige quilt met 3 kolommen vierkante tegels: de meest recente app is een grote 3x3-tegel, de rest 2x2 of 1x1, elk met de laatste momentopname van de app onder een naamstrook in de kleur van de app. Geen LSPosed nodig; heeft root nodig om de momentopnames te lezen.</string>
     <string name="recents_transparency_title">Transparantie van de achtergrond</string>
     <string name="recents_transparency_desc">Hoeveel achtergrond zichtbaar is achter de kaarten van het Overzicht. Herstart de launcher om het toe te passen.</string>
     <string name="recents_restart_launcher">Launcher herstarten</string>

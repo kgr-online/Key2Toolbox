@@ -65,38 +65,6 @@ fun RecentsScreen(onBack: () -> Unit) {
             style = MaterialTheme.typography.bodySmall
         )
 
-        DescriptionDivider()
-        Text(
-            stringResource(R.string.recents_section_lsposed),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    stringResource(
-                        if (xposedActive) R.string.recents_xposed_ok
-                        else R.string.recents_xposed_missing
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (xposedActive) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.error
-                )
-                if (!xposedActive) {
-                    Text(
-                        stringResource(R.string.recents_xposed_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -131,9 +99,12 @@ fun RecentsScreen(onBack: () -> Unit) {
                         Text(stringResource(labelRes), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
-                if (mode == LayoutMode.SLIM_LIST) {
+                if (mode.isOverlay) {
                     Text(
-                        stringResource(R.string.recents_slim_note),
+                        stringResource(
+                            if (mode == LayoutMode.MASONRY) R.string.recents_masonry_note
+                            else R.string.recents_slim_note
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp)
@@ -142,6 +113,41 @@ fun RecentsScreen(onBack: () -> Unit) {
             }
         }
 
+        // LSPosed is only involved in Grid mode - the overlay modes and Stock don't touch it.
+        if (mode == LayoutMode.GRID) {
+            Text(
+                stringResource(R.string.recents_section_lsposed),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        stringResource(
+                            if (xposedActive) R.string.recents_xposed_ok
+                            else R.string.recents_xposed_missing
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (xposedActive) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error
+                    )
+                    if (!xposedActive) {
+                        Text(
+                            stringResource(R.string.recents_xposed_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        // The Overview scrim is a launcher property - only Grid (and Stock) use it.
+        if (mode == LayoutMode.GRID || mode == LayoutMode.STOCK) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -178,6 +184,7 @@ fun RecentsScreen(onBack: () -> Unit) {
                     valueRange = 0f..1f
                 )
             }
+        }
         }
 
         Row(

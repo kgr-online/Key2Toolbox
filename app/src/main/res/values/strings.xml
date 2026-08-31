@@ -98,7 +98,7 @@
     <string name="title_extra_dim">Extra Dim</string>
     <string name="subtitle_extra_dim">Dim below the system minimum, with an optional night schedule</string>
     <string name="title_recents">Recents Layout</string>
-    <string name="subtitle_recents">Two-row grid / masonry Overview via LSPosed</string>
+    <string name="subtitle_recents">Grid, vertical quilt, or lean list</string>
     <string name="title_toolbelt">Toolbelt</string>
     <string name="subtitle_toolbelt">BlackBerry Q20-style bottom bar that replaces system navigation</string>
     <string name="title_telemetry">Global Telemetry Block</string>
@@ -545,18 +545,19 @@
     <string name="settings_backup_module_adblock">AdBlock</string>
 
     <!-- Recents Layout -->
-    <string name="recents_intro">Makes Recents/Overview show two rows of smaller task cards, the way a tablet does, instead of the stock single row. It runs entirely through an LSPosed hook inside the launcher; this screen only stores the setting and restarts the launcher.</string>
-    <string name="recents_section_lsposed">LSPosed needed</string>
+    <string name="recents_intro">Four ways to show Recents. Stock and the two standalone layouts (Slim List, Masonry) work on their own; only the tablet Grid layout needs an LSPosed hook in the launcher.</string>
+    <string name="recents_section_lsposed">LSPosed (Grid mode only)</string>
     <string name="recents_xposed_ok">LSPosed module active.</string>
     <string name="recents_xposed_missing">LSPosed module not active.</string>
     <string name="recents_xposed_hint">Open your Xposed manager (LSPosed / Vector), enable \"Key2 Toolbox\", tick the launcher (com.android.launcher3) and this app in its scope, then force-stop the launcher. Requires an Xposed framework on APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Overview layout</string>
-    <string name="recents_grid_desc">Grid forces the launcher\'s tablet two-row layout for Recents (the home screen and hotseat may shift slightly, since they share the layout profile). Masonry is Grid with staggered tile heights.</string>
+    <string name="recents_grid_desc">Grid forces the launcher\'s tablet two-row layout for Recents (the home screen and hotseat may shift slightly, since they share the layout profile). Masonry and Slim List are drawn as their own overlay and never touch the launcher.</string>
     <string name="recents_mode_stock">Stock (single row)</string>
     <string name="recents_mode_grid">Grid (two rows)</string>
-    <string name="recents_mode_masonry">Masonry (two rows, staggered)</string>
+    <string name="recents_mode_masonry">Masonry (snapshot quilt)</string>
     <string name="recents_mode_slim">Slim List (vertical, no snapshots)</string>
-    <string name="recents_slim_note">Standalone list - doesn\'t need the LSPosed module below.</string>
+    <string name="recents_slim_note">Standalone list - no LSPosed needed.</string>
+    <string name="recents_masonry_note">Standalone 3-column quilt of square tiles - the most recent app is a large 3x3, the rest are 2x2 or 1x1 - each showing the app\'s last snapshot under a name strip tinted with the app\'s colour. No LSPosed needed; needs root to read the snapshots.</string>
     <string name="recents_slim_empty">Nothing else to switch to.</string>
     <string name="recents_slim_close_all">Close all</string>
     <string name="recents_slim_app_info">App info</string>
