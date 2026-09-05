@@ -219,31 +219,20 @@ object SlimRecentsController {
         return result
     }
 
-    /**
-     * A live screenshot of the current screen, for the "hero" tile - the
-     * foreground app has no fresh stored snapshot (those are taken on
-     * background) so its stored tile is stale or black. Root `screencap`
-     * (the AccessibilityService `takeScreenshot` API needs a capability this
-     * service doesn't hold, and `adb`-level screencap is blocked on this ROM;
-     * root works). [cropTop] / [cropBottom] px trim the status bar and, if it's
-     * up, the toolbelt strip. Half-decoded. `null` on any failure. Blocking.
-     */
-    fun captureScreen(cropTop: Int, cropBottom: Int): Bitmap? = runCatching {
-        val b64 = RootShell.run("screencap -p 2>/dev/null | base64 -w0").outString.trim()
-        if (b64.isEmpty()) return null
-        val bytes = Base64.decode(b64, Base64.NO_WRAP)
-        val full = BitmapFactory.decodeByteArray(bytes, 0, bytes.size,
-            BitmapFactory.Options().apply { inSampleSize = 2 }) ?: return null
-        val t = (cropTop / 2).coerceIn(0, full.height - 1)
-        val b = (cropBottom / 2).coerceIn(0, full.height - 1 - t)
-        if (t == 0 && b == 0) full
-        else Bitmap.createBitmap(full, 0, t, full.width, (full.height - t - b).coerceAtLeast(1))
-    }.getOrNull()
-
     // --- per-app banner colour ------------------------------------
 
-    private val bannerColorCache = HashMap<String, Int>()
+    private val bannerColorCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private val DEFAULT_BANNER = Color.rgb(38, 38, 38)
+
+    /**
+     * Warm [bannerColor] for every task off the main thread. Each miss runs a
+     * Palette pass (~3-10 ms) that would otherwise land on the main thread while
+     * the Masonry cards are built, stacking into visible jank on the first open.
+     * Call from the Recents worker before showing the overlay.
+     */
+    fun primeBannerColors(tasks: List<SlimTask>) {
+        tasks.forEach { bannerColor(it.packageName, it.icon) }
+    }
 
     /**
      * A muted, desaturated colour drawn from the app's icon - the card's
@@ -295,8 +284,20 @@ object SlimRecentsController {
             ?.takeIf { it.isNotEmpty() }
     }
 
-    private fun labelAndIcon(pm: PackageManager, pkg: String): Pair<String, Drawable?> = runCatching {
-        val ai = pm.getApplicationInfo(pkg, 0)
-        pm.getApplicationLabel(ai).toString() to pm.getApplicationIcon(ai)
-    }.getOrElse { pkg to null }
+    /**
+     * Label + icon are stable for the life of an install and the PM lookup
+     * (especially [PackageManager.getApplicationIcon], which inflates the
+     * adaptive-icon drawable) is a measurable slice of [listTasks] with a dozen
+     * tasks. Cache per package for the session so the second+ Recents open does
+     * no PM work at all.
+     */
+    private val labelIconCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Drawable?>>()
+
+    private fun labelAndIcon(pm: PackageManager, pkg: String): Pair<String, Drawable?> =
+        labelIconCache.getOrPut(pkg) {
+            runCatching {
+                val ai = pm.getApplicationInfo(pkg, 0)
+                pm.getApplicationLabel(ai).toString() to pm.getApplicationIcon(ai)
+            }.getOrElse { pkg to null }
+        }
 }

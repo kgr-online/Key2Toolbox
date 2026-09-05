@@ -11,6 +11,16 @@ All notable changes to Key2 Toolbox are documented here.
   `KEYCODE_MENU` (opens the foreground app's options menu). Both run on the root
   worker. A magnifying-glass icon joins the slot icon picker.
 
+### Changed
+
+- **Masonry Recents opens straight away.** The live `screencap` for the "hero"
+  tile cost ~2 s on the Key2's square panel and sat on the open path, so the
+  whole quilt waited on it. The hero now just uses its stored snapshot like
+  every other tile, the window comes up right after the (cached) task list, and
+  snapshots stream in behind it. App label/icon lookups and the per-app banner
+  colours are cached and pre-warmed off the main thread. Cold open ~2 s → first
+  frame in tens of ms; a warm re-open paints snapshots in ~150 ms.
+
 ## [5.3.7] - 2026-08-31
 
 ### Changed

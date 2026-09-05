@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.graphics.Bitmap
 import android.graphics.Rect
 import android.os.BatteryManager
 import android.os.Bundle
@@ -234,22 +233,21 @@ class Key2AccessibilityService : AccessibilityService() {
         // Mode read is non-root (world-readable Global key) so it never adds
         // shell-spawn latency to this path.
         val mode = RecentsController.getLayoutMode(this)
+        val t0 = android.os.SystemClock.uptimeMillis()
         worker.execute {
             try {
                 if (mode.isOverlay) {
                     val cards = mode == RecentsController.LayoutMode.MASONRY
                     val tasks = SlimRecentsController.listTasks(this)
-                    // The foreground app has no fresh task snapshot (those are
-                    // taken on background), so its tile would be black/stale.
-                    // Grab a live screenshot for it - before the overlay's own
-                    // window goes up, so the scrim isn't in the shot.
-                    val liveTop = if (cards && tasks.isNotEmpty()) captureForRecents() else null
-                    val topId = tasks.firstOrNull()?.taskId
+                    Log.d("Key2Toolbox", "openRecents: listTasks ${tasks.size} in ${android.os.SystemClock.uptimeMillis() - t0} ms")
+                    // Warm the per-app banner colours here so the Palette passes
+                    // don't stack up on the main thread mid-build.
+                    if (cards) SlimRecentsController.primeBannerColors(tasks)
+                    // Show the window straight after the (cheap) task list -
+                    // nothing below this blocks the first frame. Cards come up
+                    // with a placeholder; snapshots stream in right after.
                     mainHandler.post {
                         SlimRecentsOverlayController.show(this, tasks, cards)
-                        if (liveTop != null && topId != null) {
-                            SlimRecentsOverlayController.fillSnapshots(mapOf(topId to liveTop))
-                        }
                         // Slim List's window just attached above the Toolbelt's
                         // in z-order (both are TYPE_ACCESSIBILITY_OVERLAY from
                         // this app; whichever attaches most recently wins).
@@ -261,14 +259,16 @@ class Key2AccessibilityService : AccessibilityService() {
                         ToolbeltOverlayController.hide()
                         ToolbeltOverlayController.refresh(this, ::handleToolbeltAction)
                     }
-                    // Masonry: window is already up with placeholders; load the
-                    // file snapshots for the rest and stream them in. The top
-                    // tile keeps its live screenshot when we got one.
+                    // Masonry: stream every tile's stored snapshot in, hero
+                    // included. A root `screencap` for a live hero shot costs
+                    // ~2 s on this device's square panel - far too slow to sit on
+                    // the open path - and the hero's own stored snapshot is
+                    // usually fresh enough (the system re-snapshots the
+                    // foreground task often), so we just use it like any other.
                     if (cards && tasks.isNotEmpty()) {
-                        val ids = if (liveTop != null) tasks.drop(1).map { it.taskId }
-                        else tasks.map { it.taskId }
-                        val snaps = SlimRecentsController.loadSnapshots(ids)
+                        val snaps = SlimRecentsController.loadSnapshots(tasks.map { it.taskId })
                         mainHandler.post { SlimRecentsOverlayController.fillSnapshots(snaps) }
+                        Log.d("Key2Toolbox", "openRecents: snapshots ready in ${android.os.SystemClock.uptimeMillis() - t0} ms")
                     }
                 } else {
                     performGlobalAction(GLOBAL_ACTION_RECENTS)
@@ -277,22 +277,6 @@ class Key2AccessibilityService : AccessibilityService() {
                 Log.e("Key2Toolbox", "openRecents failed", t)
             }
         }
-    }
-
-    /**
-     * A live screenshot of the current screen for the Masonry "hero" tile - the
-     * foreground app has no fresh stored snapshot. Trims the status bar and the
-     * toolbelt strip. Blocking (root screencap) - call off the main thread and
-     * before the overlay attaches. `null` on failure -> caller falls back to the
-     * stored snapshot.
-     */
-    private fun captureForRecents(): Bitmap? {
-        val sbId = resources.getIdentifier("status_bar_height", "dimen", "android")
-        val top = if (sbId > 0) resources.getDimensionPixelSize(sbId) else 0
-        val belt = prefs?.let {
-            (ToolbeltController.reservedDp(it) * resources.displayMetrics.density).toInt()
-        } ?: 0
-        return SlimRecentsController.captureScreen(top, belt)
     }
 
     private fun handleToolbeltAction(action: ToolbeltAction, arg: String?) {
