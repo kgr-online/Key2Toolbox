@@ -323,6 +323,8 @@ class Key2AccessibilityService : AccessibilityService() {
                     performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
                 else worker.execute { RootShell.run("input keyevent 120") }
             ToolbeltAction.VOICE_ASSIST -> launchVoiceAssist()
+            ToolbeltAction.OPEN_MENU -> worker.execute { RootShell.run("input keyevent 82") }
+            ToolbeltAction.SEARCH -> worker.execute { RootShell.run("input keyevent 84") }
             ToolbeltAction.DIALER_KEYPAD -> {
                 try {
                     startActivity(Intent(Intent.ACTION_DIAL).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

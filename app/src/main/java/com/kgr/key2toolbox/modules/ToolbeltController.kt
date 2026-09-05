@@ -79,6 +79,10 @@ object ToolbeltController {
         LOCK_SCREEN("lock_screen"),
         SPLIT_SCREEN("split_screen"),
         VOICE_ASSIST("voice_assist"),
+        /** Send KEYCODE_MENU - opens the foreground app's options menu. */
+        OPEN_MENU("open_menu"),
+        /** Send KEYCODE_SEARCH - spawns the system / app search. */
+        SEARCH("search"),
         /** Open the default phone app straight to the dialpad (ACTION_DIAL). */
         DIALER_KEYPAD("dialer_keypad"),
         /**
@@ -120,6 +124,7 @@ object ToolbeltController {
         BELL("bell", R.drawable.ic_toolbelt_bell),
         GEAR("gear", R.drawable.ic_toolbelt_gear),
         ASSIST("assist", R.drawable.ic_toolbelt_assist),
+        SEARCH("search", R.drawable.ic_toolbelt_search),
         GRID("grid", R.drawable.ic_toolbelt_grid);
 
         companion object {

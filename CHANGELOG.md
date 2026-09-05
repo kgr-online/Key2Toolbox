@@ -2,6 +2,15 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.3.8] - 2026-09-05
+
+### Added
+
+- **Toolbelt: Search and Open Menu slot actions.** *Search* sends
+  `KEYCODE_SEARCH` (spawns the system / app search); *Open Menu* sends
+  `KEYCODE_MENU` (opens the foreground app's options menu). Both run on the root
+  worker. A magnifying-glass icon joins the slot icon picker.
+
 ## [5.3.7] - 2026-08-31
 
 ### Changed
