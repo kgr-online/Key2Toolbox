@@ -183,19 +183,26 @@ private fun MenuEntry(screen: Screen, onClick: () -> Unit) {
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(screen.title, style = MaterialTheme.typography.titleMedium)
             if (screen.subtitle.isNotEmpty() || screen.access.isNotEmpty()) {
-                Row(verticalAlignment = Alignment.Top) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
                     if (screen.subtitle.isNotEmpty()) {
                         Text(
                             screen.subtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f, fill = false)
+                            modifier = Modifier.weight(1f)
                         )
+                    } else {
+                        Spacer(Modifier.weight(1f))
                     }
                     if (screen.access.isNotEmpty()) {
                         Spacer(Modifier.width(6.dp))
