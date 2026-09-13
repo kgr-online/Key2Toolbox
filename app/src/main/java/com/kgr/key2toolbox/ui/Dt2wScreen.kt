@@ -27,7 +27,17 @@ fun Dt2wScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // Raw driver-reported state - diagnostic only. On this touch driver,
+    // the gesture status fields (wg_enabled / wakeup_gesture.double_tap)
+    // only update to reflect the armed state after the screen actually
+    // suspends - not immediately after the echo write while the screen
+    // is still on. Do NOT drive the switch's checked state off this, or
+    // it will always snap back right after being toggled.
     var state by remember { mutableStateOf(Dt2wController.State.UNKNOWN) }
+
+    // What the user actually asked for - this drives the switch position.
+    var intendedOn by remember { mutableStateOf(false) }
+
     var persisted by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
@@ -35,6 +45,7 @@ fun Dt2wScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             state = Dt2wController.currentState()
+            intendedOn = state == Dt2wController.State.ON
             persisted = Dt2wController.isPersisted()
         }
     }
@@ -55,21 +66,31 @@ fun Dt2wScreen(onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.generic_enabled))
             Switch(
-                checked = state == Dt2wController.State.ON,
+                checked = intendedOn,
                 enabled = !busy,
                 onCheckedChange = { enable ->
                     busy = true
+                    intendedOn = enable // optimistic - reverted below only on actual write failure
                     scope.launch(Dispatchers.IO) {
-                        if (enable) {
+                        val result = if (enable) {
                             Dt2wController.enablePersist(context)
                             Dt2wController.applyLiveOn()
                         } else {
                             Dt2wController.disablePersist()
                             Dt2wController.applyLiveOff()
                         }
+
+                        // Diagnostic readback only - won't reflect armed
+                        // state until the next suspend, so it is NOT used
+                        // to drive the switch.
                         state = Dt2wController.currentState()
                         persisted = Dt2wController.isPersisted()
                         busy = false
+
+                        if (!result.success) {
+                            intendedOn = !enable
+                        }
+
                         val persistedTag = context.getString(
                             if (persisted == enable) R.string.persisted_ok else R.string.persisted_mismatch
                         )
