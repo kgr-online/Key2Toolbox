@@ -616,4 +616,32 @@
     <string name="toolbelt_privacy_indicator_hint">Every time an app reads your location, Android briefly forces the navigation bar back on top of the current fullscreen app to show the status-bar location icon. This turns that icon off system-wide (device_config privacy location_indicators_enabled = false) and freezes feature-flag sync so it survives a reboot. Trade-offs: you lose the visual cue that an app is using GPS, and no other device_config flag will update from the server. The microphone and camera indicators are not affected. Needs root.</string>
     <string name="toolbelt_debug_hint">Nav bar not hiding after enabling? Run: adb logcat | grep Key2Toolbox-Xposed and each hook logs whether it attached. Launcher class names can drift between LineageOS builds; a launcher restart is needed for the nav bar to relayout.</string>
 
+    <!-- Zygisk Detach -->
+    <string name="title_zygisk_detach">Zygisk Detach</string>
+    <string name="subtitle_zygisk_detach">Stop the Play Store force-updating chosen apps</string>
+    <string name="desc_zygisk_detach">Detaches chosen apps from the Play Store so it stops updating them against your auto-update setting. Enabling installs the zygisk-detach module (a Zygisk hook on libbinder); pick the apps to detach below. Turning it off disables the module but keeps your detach list. Needs root and Zygisk. Installing, enabling or disabling the module takes effect at boot, while list changes apply as soon as Play Store restarts.</string>
+    <string name="zygisk_detach_enable">Enable Zygisk Detach</string>
+    <string name="zygisk_detach_module_version">Module: %1$s</string>
+    <string name="zygisk_detach_module_missing">Module: not installed</string>
+    <string name="zygisk_detach_reboot_required">Reboot required for the Zygisk hook to pick up this change. You can edit the list now, but detaching only takes effect after the reboot.</string>
+    <string name="zygisk_detach_no_zygisk">Zygisk doesn\'t look enabled. Turn it on in Magisk\'s settings, then reboot - the hook can\'t load without it.</string>
+    <string name="zygisk_detach_denylisted">Play Store is on Magisk\'s DenyList (enforced), so Zygisk modules aren\'t loaded into it and detaching silently does nothing.</string>
+    <string name="zygisk_detach_remove_from_denylist">Remove from DenyList</string>
+    <string name="zygisk_detach_section_apps">Detached apps</string>
+    <string name="zygisk_detach_selected_count">%1$d selected</string>
+    <string name="zygisk_detach_filter_user">User apps</string>
+    <string name="zygisk_detach_filter_all">All apps</string>
+    <string name="zygisk_detach_not_installed">not installed</string>
+    <string name="zygisk_detach_no_match">No apps match \"%1$s\"</string>
+    <string name="zygisk_detach_loading_apps">Loading apps…</string>
+    <string name="zygisk_detach_list_unreadable">Couldn\'t read the detach list - it may be corrupted. Applying replaces it with your current selection.</string>
+    <string name="zygisk_detach_disabled_hint">Turn on Zygisk Detach above to manage the list.</string>
+    <string name="status_zygisk_detach_installing_module">Installing module…</string>
+    <string name="status_zygisk_detach_enabled">Zygisk Detach enabled.</string>
+    <string name="status_zygisk_detach_disabled">Zygisk Detach disabled. Reboot to unload the hook. Your detach list is kept.</string>
+    <string name="status_zygisk_detach_module_failed">Module install failed: %1$s</string>
+    <string name="status_zygisk_detach_applied">Applied. %1$d detached; Play Store was stopped so it re-reads the list.</string>
+    <string name="status_zygisk_detach_apply_failed">Couldn\'t update the detach list: %1$s</string>
+    <string name="status_zygisk_detach_denylist_removed">Play Store removed from the DenyList and stopped. It loads the hook the next time it starts.</string>
+
 </resources>

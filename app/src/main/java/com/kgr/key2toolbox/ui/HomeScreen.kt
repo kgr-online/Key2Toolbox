@@ -85,7 +85,8 @@ val systemScreens = listOf(
     Screen.LedNotify,
     Screen.PlayStoreTagger,
     Screen.TickerNotifications,
-    Screen.Zram
+    Screen.Zram,
+    Screen.ZygiskDetach
 )
 
 @Composable
@@ -154,6 +155,7 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
         Screen.PlayStoreTagger -> PlayStoreTaggerScreen(onBack)
         Screen.TickerNotifications -> TickerNotificationsScreen(onBack)
         Screen.Zram -> ZramScreen(onBack)
+        Screen.ZygiskDetach -> ZygiskDetachScreen(onBack)
         Screen.BatteryUsage -> BatteryUsageScreen(onBack)
         Screen.Home -> Unit
     }

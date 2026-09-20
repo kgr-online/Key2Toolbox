@@ -138,4 +138,8 @@ sealed class Screen(
         R.string.title_ticker_notifications, R.string.subtitle_ticker_notifications,
         listOf(AccessType.ROOT, AccessType.ACCESSIBILITY, AccessType.NOTIFICATION)
     )
+    data object ZygiskDetach : Screen(
+        R.string.title_zygisk_detach, R.string.subtitle_zygisk_detach,
+        listOf(AccessType.ROOT)
+    )
 }
