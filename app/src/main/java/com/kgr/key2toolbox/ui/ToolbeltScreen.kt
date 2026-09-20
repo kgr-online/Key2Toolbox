@@ -74,6 +74,7 @@ fun ToolbeltScreen(onBack: () -> Unit) {
     var haptic by remember { mutableStateOf(ToolbeltController.hapticLevel(prefs)) }
     var collapsible by remember { mutableStateOf(ToolbeltController.isCollapsible(prefs)) }
     var colorMode by remember { mutableStateOf(ToolbeltController.colorMode(prefs)) }
+    var barOpacity by remember { mutableStateOf(ToolbeltController.barOpacityPercent(prefs)) }
     var privacyIndicatorOff by remember {
         mutableStateOf(ToolbeltController.isPrivacyIndicatorOff(prefs))
     }
@@ -243,6 +244,13 @@ fun ToolbeltScreen(onBack: () -> Unit) {
                 prefs.edit().putInt(ToolbeltController.KEY_COLOR_MODE, it).apply()
             }
         )
+        IntSliderRow(
+            label = stringResource(R.string.toolbelt_bar_opacity),
+            value = barOpacity, valueText = "$barOpacity%", range = 15f..100f, steps = 16,
+            onChange = { barOpacity = it }, onCommit = {
+                prefs.edit().putInt(ToolbeltController.KEY_BAR_OPACITY, barOpacity).apply()
+            }
+        )
 
         DescriptionDivider()
         Text(
@@ -377,7 +385,7 @@ private fun loadLaunchableApps(context: android.content.Context): List<Pair<Stri
 }
 
 @Composable
-private fun IntSliderRow(
+fun IntSliderRow(
     label: String,
     value: Int,
     valueText: String,
@@ -406,7 +414,7 @@ private fun IntSliderRow(
 }
 
 @Composable
-private fun <T> PickerRow(
+fun <T> PickerRow(
     label: String,
     current: String,
     options: List<Pair<T, String>>,

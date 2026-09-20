@@ -41,6 +41,7 @@ object ToolbeltController {
     const val KEY_ICON_SCALE = "toolbelt_icon_scale"       // icon size, percent of row height
     const val KEY_HAPTIC = "toolbelt_haptic"               // 0 off / 1 light / 2 medium / 3 strong
     const val KEY_COLOR_MODE = "toolbelt_color_mode"       // 0 fixed / 1 material-you / 2 follow-app
+    const val KEY_BAR_OPACITY = "toolbelt_bar_opacity"     // percent, 0-100; applies on top of any color mode
     const val KEY_PRIVACY_INDICATOR_OFF = "toolbelt_privacy_indicator_off" // suppress the location privacy icon
 
     // device_config knob for the status-bar location icon. When an app reads
@@ -190,6 +191,16 @@ object ToolbeltController {
     fun colorMode(sp: SharedPreferences): Int = sp.getInt(KEY_COLOR_MODE, 0).coerceIn(0, 2)
 
     /**
+     * How opaque the belt's *background bar* is, 0-100. Layers on top of
+     * whichever [colorMode] is active - default 100 reproduces today's exact
+     * colors unchanged. Icon tint is never affected, only the bar behind it.
+     * Clamped to a 15 floor so the belt can't be accidentally made fully
+     * invisible (indistinguishable from broken).
+     */
+    fun barOpacityPercent(sp: SharedPreferences): Int =
+        sp.getInt(KEY_BAR_OPACITY, 100).coerceIn(15, 100)
+
+    /**
      * [bar background, icon tint] for the current colour mode. Called from the
      * accessibility service context. All modes reserve the belt height as a
      * bottom inset - transparent mode just doesn't paint over it, so the app's
@@ -198,7 +209,8 @@ object ToolbeltController {
     fun beltColors(context: Context): IntArray {
         val fixedBar = android.graphics.Color.rgb(10, 10, 10)
         val fixedIcon = android.graphics.Color.WHITE
-        return when (colorMode(prefs(context))) {
+        val sp = prefs(context)
+        val raw = when (colorMode(sp)) {
             1 -> {
                 val night = (context.resources.configuration.uiMode and
                     android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
@@ -220,6 +232,20 @@ object ToolbeltController {
             2 -> intArrayOf(android.graphics.Color.argb(0x1F, 0, 0, 0), android.graphics.Color.WHITE)
             else -> intArrayOf(fixedBar, fixedIcon)
         }
+        val opacity = barOpacityPercent(sp)
+        if (opacity >= 100) return raw
+        return intArrayOf(withOpacity(raw[0], opacity), raw[1])
+    }
+
+    /** Scales [color]'s existing alpha by [percent] (0-100); RGB channels untouched. */
+    private fun withOpacity(color: Int, percent: Int): Int {
+        val newAlpha = (android.graphics.Color.alpha(color) * percent / 100f).toInt().coerceIn(0, 255)
+        return android.graphics.Color.argb(
+            newAlpha,
+            android.graphics.Color.red(color),
+            android.graphics.Color.green(color),
+            android.graphics.Color.blue(color)
+        )
     }
 
     /**

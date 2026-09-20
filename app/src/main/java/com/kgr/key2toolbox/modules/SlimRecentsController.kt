@@ -1,6 +1,7 @@
 package com.kgr.key2toolbox.modules
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -239,6 +240,58 @@ object SlimRecentsController {
         if (t == 0 && b == 0) full
         else Bitmap.createBitmap(full, 0, t, full.width, (full.height - t - b).coerceAtLeast(1))
     }.getOrNull()
+
+    // --- overlay scrim appearance (Slim List / Masonry background) --------
+    //
+    // In-process only - unlike RecentsController's GRID/STOCK scrim (a
+    // Settings.Global key written with root and read by the launcher hook),
+    // this scrim is painted directly by SlimRecentsOverlayController in this
+    // same process, so a plain SharedPreferences round-trip is enough. Shares
+    // ToolbeltController.PREFS ("key2tweaks") - already the in-process config
+    // file this overlay reads from for beltInsetPx().
+
+    /** 0 = fixed near-black (today's look), 1 = follows Material You. */
+    const val KEY_SCRIM_COLOR_MODE = "recents_slim_scrim_color_mode"
+
+    /** Scrim opacity, percent 0-100. Default 78 reproduces the previous
+     *  hardcoded Color.argb(200, 0, 0, 0) (200/255 ≈ 78%) unchanged. */
+    const val KEY_SCRIM_OPACITY = "recents_slim_scrim_opacity"
+
+    private fun prefs(context: Context): SharedPreferences =
+        context.getSharedPreferences(ToolbeltController.PREFS, Context.MODE_PRIVATE)
+
+    fun scrimColorMode(sp: SharedPreferences): Int =
+        sp.getInt(KEY_SCRIM_COLOR_MODE, 0).coerceIn(0, 1)
+
+    fun scrimOpacityPercent(sp: SharedPreferences): Int =
+        sp.getInt(KEY_SCRIM_OPACITY, 78).coerceIn(15, 100)
+
+    /**
+     * The full-screen scrim colour behind the Slim List / Masonry rows, with
+     * [scrimOpacityPercent] already applied to the alpha channel. Called from
+     * the accessibility service context, same as [ToolbeltController.beltColors].
+     */
+    fun scrimColor(context: Context): Int {
+        val sp = prefs(context)
+        val baseRgb = when (scrimColorMode(sp)) {
+            1 -> {
+                val night = (context.resources.configuration.uiMode and
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                    android.content.res.Configuration.UI_MODE_NIGHT_YES
+                try {
+                    context.getColor(
+                        if (night) android.R.color.system_neutral1_900
+                        else android.R.color.system_neutral1_50
+                    )
+                } catch (_: Throwable) {
+                    Color.BLACK
+                }
+            }
+            else -> Color.BLACK
+        }
+        val alpha = (255 * scrimOpacityPercent(sp) / 100f).toInt().coerceIn(0, 255)
+        return Color.argb(alpha, Color.red(baseRgb), Color.green(baseRgb), Color.blue(baseRgb))
+    }
 
     // --- per-app banner colour ------------------------------------
 

@@ -563,6 +563,9 @@
     <string name="recents_slim_app_info">App info</string>
     <string name="recents_transparency_title">Background transparency</string>
     <string name="recents_transparency_desc">How much wallpaper shows through behind the Overview cards. Restarts the launcher to apply.</string>
+    <string name="recents_slim_appearance_section">Appearance</string>
+    <string name="recents_slim_scrim_color">Background colour</string>
+    <string name="recents_slim_scrim_opacity">Background opacity</string>
     <string name="recents_restart_launcher">Restart launcher</string>
     <string name="recents_restart_systemui">Restart SystemUI</string>
     <string name="recents_debug_hint">Not working after enabling? Run: adb logcat | grep Key2Toolbox-Xposed and each hook logs whether it attached. Launcher3 method names can drift between LineageOS builds.</string>
@@ -583,6 +586,7 @@
     <string name="toolbelt_icon_size">Icon size</string>
     <string name="toolbelt_haptics">Haptic feedback</string>
     <string name="toolbelt_color">Bar colour</string>
+    <string name="toolbelt_bar_opacity">Background opacity</string>
     <string-array name="toolbelt_haptic_levels">
         <item>Off</item>
         <item>Light</item>
@@ -593,6 +597,10 @@
         <item>Fixed (black)</item>
         <item>Material You</item>
         <item>Translucent</item>
+    </string-array>
+    <string-array name="recents_slim_scrim_color_modes">
+        <item>Dark</item>
+        <item>Material You</item>
     </string-array>
     <string name="toolbelt_slots_section">Slots</string>
     <string name="toolbelt_slot_n">Slot %1$d</string>

@@ -24,12 +24,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.RecentsController.LayoutMode
+import com.kgr.key2toolbox.modules.SlimRecentsController
+import com.kgr.key2toolbox.modules.ToolbeltController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,10 +41,16 @@ import kotlinx.coroutines.withContext
 @Composable
 fun RecentsScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val prefs = remember {
+        context.getSharedPreferences(ToolbeltController.PREFS, android.content.Context.MODE_PRIVATE)
+    }
 
     var xposedActive by remember { mutableStateOf(RecentsController.isXposedActive()) }
     var mode by remember { mutableStateOf(LayoutMode.STOCK) }
     var scrim by remember { mutableFloatStateOf(1f) }
+    var scrimColorMode by remember { mutableStateOf(SlimRecentsController.scrimColorMode(prefs)) }
+    var scrimOpacity by remember { mutableStateOf(SlimRecentsController.scrimOpacityPercent(prefs)) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -111,6 +121,36 @@ fun RecentsScreen(onBack: () -> Unit) {
                     )
                 }
             }
+        }
+
+        // Slim List / Masonry paint their own full-screen scrim in-process - no
+        // launcher hook involved, so this is a separate control from the GRID/
+        // STOCK transparency slider below.
+        if (mode.isOverlay) {
+            DescriptionDivider()
+            Text(
+                stringResource(R.string.recents_slim_appearance_section),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
+            val scrimColorLabels = stringArrayResource(R.array.recents_slim_scrim_color_modes)
+            PickerRow(
+                label = stringResource(R.string.recents_slim_scrim_color),
+                current = scrimColorLabels.getOrElse(scrimColorMode) { "$scrimColorMode" },
+                options = listOf(0, 1).map { it to scrimColorLabels.getOrElse(it) { "$it" } },
+                onPick = {
+                    scrimColorMode = it
+                    prefs.edit().putInt(SlimRecentsController.KEY_SCRIM_COLOR_MODE, it).apply()
+                }
+            )
+            IntSliderRow(
+                label = stringResource(R.string.recents_slim_scrim_opacity),
+                value = scrimOpacity, valueText = "$scrimOpacity%", range = 15f..100f, steps = 16,
+                onChange = { scrimOpacity = it }, onCommit = {
+                    prefs.edit().putInt(SlimRecentsController.KEY_SCRIM_OPACITY, scrimOpacity).apply()
+                }
+            )
         }
 
         // LSPosed is only involved in Grid mode - the overlay modes and Stock don't touch it.

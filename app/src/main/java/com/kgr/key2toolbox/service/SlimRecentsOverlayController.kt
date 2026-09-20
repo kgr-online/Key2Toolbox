@@ -249,7 +249,7 @@ object SlimRecentsOverlayController {
         val belt = beltInsetPx(svc)
 
         val container = FrameLayout(svc).apply {
-            setBackgroundColor(Color.argb(200, 0, 0, 0))
+            setBackgroundColor(SlimRecentsController.scrimColor(svc))
         }
 
         val list = LinearLayout(svc).apply {
