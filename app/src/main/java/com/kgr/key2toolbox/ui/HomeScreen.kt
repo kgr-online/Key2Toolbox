@@ -75,7 +75,9 @@ val networkScreens = listOf(
     Screen.WirelessAdb,
     Screen.BtIdle,
     Screen.LocationIdle,
-    Screen.Telemetry
+    Screen.Telemetry,
+    Screen.CallProximitySleep,
+    Screen.PocketKeyboardLock
 )
 
 val systemScreens = listOf(
@@ -147,6 +149,8 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
         Screen.WirelessAdb -> WirelessAdbScreen(onBack)
         Screen.BtIdle -> BtIdleScreen(onBack)
         Screen.LocationIdle -> LocationIdleScreen(onBack)
+        Screen.CallProximitySleep -> CallProximitySleepScreen(onBack)
+        Screen.PocketKeyboardLock -> PocketKeyboardLockScreen(onBack)
         Screen.Telemetry -> TelemetryScreen(onBack)
         Screen.AdBlock -> AdBlockScreen(onBack)
         Screen.DenylistManager -> DenylistScreen(onBack)

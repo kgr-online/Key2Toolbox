@@ -644,4 +644,20 @@
     <string name="status_zygisk_detach_apply_failed">Couldn\'t update the detach list: %1$s</string>
     <string name="status_zygisk_detach_denylist_removed">Play Store removed from the DenyList and stopped. It loads the hook the next time it starts.</string>
 
+    <!-- Call Proximity Force-Sleep -->
+    <string name="title_call_proximity_sleep">Call Proximity Sleep</string>
+    <string name="subtitle_call_proximity_sleep">Force screen off on proximity during calls</string>
+    <string name="desc_call_proximity_sleep">PowerManager\'s own proximity-screen-off handling is broken on this device - the dialer detects near/far correctly, but the screen never actually blanks during a call. This forces the screen to sleep directly once the sensor reports \"near\" for the chosen debounce window, so holding the phone to your ear reliably sleeps the screen and keyboard instead of leaving both live.</string>
+    <string name="call_proximity_sleep_debounce_label">Debounce before forcing sleep</string>
+    <string name="status_call_proximity_sleep_enabled">Call proximity sleep enabled. Debounce: %1$d ms.</string>
+    <string name="status_call_proximity_sleep_disabled">Call proximity sleep disabled.</string>
+
+    <!-- Pocket Keyboard Lock -->
+    <string name="title_pocket_kbd_lock">Lockscreen Keyboard Lock</string>
+    <string name="subtitle_pocket_kbd_lock">Disable the physical keyboard while locked</string>
+    <string name="desc_pocket_kbd_lock">Disables the physical keyboard while the lockscreen is showing. The D-pad keys on this keyboard can navigate focus on the lockscreen and activate whatever\'s focused - including the emergency-call button - with no touchscreen involvement, which can trigger an accidental call from a pocket. Needs root.</string>
+    <string name="pocket_kbd_lock_pin_keyboard_note">Automatically skipped while \"Lockscreen PIN on Keyboard\" is enabled, so you\'re never locked out of your own unlock method.</string>
+    <string name="status_pocket_kbd_lock_enabled">Lockscreen keyboard lock enabled.</string>
+    <string name="status_pocket_kbd_lock_disabled">Lockscreen keyboard lock disabled.</string>
+
 </resources>

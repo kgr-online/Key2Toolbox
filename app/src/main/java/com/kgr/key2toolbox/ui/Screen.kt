@@ -134,6 +134,14 @@ sealed class Screen(
         R.string.title_location_idle, R.string.subtitle_location_idle,
         listOf(AccessType.ROOT)
     )
+    data object CallProximitySleep : Screen(
+        R.string.title_call_proximity_sleep, R.string.subtitle_call_proximity_sleep,
+        listOf(AccessType.ROOT)
+    )
+    data object PocketKeyboardLock : Screen(
+        R.string.title_pocket_kbd_lock, R.string.subtitle_pocket_kbd_lock,
+        listOf(AccessType.ROOT)
+    )
     data object TickerNotifications : Screen(
         R.string.title_ticker_notifications, R.string.subtitle_ticker_notifications,
         listOf(AccessType.ROOT, AccessType.ACCESSIBILITY, AccessType.NOTIFICATION)
