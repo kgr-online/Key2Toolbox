@@ -102,6 +102,10 @@ sealed class Screen(
         R.string.title_toolbelt, R.string.subtitle_toolbelt,
         listOf(AccessType.ACCESSIBILITY, AccessType.ROOT)
     )
+    data object Gestures : Screen(
+        R.string.title_gestures, R.string.subtitle_gestures,
+        listOf(AccessType.ACCESSIBILITY)
+    )
     data object Wifi5g : Screen(
         R.string.title_wifi5g, R.string.subtitle_wifi5g,
         listOf(AccessType.ROOT)

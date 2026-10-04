@@ -22,8 +22,8 @@ android {
         applicationId = "com.kgr.key2toolbox"
         minSdk = 28
         targetSdk = 34
-        versionCode = 40
-        versionName = "5.5.3"
+        versionCode = 41
+        versionName = "5.5.4"
     }
 
     signingConfigs {
@@ -103,4 +103,6 @@ dependencies {
     compileOnly("de.robv.android.xposed:api:82")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+
+    testImplementation("junit:junit:4.13.2")
 }

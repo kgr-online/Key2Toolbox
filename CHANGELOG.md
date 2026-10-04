@@ -2,6 +2,24 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.5.4] - 2026-10-05
+
+### Added
+
+- **Edge gestures: custom side strips** (ported from Q25 Toolbox). Thin invisible
+  strips on the left and right edges, each Off or Custom with its own thickness,
+  length and swipe distance. Every gesture (straight inward, diagonal up, diagonal
+  down), as a plain swipe or held, runs an action: Back, Home, Recents,
+  Notifications, Quick settings, Lock screen, Screenshot, Power menu, Split
+  screen, Flashlight or Previous app (defaults: swipe = Back, hold = Previous app,
+  diagonal down = Notifications, diagonal up = Quick settings). Optional arrow
+  that follows the finger (colours, size, travel, opacity, tilt, with a live
+  preview; each colour can come from the Material You palette: pick a family and
+  then a shade, and it follows the wallpaper), configurable vibration, apps where
+  the strips are switched off, and a button to copy one side onto the other. Not
+  shown on the lockscreen or with the screen off. Included in backups. The bottom strip and the native bottom-gesture
+  switch of Q25 Toolbox are not ported: the Toolbelt owns the bottom edge.
+
 ## [5.5.3] - 2026-10-04
 
 ### Added

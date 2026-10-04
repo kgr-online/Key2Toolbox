@@ -47,6 +47,7 @@ fun AppPickerScreen(
     onChange: (Set<String>) -> Unit,
     onBack: () -> Unit,
     countLabel: @Composable (selected: Int, total: Int) -> String,
+    description: String? = null,
 ) {
     val context = LocalContext.current
 
@@ -82,6 +83,9 @@ fun AppPickerScreen(
             TextButton(onClick = onBack) { Text(stringResource(R.string.generic_back)) }
         }
         Text(title, style = MaterialTheme.typography.headlineSmall)
+        description?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
 
         OutlinedTextField(
             value = query,

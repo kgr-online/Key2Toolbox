@@ -30,6 +30,7 @@ import com.kgr.key2toolbox.modules.AutoFocusController
 import com.kgr.key2toolbox.modules.BatteryUsageController
 import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.SlimRecentsController
+import com.kgr.key2toolbox.modules.GestureSettings
 import com.kgr.key2toolbox.modules.ToolbeltController
 import com.kgr.key2toolbox.modules.ToolbeltController.ToolbeltAction
 import java.util.Locale
@@ -179,6 +180,7 @@ class Key2AccessibilityService : AccessibilityService() {
             val alwaysOffNow = sp.getBoolean(KEY_NAV_ALWAYS_OFF, false)
             worker.execute { persistAlwaysOff(alwaysOffNow) }
         }
+        if (key.startsWith(GestureSettings.KEY_PREFIX)) GestureStripsController.reconcile(this)
         if (key == KEY_IME_BLOCK || key == KEY_IME_BLOCK_APPS) {
             reconcileImeBlock()
         }
@@ -240,6 +242,43 @@ class Key2AccessibilityService : AccessibilityService() {
      * always dispatches off [worker] - never call performGlobalAction's
      * stock-Overview branch or build the overlay on the calling thread.
      */
+    /** Runs the action assigned to an edge gesture. Back/Home first close our Recents overlay if it is up, like the keys do. */
+    fun performEdgeAction(a: GestureSettings.Action) {
+        when (a) {
+            GestureSettings.Action.NONE -> {}
+            GestureSettings.Action.BACK ->
+                if (RecentsOverlays.isShowing()) RecentsOverlays.hide() else performGlobalAction(GLOBAL_ACTION_BACK)
+            GestureSettings.Action.HOME -> {
+                if (RecentsOverlays.isShowing()) RecentsOverlays.hide(expandTaskId = null)
+                performGlobalAction(GLOBAL_ACTION_HOME)
+            }
+            GestureSettings.Action.RECENTS -> openRecents()
+            GestureSettings.Action.NOTIFICATIONS -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+            GestureSettings.Action.QUICK_SETTINGS -> performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+            GestureSettings.Action.LOCK_SCREEN -> performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+            GestureSettings.Action.SCREENSHOT -> performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+            GestureSettings.Action.POWER_MENU -> performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
+            GestureSettings.Action.SPLIT_SCREEN -> performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
+            GestureSettings.Action.FLASHLIGHT -> TorchToggle.toggle(this)
+            GestureSettings.Action.PREVIOUS_APP -> {
+                if (RecentsOverlays.isShowing()) RecentsOverlays.hide(animate = false)
+                val front = foregroundPkg
+                worker.execute { try { switchToPreviousApp(front) } catch (t: Throwable) { Log.e("Key2Toolbox", "previous app failed", t) } }
+            }
+        }
+    }
+
+    /**
+     * Resumes the app used before the one in front. [SlimRecentsController.listTasks] is newest first and leaves the
+     * home launcher out: if its first task is the app in front, the previous one is the second; if the front app is
+     * the launcher (or unknown to us), the first task is the one to go back to. Root dumpsys, so off the main thread.
+     */
+    private fun switchToPreviousApp(front: String?) {
+        val tasks = SlimRecentsController.listTasks(this)
+        val target = if (front != null && tasks.firstOrNull()?.packageName == front) tasks.getOrNull(1) else tasks.firstOrNull()
+        target?.let { SlimRecentsController.resumeTask(it) }
+    }
+
     private fun openRecents() {
         // The app in front, captured BEFORE the overlay window goes up so it cannot be confused with it.
         val frontPkg = foregroundPkg
@@ -458,8 +497,11 @@ class Key2AccessibilityService : AccessibilityService() {
                     // screen locked - close it immediately so it can never be
                     // sitting in front of the lock screen on wake.
                     RecentsOverlays.hide(animate = false)
+                    GestureStripsController.hide()
                     return
                 }
+                // Edge strips: rebuilt once the screen is on and the keyguard is gone (a no-op while locked).
+                GestureStripsController.reconcile(this@Key2AccessibilityService)
                 forceReconcile()
                 mainHandler.postDelayed({ forceReconcile() }, 300)
                 mainHandler.postDelayed({ forceReconcile() }, 600)
@@ -479,6 +521,7 @@ class Key2AccessibilityService : AccessibilityService() {
         } catch (e: Exception) {
             Log.e("Key2Toolbox", "Failed to register screenReceiver", e)
         }
+        GestureStripsController.reconcile(this)
 
         // Battery Usage: auto-reset stats once the level crosses the threshold while charging,
         // a stand-in for BATTERY_STATUS_FULL which this device's charging driver never reports.
@@ -808,6 +851,7 @@ class Key2AccessibilityService : AccessibilityService() {
             foregroundPkg = pkg
             reconcileImeBlock()
             SlimRecentsOverlayController.onForegroundChanged(pkg!!)
+            GestureStripsController.onForegroundChanged(this, pkg)
         }
 
         // Toolbelt: keep the belt attached; slide it away while the soft keyboard
@@ -1454,6 +1498,7 @@ class Key2AccessibilityService : AccessibilityService() {
 
     override fun onUnbind(intent: Intent?): Boolean {
         isRunning = false
+        GestureStripsController.hide()
         writeNodeBlocking(true) // never leave nav buttons dead
         restoreImeBlock()       // never leave the soft keyboard globally suppressed
         teardownToolbelt()      // never leave the real nav bar hidden with no belt to replace it
@@ -1482,6 +1527,7 @@ class Key2AccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         isRunning = false
         instance = null
+        GestureStripsController.hide()
         writeNodeBlocking(true)
         restoreImeBlock()
         teardownToolbelt()
