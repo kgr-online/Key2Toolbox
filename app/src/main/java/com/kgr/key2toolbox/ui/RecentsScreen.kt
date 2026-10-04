@@ -1,5 +1,8 @@
 package com.kgr.key2toolbox.ui
 
+import android.content.Context
+import android.os.Build
+import android.view.WindowManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kgr.key2toolbox.R
+import com.kgr.key2toolbox.modules.BlurSupportController
 import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.RecentsController.LayoutMode
 import com.kgr.key2toolbox.modules.SlimRecentsController
@@ -47,16 +51,41 @@ fun RecentsScreen(onBack: () -> Unit) {
     }
 
     var xposedActive by remember { mutableStateOf(RecentsController.isXposedActive()) }
+    // Is the module injected in the launcher (what the hooked Grid needs)? null until the root check returns.
+    var launcherHooked by remember { mutableStateOf<Boolean?>(null) }
     var mode by remember { mutableStateOf(LayoutMode.STOCK) }
     var scrim by remember { mutableFloatStateOf(1f) }
     var scrimColorMode by remember { mutableStateOf(SlimRecentsController.scrimColorMode(prefs)) }
     var scrimOpacity by remember { mutableStateOf(SlimRecentsController.scrimOpacityPercent(prefs)) }
+    var scrimBlur by remember { mutableStateOf(SlimRecentsController.scrimBlurPercent(prefs)) }
+    var animPct by remember { mutableStateOf(SlimRecentsController.animDurationPercent(prefs)) }
+    var gridCorner by remember { mutableStateOf(SlimRecentsController.gridCornerDp(prefs)) }
+    var quiltCorner by remember { mutableStateOf(SlimRecentsController.quiltCornerDp(prefs)) }
+    // Cross-window blur can be unavailable (battery saver, unsupported GPU path): say so instead of a dead slider.
+    val blurSupported = remember {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).isCrossWindowBlurEnabled
+    }
+
+    // Optional module that makes this ROM advertise blur support (reboot needed).
+    var blurModule by remember { mutableStateOf<Boolean?>(null) } // installed?
+    var blurUpstream by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val bi = BlurSupportController.isInstalled()
+            val bu = BlurSupportController.isUpstreamOnly()
+            withContext(Dispatchers.Main) { blurModule = bi; blurUpstream = bu }
+        }
+    }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val m = RecentsController.getLayoutMode()
             val s = RecentsController.getScrimAlpha()
+            val hooked = RecentsController.isLauncherHooked()
             withContext(Dispatchers.Main) {
+                launcherHooked = hooked
                 mode = m
                 scrim = s
                 xposedActive = RecentsController.isXposedActive()
@@ -123,10 +152,14 @@ fun RecentsScreen(onBack: () -> Unit) {
             }
         }
 
-        // Slim List / Masonry paint their own full-screen scrim in-process - no
+        // Grid falls back to our own overlay when the LSPosed module is not active (see
+        // Key2AccessibilityService.openRecents); with the module, the launcher draws it.
+        val gridOverlay = mode == LayoutMode.GRID && launcherHooked == false
+
+        // Slim List / Masonry (and the Grid fallback) paint their own full-screen scrim in-process - no
         // launcher hook involved, so this is a separate control from the GRID/
         // STOCK transparency slider below.
-        if (mode.isOverlay) {
+        if (mode.isOverlay || gridOverlay) {
             DescriptionDivider()
             Text(
                 stringResource(R.string.recents_slim_appearance_section),
@@ -151,6 +184,92 @@ fun RecentsScreen(onBack: () -> Unit) {
                     prefs.edit().putInt(SlimRecentsController.KEY_SCRIM_OPACITY, scrimOpacity).apply()
                 }
             )
+            IntSliderRow(
+                label = stringResource(R.string.recents_slim_scrim_blur),
+                value = scrimBlur, valueText = if (blurSupported) "$scrimBlur%" else "-",
+                range = 0f..100f, steps = 19,
+                onChange = { if (blurSupported) scrimBlur = it }, onCommit = {
+                    if (blurSupported) prefs.edit().putInt(SlimRecentsController.KEY_SCRIM_BLUR, scrimBlur).apply()
+                }
+            )
+            if (!blurSupported) {
+                Text(
+                    stringResource(R.string.recents_slim_blur_unsupported),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Offer the module while blur is unavailable, and keep it removable once installed.
+            val installed = blurModule
+            if (installed != null && (!blurSupported || installed)) {
+                Text(
+                    stringResource(R.string.recents_blur_module_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (installed && !blurSupported) {
+                    Text(
+                        stringResource(R.string.recents_blur_module_pending),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (!blurUpstream) {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                if (installed) BlurSupportController.uninstall() else BlurSupportController.install()
+                                val now = BlurSupportController.isInstalled()
+                                withContext(Dispatchers.Main) { blurModule = now }
+                            }
+                        }
+                    ) {
+                        Text(
+                            stringResource(
+                                if (installed) R.string.recents_blur_module_remove
+                                else R.string.recents_blur_module_install
+                            )
+                        )
+                    }
+                }
+            }
+            // Corner radius only applies to the tile layouts; the vertical list has its own fixed pills.
+            if (gridOverlay) {
+                IntSliderRow(
+                    label = stringResource(R.string.recents_slim_corner_grid),
+                    value = gridCorner,
+                    valueText = if (gridCorner == 0) stringResource(R.string.recents_slim_corner_square) else "$gridCorner dp",
+                    range = 0f..SlimRecentsController.MAX_CORNER_DP.toFloat(), steps = SlimRecentsController.MAX_CORNER_DP - 1,
+                    onChange = { gridCorner = it }, onCommit = {
+                        prefs.edit().putInt(SlimRecentsController.KEY_GRID_CORNER_DP, gridCorner).apply()
+                    }
+                )
+            }
+            if (mode == LayoutMode.MASONRY) {
+                IntSliderRow(
+                    label = stringResource(R.string.recents_slim_corner_quilt),
+                    value = quiltCorner,
+                    valueText = if (quiltCorner == 0) stringResource(R.string.recents_slim_corner_square) else "$quiltCorner dp",
+                    range = 0f..SlimRecentsController.MAX_CORNER_DP.toFloat(), steps = SlimRecentsController.MAX_CORNER_DP - 1,
+                    onChange = { quiltCorner = it }, onCommit = {
+                        prefs.edit().putInt(SlimRecentsController.KEY_QUILT_CORNER_DP, quiltCorner).apply()
+                    }
+                )
+            }
+            IntSliderRow(
+                label = stringResource(R.string.recents_slim_anim_duration),
+                value = animPct,
+                valueText = if (animPct == 0) stringResource(R.string.recents_slim_anim_off) else "$animPct%",
+                range = 0f..200f, steps = 19,
+                onChange = { animPct = it }, onCommit = {
+                    prefs.edit().putInt(SlimRecentsController.KEY_ANIM_DURATION, animPct).apply()
+                }
+            )
+            Text(
+                stringResource(R.string.recents_slim_anim_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         // LSPosed is only involved in Grid mode - the overlay modes and Stock don't touch it.
@@ -168,14 +287,23 @@ fun RecentsScreen(onBack: () -> Unit) {
                 ) {
                     Text(
                         stringResource(
-                            if (xposedActive) R.string.recents_xposed_ok
+                            if (launcherHooked == true) R.string.recents_xposed_ok
                             else R.string.recents_xposed_missing
                         ),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (xposedActive) MaterialTheme.colorScheme.primary
+                        color = if (launcherHooked == true) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.error
                     )
-                    if (!xposedActive) {
+                    // Which path Grid is using right now.
+                    Text(
+                        stringResource(
+                            if (launcherHooked == true) R.string.recents_grid_using_hook
+                            else R.string.recents_grid_using_overlay
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (launcherHooked == false) {
                         Text(
                             stringResource(R.string.recents_xposed_hint),
                             style = MaterialTheme.typography.bodySmall,

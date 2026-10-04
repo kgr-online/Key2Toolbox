@@ -63,6 +63,18 @@ fun ToolbeltScreen(onBack: () -> Unit) {
         context.getSharedPreferences(ToolbeltController.PREFS, android.content.Context.MODE_PRIVATE)
     }
 
+    var showKeepPicker by remember { mutableStateOf(false) }
+    if (showKeepPicker) {
+        AppPickerScreen(
+            title = stringResource(R.string.toolbelt_keep_apps),
+            initial = ToolbeltController.beltKeepApps(prefs),
+            onChange = { prefs.edit().putStringSet(ToolbeltController.KEY_BELT_KEEP_APPS, it).apply() },
+            onBack = { showKeepPicker = false },
+            countLabel = { n, total -> stringResource(R.string.toolbelt_statusbar_apps_count, n, total) },
+        )
+        return
+    }
+
     var enabled by remember { mutableStateOf(ToolbeltController.isEnabled(context)) }
     var autoHide by remember {
         mutableStateOf(prefs.getBoolean(ToolbeltController.KEY_AUTOHIDE_FULLSCREEN, true))
@@ -158,6 +170,23 @@ fun ToolbeltScreen(onBack: () -> Unit) {
                     autoHide = on
                     prefs.edit().putBoolean(ToolbeltController.KEY_AUTOHIDE_FULLSCREEN, on).apply()
                 }
+            )
+        }
+
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.toolbelt_keep_apps), modifier = Modifier.weight(1f))
+                TextButton(onClick = { showKeepPicker = true }) {
+                    Text(stringResource(R.string.toolbelt_statusbar_choose))
+                }
+            }
+            Text(
+                stringResource(
+                    R.string.toolbelt_keep_hint,
+                    ToolbeltController.beltKeepApps(prefs).size
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 

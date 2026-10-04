@@ -599,4 +599,22 @@
     </string-array>    <string name="telemetry_show_details">Mostrar estado por app (%1$d)</string>
     <string name="telemetry_hide_details">Ocultar estado por app</string>
     <string name="telemetry_surface_blocked">bloqueado</string>
-    <string name="telemetry_surface_leaking">activo</string></resources>
+    <string name="telemetry_surface_leaking">activo</string>    <string name="toolbelt_statusbar_choose">Elegir apps</string>
+    <string name="toolbelt_statusbar_apps_count">%1$d seleccionadas de %2$d apps</string>
+    <string name="toolbelt_keep_apps">Mantener la barra en apps a pantalla completa elegidas</string>
+    <string name="toolbelt_keep_hint">En las apps elegidas la barra permanece visible aunque la app oculte la barra de estado o pase a pantalla completa (p. ej. un launcher con su propia opción de ocultar la barra de estado). Seleccionadas: %1$d.</string>
+    <string name="recents_slim_scrim_blur">Desenfoque del fondo</string>
+    <string name="recents_slim_blur_unsupported">El desenfoque no está disponible ahora (el sistema lo desactiva, por ejemplo con el ahorro de batería).</string>
+    <string name="recents_slim_anim_duration">Duración de la animación</string>
+    <string name="recents_slim_anim_off">Desactivada</string>
+    <string name="recents_slim_anim_hint">Multiplica el tiempo base y sigue la escala de animación del sistema (Opciones de desarrollador). 100% iguala la velocidad del sistema.</string>
+    <string name="recents_blur_module_install">Instalar módulo de soporte de desenfoque</string>
+    <string name="recents_blur_module_remove">Quitar módulo de soporte de desenfoque</string>
+    <string name="recents_blur_module_hint">Este ROM no declara soporte de desenfoque de fondo, así que el slider está desactivado. El módulo fija ro.surface_flinger.supports_background_blur=1 al arrancar (igual que el módulo Enable Blurs). Requiere root y reiniciar; se aplica a todo el sistema y puede restar fluidez en esta GPU.</string>
+    <string name="recents_blur_module_pending">Módulo instalado. Reinicia para aplicarlo.</string>
+    <string name="recents_slim_corner_grid">Radio de esquinas de la cuadrícula</string>
+    <string name="recents_slim_corner_quilt">Radio de esquinas del mosaico</string>
+    <string name="recents_slim_corner_square">Cuadradas</string>
+    <string name="recents_grid_using_hook">La grid la dibuja el launcher mediante el módulo LSPosed.</string>
+    <string name="recents_grid_using_overlay">Módulo LSPosed no detectado: la grid usa la superposición integrada (mismo diseño, dibujada por esta app, sin hook).</string>
+</resources>

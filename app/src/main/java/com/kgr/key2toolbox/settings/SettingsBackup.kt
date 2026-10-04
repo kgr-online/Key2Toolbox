@@ -124,6 +124,8 @@ object SettingsBackup {
         ToolbeltController.KEY_ICON_SCALE to BackupModule.TOOLBELT,
         ToolbeltController.KEY_HAPTIC to BackupModule.TOOLBELT,
         ToolbeltController.KEY_COLOR_MODE to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_BELT_KEEP_APPS to BackupModule.TOOLBELT,
+        TelemetryController.KEY_BLOCKED_PACKAGES to BackupModule.TELEMETRY,
         ToolbeltController.KEY_PRIVACY_INDICATOR_OFF to BackupModule.TOOLBELT
     )
 
@@ -499,6 +501,16 @@ object SettingsBackup {
                         // Leave it unset - don't fail the whole import.
                     }
                 }
+            }
+        }
+
+        // The per-app list was restored with the prefs above; the root watchdog reads its own copy
+        // (/data/adb/.telemetry_blocked), so rewrite it before re-enabling the watchdog.
+        if (BackupModule.TELEMETRY in modules) {
+            try {
+                TelemetryController.resyncBlocklist(context)
+            } catch (e: Exception) {
+                // Leave it unset - don't fail the whole import.
             }
         }
 

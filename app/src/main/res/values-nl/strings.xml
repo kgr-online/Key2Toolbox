@@ -599,4 +599,22 @@
     </string-array>    <string name="telemetry_show_details">Status per app tonen (%1$d)</string>
     <string name="telemetry_hide_details">Status per app verbergen</string>
     <string name="telemetry_surface_blocked">geblokkeerd</string>
-    <string name="telemetry_surface_leaking">actief</string></resources>
+    <string name="telemetry_surface_leaking">actief</string>    <string name="toolbelt_statusbar_choose">Apps kiezen</string>
+    <string name="toolbelt_statusbar_apps_count">%1$d van %2$d apps geselecteerd</string>
+    <string name="toolbelt_keep_apps">Balk behouden in gekozen volledig-scherm-apps</string>
+    <string name="toolbelt_keep_hint">In de gekozen apps blijft de balk zichtbaar, ook als de app de statusbalk verbergt of naar volledig scherm gaat (bijv. een launcher met een eigen optie om de statusbalk te verbergen). Geselecteerd: %1$d.</string>
+    <string name="recents_slim_scrim_blur">Achtergrondvervaging</string>
+    <string name="recents_slim_blur_unsupported">Vervaging is nu niet beschikbaar (het systeem schakelt deze uit, bijvoorbeeld in batterijbesparing).</string>
+    <string name="recents_slim_anim_duration">Animatieduur</string>
+    <string name="recents_slim_anim_off">Uit</string>
+    <string name="recents_slim_anim_hint">Vermenigvuldigt de basistijd en volgt de systeemanimatieschaal (Ontwikkelaarsopties). 100% komt overeen met de systeemsnelheid.</string>
+    <string name="recents_blur_module_install">Module voor vervagingsondersteuning installeren</string>
+    <string name="recents_blur_module_remove">Module voor vervagingsondersteuning verwijderen</string>
+    <string name="recents_blur_module_hint">Deze ROM meldt geen achtergrondvervaging, dus de schuifregelaar is uitgeschakeld. De module stelt bij het opstarten ro.surface_flinger.supports_background_blur=1 in (zoals de module Enable Blurs). Vereist root en een herstart; geldt systeembreed en kan de vloeiendheid op deze GPU verminderen.</string>
+    <string name="recents_blur_module_pending">Module geïnstalleerd. Herstart om toe te passen.</string>
+    <string name="recents_slim_corner_grid">Hoekradius van het raster</string>
+    <string name="recents_slim_corner_quilt">Hoekradius van het mozaïek</string>
+    <string name="recents_slim_corner_square">Vierkant</string>
+    <string name="recents_grid_using_hook">Het raster wordt door de launcher getekend via de LSPosed-module.</string>
+    <string name="recents_grid_using_overlay">LSPosed-module niet gedetecteerd: het raster gebruikt de ingebouwde overlay (zelfde indeling, getekend door deze app, zonder hook).</string>
+</resources>

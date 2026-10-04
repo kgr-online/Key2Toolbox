@@ -573,4 +573,22 @@
     </string-array>    <string name="telemetry_show_details">Mostrar estado por app (%1$d)</string>
     <string name="telemetry_hide_details">Ocultar estado por app</string>
     <string name="telemetry_surface_blocked">bloqueado</string>
-    <string name="telemetry_surface_leaking">ativo</string></resources>
+    <string name="telemetry_surface_leaking">ativo</string>    <string name="toolbelt_statusbar_choose">Escolher apps</string>
+    <string name="toolbelt_statusbar_apps_count">%1$d selecionadas de %2$d apps</string>
+    <string name="toolbelt_keep_apps">Manter a barra nas apps em ecrã inteiro escolhidas</string>
+    <string name="toolbelt_keep_hint">Nas apps escolhidas a barra mantém-se visível mesmo que a app oculte a barra de estado ou passe a ecrã inteiro (p. ex. um launcher com a sua própria opção de ocultar a barra de estado). Selecionadas: %1$d.</string>
+    <string name="recents_slim_scrim_blur">Desfoque do fundo</string>
+    <string name="recents_slim_blur_unsupported">O desfoque não está disponível de momento (o sistema desativa-o, por exemplo na poupança de bateria).</string>
+    <string name="recents_slim_anim_duration">Duração da animação</string>
+    <string name="recents_slim_anim_off">Desativada</string>
+    <string name="recents_slim_anim_hint">Multiplica o tempo base e segue a escala de animação do sistema (Opções de programador). 100% corresponde à velocidade do sistema.</string>
+    <string name="recents_blur_module_install">Instalar módulo de suporte de desfoque</string>
+    <string name="recents_blur_module_remove">Remover módulo de suporte de desfoque</string>
+    <string name="recents_blur_module_hint">Esta ROM não declara desfoque de fundo, por isso o seletor está desativado. O módulo define ro.surface_flinger.supports_background_blur=1 no arranque (como o módulo Enable Blurs). Requer root e reinício; aplica-se a todo o sistema e pode reduzir a fluidez nesta GPU.</string>
+    <string name="recents_blur_module_pending">Módulo instalado. Reinicie para aplicar.</string>
+    <string name="recents_slim_corner_grid">Raio dos cantos da grelha</string>
+    <string name="recents_slim_corner_quilt">Raio dos cantos do mosaico</string>
+    <string name="recents_slim_corner_square">Quadrados</string>
+    <string name="recents_grid_using_hook">A grelha é desenhada pelo launcher através do módulo LSPosed.</string>
+    <string name="recents_grid_using_overlay">Módulo LSPosed não detetado: a grelha usa a sobreposição integrada (mesmo desenho, desenhada por esta app, sem hook).</string>
+</resources>

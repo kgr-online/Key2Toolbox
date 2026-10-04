@@ -599,4 +599,22 @@
     </string-array>    <string name="telemetry_show_details">Afficher l\'état par app (%1$d)</string>
     <string name="telemetry_hide_details">Masquer l\'état par app</string>
     <string name="telemetry_surface_blocked">bloqué</string>
-    <string name="telemetry_surface_leaking">actif</string></resources>
+    <string name="telemetry_surface_leaking">actif</string>    <string name="toolbelt_statusbar_choose">Choisir des apps</string>
+    <string name="toolbelt_statusbar_apps_count">%1$d sélectionnée(s) sur %2$d apps</string>
+    <string name="toolbelt_keep_apps">Garder la barre dans les apps plein écran choisies</string>
+    <string name="toolbelt_keep_hint">Dans les apps choisies, la barre reste visible même si l\'app masque la barre d\'état ou passe en plein écran (p. ex. un launcher avec sa propre option de masquage de la barre d\'état). Sélection : %1$d.</string>
+    <string name="recents_slim_scrim_blur">Flou d\'arrière-plan</string>
+    <string name="recents_slim_blur_unsupported">Le flou n\'est pas disponible pour le moment (le système le désactive, par exemple en économie d\'énergie).</string>
+    <string name="recents_slim_anim_duration">Durée de l\'animation</string>
+    <string name="recents_slim_anim_off">Désactivée</string>
+    <string name="recents_slim_anim_hint">Multiplie la durée de base et suit l\'échelle d\'animation du système (Options pour les développeurs). 100 % correspond à la vitesse du système.</string>
+    <string name="recents_blur_module_install">Installer le module de prise en charge du flou</string>
+    <string name="recents_blur_module_remove">Retirer le module de prise en charge du flou</string>
+    <string name="recents_blur_module_hint">Cette ROM n\'annonce pas le flou d\'arrière-plan, le curseur est donc désactivé. Le module définit ro.surface_flinger.supports_background_blur=1 au démarrage (comme le module Enable Blurs). Nécessite root et un redémarrage ; s\'applique à tout le système et peut réduire la fluidité sur ce GPU.</string>
+    <string name="recents_blur_module_pending">Module installé. Redémarrez pour l\'appliquer.</string>
+    <string name="recents_slim_corner_grid">Rayon des coins de la grille</string>
+    <string name="recents_slim_corner_quilt">Rayon des coins de la mosaïque</string>
+    <string name="recents_slim_corner_square">Carrés</string>
+    <string name="recents_grid_using_hook">La grille est dessinée par le launcher via le module LSPosed.</string>
+    <string name="recents_grid_using_overlay">Module LSPosed non détecté : la grille utilise la superposition intégrée (même disposition, dessinée par cette app, sans hook).</string>
+</resources>

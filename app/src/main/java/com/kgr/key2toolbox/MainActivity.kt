@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.kgr.key2toolbox.core.RootShell
+import com.kgr.key2toolbox.modules.AdBlockController
 import com.kgr.key2toolbox.ui.HomeScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -58,7 +59,14 @@ class MainActivity : ComponentActivity() {
         // Run on a background thread since this blocks on the root grant
         // prompt (FolkPatch/APatch manager) on first launch.
         lifecycleScope.launch(Dispatchers.IO) {
-            RootShell.isRootAvailable()
+            if (RootShell.isRootAvailable()) {
+                // Once per app launch: make sure AdBlock's hosts file is mounted even where the root
+                // manager does not overlay module files (see AdBlockController.ensureMounted).
+                try {
+                    AdBlockController.ensureMounted(applicationContext)
+                } catch (_: Exception) {
+                }
+            }
         }
 
         setContent {

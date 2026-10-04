@@ -599,4 +599,22 @@
     </string-array>    <string name="telemetry_show_details">Status pro App anzeigen (%1$d)</string>
     <string name="telemetry_hide_details">Status pro App ausblenden</string>
     <string name="telemetry_surface_blocked">blockiert</string>
-    <string name="telemetry_surface_leaking">aktiv</string></resources>
+    <string name="telemetry_surface_leaking">aktiv</string>    <string name="toolbelt_statusbar_choose">Apps wählen</string>
+    <string name="toolbelt_statusbar_apps_count">%1$d von %2$d Apps ausgewählt</string>
+    <string name="toolbelt_keep_apps">Leiste in ausgewählten Vollbild-Apps beibehalten</string>
+    <string name="toolbelt_keep_hint">In den gewählten Apps bleibt die Leiste sichtbar, auch wenn die App die Statusleiste ausblendet oder in den Vollbildmodus wechselt (z. B. ein Launcher mit eigener Option zum Ausblenden der Statusleiste). Ausgewählt: %1$d.</string>
+    <string name="recents_slim_scrim_blur">Hintergrundunschärfe</string>
+    <string name="recents_slim_blur_unsupported">Unschärfe ist derzeit nicht verfügbar (das System schaltet sie ab, z. B. im Energiesparmodus).</string>
+    <string name="recents_slim_anim_duration">Animationsdauer</string>
+    <string name="recents_slim_anim_off">Aus</string>
+    <string name="recents_slim_anim_hint">Multipliziert die Basiszeit und folgt der System-Animationsskala (Entwickleroptionen). 100 % entspricht der Systemgeschwindigkeit.</string>
+    <string name="recents_blur_module_install">Unschärfe-Unterstützungsmodul installieren</string>
+    <string name="recents_blur_module_remove">Unschärfe-Unterstützungsmodul entfernen</string>
+    <string name="recents_blur_module_hint">Diese ROM meldet keine Hintergrundunschärfe, daher ist der Regler deaktiviert. Das Modul setzt beim Start ro.surface_flinger.supports_background_blur=1 (wie das Modul Enable Blurs). Benötigt Root und einen Neustart; gilt systemweit und kann auf dieser GPU die Flüssigkeit kosten.</string>
+    <string name="recents_blur_module_pending">Modul installiert. Zum Anwenden neu starten.</string>
+    <string name="recents_slim_corner_grid">Eckenradius des Rasters</string>
+    <string name="recents_slim_corner_quilt">Eckenradius des Mosaiks</string>
+    <string name="recents_slim_corner_square">Eckig</string>
+    <string name="recents_grid_using_hook">Das Raster wird vom Launcher über das LSPosed-Modul gezeichnet.</string>
+    <string name="recents_grid_using_overlay">LSPosed-Modul nicht erkannt: Das Raster nutzt das eingebaute Overlay (gleiches Layout, von dieser App gezeichnet, ohne Hook).</string>
+</resources>
