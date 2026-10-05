@@ -682,4 +682,6 @@
     <string name="gestures_color_neutral">Neutro</string>
     <string name="gestures_color_neutral_variant">Neutro variante</string>
     <string name="gestures_color_follows">Sigue tu fondo de pantalla. Elige otro color para dejar de seguirlo.</string>
+    <string name="gestures_sys_back_off">Desactivar el gesto Atrás del sistema bajo esta franja</string>
+    <string name="gestures_sys_back_off_desc">El gesto Atrás propio del sistema (navegación por gestos) arranca desde el mismo borde y se dispara a la vez que esta franja. Mientras la franja está en pantalla, su sensibilidad en este lado se pone a 0, y tu valor se restaura en cuanto desaparece (pantalla de bloqueo, apps excluidas, servicio apagado). Deja una acción Atrás en la franja, u otra forma de retroceder.</string>
 </resources>

@@ -743,4 +743,6 @@
     <string name="gestures_color_neutral">Neutral</string>
     <string name="gestures_color_neutral_variant">Neutral variant</string>
     <string name="gestures_color_follows">Follows your wallpaper. Pick another colour to stop.</string>
+    <string name="gestures_sys_back_off">Switch off the system back gesture under this strip</string>
+    <string name="gestures_sys_back_off_desc">The system\'s own edge-back gesture (gesture navigation) starts from the same edge and fires together with this strip. While the strip is on screen, its sensitivity on this side is set to 0, and your value is restored as soon as the strip goes away (lockscreen, excluded apps, service off). Keep a Back action on the strip, or another way to go back.</string>
 </resources>

@@ -682,4 +682,6 @@
     <string name="gestures_color_neutral">Neutro</string>
     <string name="gestures_color_neutral_variant">Neutro variante</string>
     <string name="gestures_color_follows">Segue lo sfondo. Scegli un altro colore per smettere di seguirlo.</string>
+    <string name="gestures_sys_back_off">Disattiva il gesto Indietro del sistema sotto questa striscia</string>
+    <string name="gestures_sys_back_off_desc">Il gesto Indietro del sistema (navigazione a gesti) parte dallo stesso bordo e scatta insieme a questa striscia. Finché la striscia è sullo schermo, la sua sensibilità su questo lato è impostata a 0, e il tuo valore viene ripristinato appena sparisce (schermata di blocco, app escluse, servizio spento). Tieni un\'azione Indietro sulla striscia, o un altro modo per tornare indietro.</string>
 </resources>

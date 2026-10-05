@@ -31,6 +31,7 @@ import com.kgr.key2toolbox.modules.BatteryUsageController
 import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.SlimRecentsController
 import com.kgr.key2toolbox.modules.GestureSettings
+import com.kgr.key2toolbox.modules.SystemBackGesture
 import com.kgr.key2toolbox.modules.ToolbeltController
 import com.kgr.key2toolbox.modules.ToolbeltController.ToolbeltAction
 import java.util.Locale
@@ -1499,6 +1500,7 @@ class Key2AccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean {
         isRunning = false
         GestureStripsController.hide()
+        SystemBackGesture.restoreAll(this) // never leave the system back gesture off with no strip to replace it
         writeNodeBlocking(true) // never leave nav buttons dead
         restoreImeBlock()       // never leave the soft keyboard globally suppressed
         teardownToolbelt()      // never leave the real nav bar hidden with no belt to replace it
@@ -1528,6 +1530,7 @@ class Key2AccessibilityService : AccessibilityService() {
         isRunning = false
         instance = null
         GestureStripsController.hide()
+        SystemBackGesture.restoreAll(this)
         writeNodeBlocking(true)
         restoreImeBlock()
         teardownToolbelt()

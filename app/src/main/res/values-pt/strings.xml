@@ -656,4 +656,6 @@
     <string name="gestures_color_neutral">Neutra</string>
     <string name="gestures_color_neutral_variant">Neutra variante</string>
     <string name="gestures_color_follows">Acompanha o seu fundo de ecrã. Escolha outra cor para deixar de acompanhar.</string>
+    <string name="gestures_sys_back_off">Desativar o gesto Voltar do sistema por baixo desta faixa</string>
+    <string name="gestures_sys_back_off_desc">O gesto Voltar próprio do sistema (navegação por gestos) começa na mesma borda e dispara ao mesmo tempo que esta faixa. Enquanto a faixa está no ecrã, a sua sensibilidade neste lado fica a 0, e o seu valor é reposto assim que desaparece (ecrã de bloqueio, apps excluídas, serviço desligado). Mantenha uma ação Voltar na faixa, ou outra forma de recuar.</string>
 </resources>

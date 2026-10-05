@@ -146,6 +146,12 @@ private fun ZoneCard(zone: Zone, titleRes: Int, descRes: Int, copyRes: Int = 0, 
                     Switch(checked = cfg.arrow, onCheckedChange = { update(cfg.copy(arrow = it)) })
                     Text(stringResource(R.string.gestures_arrow))
                 }
+                var sysOff by remember { mutableStateOf(GestureSettings.systemBackOff(context, zone)) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Switch(checked = sysOff, onCheckedChange = { sysOff = it; GestureSettings.setSystemBackOff(context, zone, it) })
+                    Text(stringResource(R.string.gestures_sys_back_off), modifier = Modifier.weight(1f))
+                }
+                Text(stringResource(R.string.gestures_sys_back_off_desc), style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.gestures_actions), style = MaterialTheme.typography.titleSmall)
                 for (dir in GestureSettings.dirsOf(zone)) GestureRow(zone, dir)
                 if (onCopy != null) OutlinedButton(onClick = onCopy) { Text(stringResource(copyRes)) }

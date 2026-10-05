@@ -682,4 +682,6 @@
     <string name="gestures_color_neutral">Neutraal</string>
     <string name="gestures_color_neutral_variant">Neutraal variant</string>
     <string name="gestures_color_follows">Volgt je achtergrond. Kies een andere kleur om dat te stoppen.</string>
+    <string name="gestures_sys_back_off">Systeemgebaar Terug onder deze strook uitschakelen</string>
+    <string name="gestures_sys_back_off_desc">Het eigen Terug-gebaar van het systeem (gebarennavigatie) begint vanaf dezelfde rand en gaat samen met deze strook af. Zolang de strook op het scherm staat, is de gevoeligheid aan deze kant 0, en je waarde wordt hersteld zodra hij verdwijnt (vergrendelscherm, uitgesloten apps, dienst uit). Houd een Terug-actie op de strook, of een andere manier om terug te gaan.</string>
 </resources>

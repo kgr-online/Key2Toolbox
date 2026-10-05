@@ -28,6 +28,7 @@ object GestureSettings {
     private const val K_DISTANCE = "distance_dp"
     private const val K_HAPTIC = "haptic"
     private const val K_ARROW = "arrow"
+    private const val K_SYS_BACK_OFF = "sys_back_off"
 
     // Ranges are in dp / percent so they scale with the display density.
     val THICKNESS_RANGE = 6f..32f
@@ -71,6 +72,19 @@ object GestureSettings {
             haptic = pick(zone, K_HAPTIC, ::bool, d.haptic),
             arrow = pick(zone, K_ARROW, ::bool, d.arrow),
         )
+    }
+
+    /**
+     * Whether the system's own back gesture on this edge is switched off while the strip is shown (see
+     * [SystemBackGesture]). Key2-only: Q25 Toolbox has no system gesture navigation to overlap with.
+     */
+    fun systemBackOff(context: Context, zone: Zone): Boolean =
+        context.getSharedPreferences(Key2AccessibilityService.PREFS, Context.MODE_PRIVATE)
+            .getBoolean(zone.prefix + K_SYS_BACK_OFF, false)
+
+    fun setSystemBackOff(context: Context, zone: Zone, off: Boolean) {
+        context.getSharedPreferences(Key2AccessibilityService.PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(zone.prefix + K_SYS_BACK_OFF, off).apply()
     }
 
     fun set(context: Context, zone: Zone, c: Config) {
@@ -140,6 +154,7 @@ object GestureSettings {
     /** Copies every setting and binding of [from] onto [to] (the side strips are configured separately). */
     fun copyZone(context: Context, from: Zone, to: Zone) {
         set(context, to, get(context, from))
+        setSystemBackOff(context, to, systemBackOff(context, from))
         for (d in dirsOf(from)) for (hold in listOf(false, true)) setBinding(context, to, d, hold, binding(context, from, d, hold))
     }
 
@@ -260,7 +275,7 @@ object GestureSettings {
 
     /** Every pref key this module owns (for backup/restore). */
     fun allKeys(): List<String> {
-        val suffixes = listOf(K_MODE, K_THICKNESS, K_LENGTH, K_DISTANCE, K_HAPTIC, K_ARROW)
+        val suffixes = listOf(K_MODE, K_THICKNESS, K_LENGTH, K_DISTANCE, K_HAPTIC, K_ARROW, K_SYS_BACK_OFF)
         val prefixes = Zone.entries.flatMap { listOfNotNull(it.prefix, it.legacyPrefix) }.distinct()
         val dirs = EdgeSwipe.Dir.entries.flatMap { d -> listOf(false, true).map { bindingSuffix(d, it) } }
         return prefixes.flatMap { pre -> (suffixes + dirs).map { pre + it } } + KEY_EXCLUDED +

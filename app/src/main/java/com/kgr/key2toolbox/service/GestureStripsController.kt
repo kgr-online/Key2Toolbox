@@ -14,6 +14,7 @@ import android.view.View
 import android.view.WindowManager
 import com.kgr.key2toolbox.modules.GestureSettings
 import com.kgr.key2toolbox.modules.GestureSettings.Zone
+import com.kgr.key2toolbox.modules.SystemBackGesture
 
 /**
  * Custom edge gestures: thin TYPE_ACCESSIBILITY_OVERLAY strips on the side edges, each driving an [EdgeSwipe]
@@ -32,6 +33,7 @@ object GestureStripsController {
     /** The shared arrow overlay (null unless a zone has its arrow on). */
     private var arrow: GestureArrowView? = null
     private var wm: WindowManager? = null
+    private var appContext: Context? = null
 
     /** Whether the strips may be up right now: screen on and keyguard gone. */
     private fun allowed(ctx: Context): Boolean {
@@ -53,13 +55,14 @@ object GestureStripsController {
 
     /** Rebuilds the strips from the saved settings (adds, resizes or removes them). */
     fun reconcile(service: Key2AccessibilityService) = main.post {
+        appContext = service.applicationContext
         removeAll()
         excludedNow = foreground?.let { it in GestureSettings.excludedApps(service) } == true
-        if (excludedNow || !allowed(service)) return@post
+        if (excludedNow || !allowed(service)) { SystemBackGesture.sync(service, emptySet()); return@post }
         val left = GestureSettings.get(service, Zone.LEFT)
         val right = GestureSettings.get(service, Zone.RIGHT)
         val on = listOf(left, right).filter { it.mode == GestureSettings.Mode.CUSTOM }
-        if (on.isEmpty()) return@post
+        if (on.isEmpty()) { SystemBackGesture.sync(service, emptySet()); return@post }
 
         val manager = service.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         wm = manager
@@ -69,17 +72,25 @@ object GestureStripsController {
         val dp = service.resources.displayMetrics.density
         val tint = GestureSettings.showStrips(service)
 
+        // The system back gesture is switched off exactly on the sides whose strip is up (and asked for it).
+        val sysOff = HashSet<Zone>()
         // Each side strip has its own size; the strip is as tall as its own length setting says.
         for ((edge, cfg, gravity) in listOf(
             Triple(EdgeSwipe.Edge.LEFT, left, Gravity.START or Gravity.CENTER_VERTICAL),
             Triple(EdgeSwipe.Edge.RIGHT, right, Gravity.END or Gravity.CENTER_VERTICAL),
         )) {
             if (cfg.mode != GestureSettings.Mode.CUSTOM) continue
-            add(service, manager, edge, cfg, (cfg.thicknessDp * dp).toInt(), (bounds.height() * cfg.lengthPct / 100f).toInt(), gravity, tint)
+            val added = add(service, manager, edge, cfg, (cfg.thicknessDp * dp).toInt(), (bounds.height() * cfg.lengthPct / 100f).toInt(), gravity, tint)
+            val zone = if (edge == EdgeSwipe.Edge.LEFT) Zone.LEFT else Zone.RIGHT
+            if (added && GestureSettings.systemBackOff(service, zone)) sysOff += zone
         }
+        SystemBackGesture.sync(service, sysOff)
     }
 
-    fun hide() = main.post { removeAll() }
+    fun hide() = main.post {
+        removeAll()
+        appContext?.let { SystemBackGesture.sync(it, emptySet()) }
+    }
 
     private fun removeAll() {
         val manager = wm
@@ -110,7 +121,7 @@ object GestureStripsController {
     private fun add(
         service: Key2AccessibilityService, manager: WindowManager, edge: EdgeSwipe.Edge,
         cfg: GestureSettings.Config, w: Int, h: Int, gravity: Int, tint: Boolean,
-    ) {
+    ): Boolean {
         val view = StripView(service, edge, cfg, tint)
         val lp = WindowManager.LayoutParams(
             w, h, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
@@ -126,8 +137,10 @@ object GestureStripsController {
         try {
             manager.addView(view, lp)
             strips.add(view)
+            return true
         } catch (t: Throwable) {
             android.util.Log.e("Key2Toolbox", "gesture strip $edge failed", t)
+            return false
         }
     }
 

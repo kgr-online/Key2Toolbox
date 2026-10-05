@@ -45,6 +45,7 @@ class GestureSettingsTest {
     @Test fun backupKeysCoverNewAndLegacySideKeys() {
         val keys = GestureSettings.allKeys().toSet()
         assertTrue("gest_left_mode" in keys && "gest_right_act_straight_hold" in keys)
+        assertTrue("gest_left_sys_back_off" in keys && "gest_right_sys_back_off" in keys)
         assertTrue("gest_arrow_color_ref" in keys && "gest_arrow_active_ref" in keys) // palette references are backed up
         assertTrue("gest_lat_mode" in keys && "gest_lat_act_diag_a_swipe" in keys) // old backups still restore
     }

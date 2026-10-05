@@ -682,4 +682,6 @@
     <string name="gestures_color_neutral">Neutral</string>
     <string name="gestures_color_neutral_variant">Neutral-Variante</string>
     <string name="gestures_color_follows">Folgt Ihrem Hintergrundbild. Wählen Sie eine andere Farbe, um das zu beenden.</string>
+    <string name="gestures_sys_back_off">Systemgeste „Zurück“ unter diesem Streifen ausschalten</string>
+    <string name="gestures_sys_back_off_desc">Die systemeigene Zurück-Geste (Gestennavigation) beginnt am selben Rand und löst zusammen mit diesem Streifen aus. Solange der Streifen auf dem Bildschirm ist, wird ihre Empfindlichkeit auf dieser Seite auf 0 gesetzt, und Ihr Wert kommt zurück, sobald er verschwindet (Sperrbildschirm, ausgeschlossene Apps, Dienst aus). Behalten Sie eine Zurück-Aktion auf dem Streifen oder eine andere Möglichkeit zum Zurückgehen.</string>
 </resources>

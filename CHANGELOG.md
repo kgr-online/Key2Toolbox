@@ -2,6 +2,18 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.5.5] - 2026-10-05
+
+### Added
+
+- **Edge gestures: switch off the system back gesture under a strip.** With gesture
+  navigation, the system's own back gesture starts from the same edge and fired
+  together with a custom strip. Each side has a switch that sets the system's
+  back-gesture sensitivity on that side (`back_gesture_inset_scale_left/right`) to 0
+  while its strip is on screen, and writes the user's own value back as soon as the
+  strip goes away (lockscreen, screen off, an excluded app, the switch turned off,
+  the accessibility service stopping). Off by default.
+
 ## [5.5.4] - 2026-10-05
 
 ### Added

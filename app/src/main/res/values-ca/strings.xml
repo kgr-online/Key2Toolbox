@@ -682,4 +682,6 @@
     <string name="gestures_color_neutral">Neutre</string>
     <string name="gestures_color_neutral_variant">Neutre variant</string>
     <string name="gestures_color_follows">Segueix el teu fons de pantalla. Tria un altre color per deixar de seguir-lo.</string>
+    <string name="gestures_sys_back_off">Desactiva el gest Enrere del sistema sota aquesta franja</string>
+    <string name="gestures_sys_back_off_desc">El gest Enrere propi del sistema (navegació per gestos) arrenca des de la mateixa vora i es dispara alhora que aquesta franja. Mentre la franja és a la pantalla, la seva sensibilitat en aquest costat es posa a 0, i el teu valor es restaura tan bon punt desapareix (pantalla de bloqueig, apps excloses, servei apagat). Deixa una acció Enrere a la franja, o una altra manera de tornar enrere.</string>
 </resources>

@@ -682,4 +682,6 @@
     <string name="gestures_color_neutral">Neutre</string>
     <string name="gestures_color_neutral_variant">Neutre variante</string>
     <string name="gestures_color_follows">Suit votre fond d\'écran. Choisissez une autre couleur pour arrêter.</string>
+    <string name="gestures_sys_back_off">Désactiver le geste Retour du système sous cette bande</string>
+    <string name="gestures_sys_back_off_desc">Le geste Retour du système (navigation par gestes) part du même bord et se déclenche en même temps que cette bande. Tant que la bande est à l\'écran, sa sensibilité de ce côté est mise à 0, et votre valeur est rétablie dès qu\'elle disparaît (écran de verrouillage, apps exclues, service arrêté). Gardez une action Retour sur la bande, ou un autre moyen de revenir en arrière.</string>
 </resources>
