@@ -61,6 +61,7 @@ object ToolbeltOverlayController {
     private var imeHidden = false
     private var lastFullIme = false
     private var lastAnyIme = false
+    private var lastStripBacked = false
     private var autoHidePref = true
 
     // Live config, refreshed from prefs on every refresh().
@@ -85,7 +86,7 @@ object ToolbeltOverlayController {
     private fun applyColors() {
         val svc = service ?: return
         val c = ToolbeltController.beltColors(svc)
-        barColor = c[0]; iconColor = c[1]
+        barColor = if (stripBacked()) Color.BLACK else c[0]; iconColor = c[1]
         // Only the belt row carries the colour, so the layers don't stack (which
         // would double a translucent scrim). The container stays transparent.
         root?.setBackgroundColor(Color.TRANSPARENT)
@@ -170,8 +171,8 @@ object ToolbeltOverlayController {
     /**
      * [fullIme] = a real soft keyboard (tall IME window). [anyIme] = any input
      * method window, incl. the short physical-keyboard toolbar strip. The belt
-     * hides for [fullIme] always, and for [anyIme] in translucent mode - there
-     * the belt is see-through, so that strip would otherwise show through it.
+     * hides for [fullIme] only. While just the strip is up in transparent mode,
+     * the belt stays and is painted opaque black so the strip can't show through.
      */
     fun setImeVisible(fullIme: Boolean, anyIme: Boolean) {
         lastFullIme = fullIme
@@ -179,11 +180,20 @@ object ToolbeltOverlayController {
         recomputeImeHidden()
     }
 
+    /** Transparent mode with only the IME strip up: belt gets an opaque backing. */
+    private fun stripBacked() = colorMode == 2 && lastAnyIme && !lastFullIme
+
     private fun recomputeImeHidden() {
-        val hide = lastFullIme || (colorMode == 2 && lastAnyIme)
-        if (imeHidden == hide) return
-        imeHidden = hide
-        mainHandler.post { applyLayoutState(animate = true) }
+        val hide = lastFullIme
+        val backed = stripBacked()
+        val colorChanged = backed != lastStripBacked
+        lastStripBacked = backed
+        if (imeHidden != hide) {
+            imeHidden = hide
+            mainHandler.post { applyLayoutState(animate = true) }
+        } else if (colorChanged) {
+            mainHandler.post { applyColors() }
+        }
     }
 
     fun setForegroundFullscreen(fullscreen: Boolean) {

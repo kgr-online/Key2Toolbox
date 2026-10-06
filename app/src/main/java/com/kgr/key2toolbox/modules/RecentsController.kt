@@ -65,6 +65,20 @@ object RecentsController {
     @JvmStatic
     fun isXposedActive(): Boolean = false
 
+    /**
+     * Whether an Xposed framework (LSPosed / Vector) is injected into the launcher process, i.e. whether the
+     * module is enabled for it. This is what the hooked Grid needs, and it is NOT the same as [isXposedActive]:
+     * that only proves the module is enabled for THIS app, which is true on a setup where the launcher was never
+     * ticked in the scope (the launcher then draws the stock one-row Overview). Read from the launcher's
+     * `/proc/<pid>/maps` with root: a scoped process has the framework's Zygisk library mapped from
+     * `/data/adb/modules/<zygisk_lsposed|zygisk_vector|...>`, an unscoped one does not. Blocking (root shell).
+     */
+    fun isLauncherHooked(): Boolean = RootShell.run(
+        "pid=$(pidof $LAUNCHER_PKG | cut -d' ' -f1); " +
+            "[ -n \"\$pid\" ] && grep -qiE '/data/adb/modules/[^ ]*(lsposed|lspd|vector|xposed)' /proc/\$pid/maps " +
+            "&& echo yes || echo no"
+    ).outString.trim() == "yes"
+
     fun getLayoutMode(): LayoutMode = LayoutMode.fromValue(
         RootShell.run("settings get global $LAYOUT_MODE_KEY").outString.trim().toIntOrNull()
     )

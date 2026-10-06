@@ -2,6 +2,102 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.5.5] - 2026-10-05
+
+### Added
+
+- **Edge gestures: switch off the system back gesture under a strip.** With gesture
+  navigation, the system's own back gesture starts from the same edge and fired
+  together with a custom strip. Each side has a switch that sets the system's
+  back-gesture sensitivity on that side (`back_gesture_inset_scale_left/right`) to 0
+  while its strip is on screen, and writes the user's own value back as soon as the
+  strip goes away (lockscreen, screen off, an excluded app, the switch turned off,
+  the accessibility service stopping). Off by default.
+
+## [5.5.4] - 2026-10-05
+
+### Added
+
+- **Edge gestures: custom side strips** (ported from Q25 Toolbox). Thin invisible
+  strips on the left and right edges, each Off or Custom with its own thickness,
+  length and swipe distance. Every gesture (straight inward, diagonal up, diagonal
+  down), as a plain swipe or held, runs an action: Back, Home, Recents,
+  Notifications, Quick settings, Lock screen, Screenshot, Power menu, Split
+  screen, Flashlight or Previous app (defaults: swipe = Back, hold = Previous app,
+  diagonal down = Notifications, diagonal up = Quick settings). Optional arrow
+  that follows the finger (colours, size, travel, opacity, tilt, with a live
+  preview; each colour can come from the Material You palette: pick a family and
+  then a shade, and it follows the wallpaper), configurable vibration, apps where
+  the strips are switched off, and a button to copy one side onto the other. Not
+  shown on the lockscreen or with the screen off. Included in backups. The bottom strip and the native bottom-gesture
+  switch of Q25 Toolbox are not ported: the Toolbelt owns the bottom edge.
+
+## [5.5.3] - 2026-10-04
+
+### Added
+
+- **Toolbelt: Search and Open Menu slot actions.** *Search* sends `KEYCODE_SEARCH`
+  (spawns the system / app search); *Open Menu* sends `KEYCODE_MENU` (opens the
+  foreground app's options menu). Both run on the root worker. A magnifying-glass
+  icon joins the slot icon picker.
+- **Toolbelt: keep the belt in chosen fullscreen apps.** A per-app list exempts
+  apps from the fullscreen auto-hide, for launchers that hide their own status bar.
+  Launchers (home apps) now appear in the app pickers.
+- **Grid without LSPosed** (from Q25 Toolbox). A standalone two-row Grid overlay
+  (newest tile large on the right, older ones in two rows to its left, "Close all"
+  at the far end) draws the Grid mode whenever the LSPosed module is not injected
+  in the launcher. That is checked from the launcher's `/proc/<pid>/maps` with
+  root, not from this app: the module can be enabled for the app and not for the
+  launcher. With the module in the launcher, the launcher still draws the Grid.
+  The Recents screen says which path is in use.
+- **Tile corner radius** for the overlay Grid (default 22 dp) and for Masonry
+  (default 0 = square).
+- **Masonry and Grid: tile entrance/exit animation** (from Q25 Toolbox). Opening,
+  the newest tile shrinks from full screen into place while the rest rise in;
+  closing, the tapped tile (or the newest, on Back) grows to full screen as the
+  scrim fades. Only a tile that has a snapshot expands (the app in front has none
+  yet, so Back and a background tap fade instead of covering the screen with a
+  dark placeholder).
+- **Slim List / Masonry / Grid: background blur and animation duration** (from Q25
+  Toolbox). The Recents screen gets a blur slider and an animation-duration slider
+  (0 = no animation). Durations follow the system animator scale; **Battery Saver
+  with `disable_animation=true` turns all animations off**, and blur is
+  unavailable under Battery Saver.
+- **Recents: optional "blur support" module** for ROMs that do not advertise
+  background blur (the Key2's does not). Install/remove from the Recents screen;
+  reboot to apply.
+- **AdBlock: fallback hosts mount.** If the root manager does not overlay the
+  module's hosts file, a `service.sh` bind-mounts it over `/system/etc/hosts` (a
+  no-op where the overlay already works); also applied right after install and
+  once per app launch.
+
+### Changed
+
+- **Masonry Recents opens straight away.** The live `screencap` for the "hero"
+  tile cost ~2 s on the Key2's square panel and sat on the open path, so the whole
+  quilt waited on it. The hero now uses its stored snapshot like every other tile,
+  the window comes up right after the (cached) task list, and snapshots stream in
+  behind it. App label/icon lookups and the per-app banner colours are cached and
+  pre-warmed off the main thread. Cold open ~2 s to first frame in tens of ms; a
+  warm re-open paints snapshots in ~150 ms.
+- **Toolbelt, transparent mode: the keyboard strip no longer hides the belt.** The
+  belt stays and turns opaque black while only the physical-keyboard toolbar strip
+  is up (the full soft keyboard still hides it).
+- **Tapping the app already in front no longer runs `am start`** from Recents (it
+  re-triggered the app's launch transition).
+
+### Fixed
+
+- **Location icon suppression survives reboots.** The `device_config` flag is reset
+  during boot, so enabling the toggle also installs a `service.d` script that
+  re-applies it after boot (then watches for drift); turning it off removes it.
+- **Telemetry: the per-app blocklist is now in backups** and is rewritten to the
+  root watchdog's file on restore (it was skipped, so a restore left the list empty).
+- **Recents overlays: flash of the whole list after closing.** The system could show
+  the window's last frame after it was removed; the window is now made transparent
+  at the compositor level before removal. The blur is switched off in one step when
+  the exit starts.
+
 ## [5.3.7] - 2026-08-31
 
 ### Changed

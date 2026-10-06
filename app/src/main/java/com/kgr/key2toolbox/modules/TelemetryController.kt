@@ -38,7 +38,7 @@ object TelemetryController {
      * left completely untouched, even if "Detect Apps" found it.
      */
     private const val PREFS = "key2tweaks"
-    private const val KEY_BLOCKED_PACKAGES = "telemetry_blocked_packages"
+    const val KEY_BLOCKED_PACKAGES = "telemetry_blocked_packages"
     private const val BLOCKLIST_PATH = "/data/adb/.telemetry_blocked"
 
     private fun prefs(context: Context): SharedPreferences =
@@ -93,6 +93,9 @@ object TelemetryController {
             AssetInstaller.removeFile(TARGET)
         }
     }
+
+    /** Re-writes the root-side blocklist from the saved set (used after a backup restore). */
+    fun resyncBlocklist(context: Context) = mirrorBlocklist(blockedPackages(context))
 
     /** Packages currently enrolled for per-app telemetry blocking. */
     fun blockedPackages(context: Context): Set<String> =

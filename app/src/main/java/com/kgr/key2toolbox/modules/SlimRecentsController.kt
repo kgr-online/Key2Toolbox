@@ -220,27 +220,6 @@ object SlimRecentsController {
         return result
     }
 
-    /**
-     * A live screenshot of the current screen, for the "hero" tile - the
-     * foreground app has no fresh stored snapshot (those are taken on
-     * background) so its stored tile is stale or black. Root `screencap`
-     * (the AccessibilityService `takeScreenshot` API needs a capability this
-     * service doesn't hold, and `adb`-level screencap is blocked on this ROM;
-     * root works). [cropTop] / [cropBottom] px trim the status bar and, if it's
-     * up, the toolbelt strip. Half-decoded. `null` on any failure. Blocking.
-     */
-    fun captureScreen(cropTop: Int, cropBottom: Int): Bitmap? = runCatching {
-        val b64 = RootShell.run("screencap -p 2>/dev/null | base64 -w0").outString.trim()
-        if (b64.isEmpty()) return null
-        val bytes = Base64.decode(b64, Base64.NO_WRAP)
-        val full = BitmapFactory.decodeByteArray(bytes, 0, bytes.size,
-            BitmapFactory.Options().apply { inSampleSize = 2 }) ?: return null
-        val t = (cropTop / 2).coerceIn(0, full.height - 1)
-        val b = (cropBottom / 2).coerceIn(0, full.height - 1 - t)
-        if (t == 0 && b == 0) full
-        else Bitmap.createBitmap(full, 0, t, full.width, (full.height - t - b).coerceAtLeast(1))
-    }.getOrNull()
-
     // --- overlay scrim appearance (Slim List / Masonry background) --------
     //
     // In-process only - unlike RecentsController's GRID/STOCK scrim (a
@@ -256,6 +235,39 @@ object SlimRecentsController {
     /** Scrim opacity, percent 0-100. Default 78 reproduces the previous
      *  hardcoded Color.argb(200, 0, 0, 0) (200/255 ≈ 78%) unchanged. */
     const val KEY_SCRIM_OPACITY = "recents_slim_scrim_opacity"
+
+    /** Blur behind the overlay, percent 0-100 (0 = off). Needs cross-window blur support (Android 12+). */
+    const val KEY_SCRIM_BLUR = "recents_slim_scrim_blur"
+
+    fun scrimBlurPercent(sp: SharedPreferences): Int =
+        sp.getInt(KEY_SCRIM_BLUR, 0).coerceIn(0, 100)
+
+    /** Blur radius in px for the overlay window: 1% = 1dp, so 100% is a 100dp radius. */
+    fun scrimBlurRadiusPx(context: Context): Int =
+        (scrimBlurPercent(prefs(context)) * context.resources.displayMetrics.density).toInt()
+
+    /** Open/close animation length as a percent of the built-in base (0 = no animation). */
+    const val KEY_ANIM_DURATION = "recents_slim_anim_duration"
+
+    fun animDurationPercent(sp: SharedPreferences): Int =
+        sp.getInt(KEY_ANIM_DURATION, 100).coerceIn(0, 200)
+
+    /** Tile corner radius in dp for the standalone Grid (default matches the launcher's rounded cards). */
+    const val KEY_GRID_CORNER_DP = "recents_grid_corner_dp"
+
+    /** Tile corner radius in dp for the Masonry quilt (default 0 = the original square tiles). */
+    const val KEY_QUILT_CORNER_DP = "recents_quilt_corner_dp"
+
+    const val MAX_CORNER_DP = 40
+
+    fun gridCornerDp(sp: SharedPreferences): Int = sp.getInt(KEY_GRID_CORNER_DP, 22).coerceIn(0, MAX_CORNER_DP)
+    fun quiltCornerDp(sp: SharedPreferences): Int = sp.getInt(KEY_QUILT_CORNER_DP, 0).coerceIn(0, MAX_CORNER_DP)
+
+    fun gridCornerPx(context: Context): Int =
+        (gridCornerDp(prefs(context)) * context.resources.displayMetrics.density).toInt()
+
+    fun quiltCornerPx(context: Context): Int =
+        (quiltCornerDp(prefs(context)) * context.resources.displayMetrics.density).toInt()
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(ToolbeltController.PREFS, Context.MODE_PRIVATE)
@@ -295,8 +307,18 @@ object SlimRecentsController {
 
     // --- per-app banner colour ------------------------------------
 
-    private val bannerColorCache = HashMap<String, Int>()
+    private val bannerColorCache = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private val DEFAULT_BANNER = Color.rgb(38, 38, 38)
+
+    /**
+     * Warm [bannerColor] for every task off the main thread. Each miss runs a
+     * Palette pass (~3-10 ms) that would otherwise land on the main thread while
+     * the Masonry cards are built, stacking into visible jank on the first open.
+     * Call from the Recents worker before showing the overlay.
+     */
+    fun primeBannerColors(tasks: List<SlimTask>) {
+        tasks.forEach { bannerColor(it.packageName, it.icon) }
+    }
 
     /**
      * A muted, desaturated colour drawn from the app's icon - the card's
@@ -348,8 +370,20 @@ object SlimRecentsController {
             ?.takeIf { it.isNotEmpty() }
     }
 
-    private fun labelAndIcon(pm: PackageManager, pkg: String): Pair<String, Drawable?> = runCatching {
-        val ai = pm.getApplicationInfo(pkg, 0)
-        pm.getApplicationLabel(ai).toString() to pm.getApplicationIcon(ai)
-    }.getOrElse { pkg to null }
+    /**
+     * Label + icon are stable for the life of an install and the PM lookup
+     * (especially [PackageManager.getApplicationIcon], which inflates the
+     * adaptive-icon drawable) is a measurable slice of [listTasks] with a dozen
+     * tasks. Cache per package for the session so the second+ Recents open does
+     * no PM work at all.
+     */
+    private val labelIconCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Drawable?>>()
+
+    private fun labelAndIcon(pm: PackageManager, pkg: String): Pair<String, Drawable?> =
+        labelIconCache.getOrPut(pkg) {
+            runCatching {
+                val ai = pm.getApplicationInfo(pkg, 0)
+                pm.getApplicationLabel(ai).toString() to pm.getApplicationIcon(ai)
+            }.getOrElse { pkg to null }
+        }
 }

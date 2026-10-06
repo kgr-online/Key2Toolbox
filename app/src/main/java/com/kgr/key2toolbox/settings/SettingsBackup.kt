@@ -10,6 +10,7 @@ import com.kgr.key2toolbox.modules.BtIdleController
 import com.kgr.key2toolbox.modules.ExtraDimController
 import com.kgr.key2toolbox.modules.LocationIdleController
 import com.kgr.key2toolbox.modules.RecentsController
+import com.kgr.key2toolbox.modules.GestureSettings
 import com.kgr.key2toolbox.modules.TelemetryController
 import com.kgr.key2toolbox.modules.TickerController
 import com.kgr.key2toolbox.modules.ToolbeltController
@@ -94,6 +95,7 @@ object SettingsBackup {
         LOCATION_IDLE(R.string.title_location_idle),
         EXTRA_DIM(R.string.title_extra_dim),
         TELEMETRY(R.string.title_telemetry),
+        GESTURES(R.string.title_gestures),
         TICKER_NOTIFICATIONS(R.string.title_ticker_notifications),
         TOOLBELT(R.string.title_toolbelt),
         RECENTS_LAYOUT(R.string.title_recents)
@@ -124,8 +126,10 @@ object SettingsBackup {
         ToolbeltController.KEY_ICON_SCALE to BackupModule.TOOLBELT,
         ToolbeltController.KEY_HAPTIC to BackupModule.TOOLBELT,
         ToolbeltController.KEY_COLOR_MODE to BackupModule.TOOLBELT,
+        ToolbeltController.KEY_BELT_KEEP_APPS to BackupModule.TOOLBELT,
+        TelemetryController.KEY_BLOCKED_PACKAGES to BackupModule.TELEMETRY,
         ToolbeltController.KEY_PRIVACY_INDICATOR_OFF to BackupModule.TOOLBELT
-    )
+    ) + GestureSettings.allKeys().associateWith { BackupModule.GESTURES }
 
     private const val KEY2TWEAKS_PREFS = "key2tweaks"
     private const val LED_NOTIFY_PREFS = "led_notify"
@@ -499,6 +503,16 @@ object SettingsBackup {
                         // Leave it unset - don't fail the whole import.
                     }
                 }
+            }
+        }
+
+        // The per-app list was restored with the prefs above; the root watchdog reads its own copy
+        // (/data/adb/.telemetry_blocked), so rewrite it before re-enabling the watchdog.
+        if (BackupModule.TELEMETRY in modules) {
+            try {
+                TelemetryController.resyncBlocklist(context)
+            } catch (e: Exception) {
+                // Leave it unset - don't fail the whole import.
             }
         }
 
