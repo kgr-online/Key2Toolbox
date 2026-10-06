@@ -2,6 +2,29 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.5.6] - 2026-10-05
+
+### Added
+
+- **Google TTS Quick Settings tile.** A "Google TTS" tile (speaker icon) that opens
+  the Google Text-to-speech engine settings straight from the shade and collapses
+  the panel. The engine's settings activity (`com.google.android.tts`
+  `EngineSettings`) is not exported, so the tile launches it with root; Key2 Toolbox
+  must be granted root. Add it from the Quick Settings edit screen.
+
+### Changed
+
+- **Two module cards moved to the tab they belong in.** *Call Proximity Sleep* moved
+  from Network to Display, and *Lockscreen Keyboard Lock* moved from Network to
+  Keyboard. Placement only; their settings are unchanged.
+
+### Fixed
+
+- **Recents appearance: the "Background colour" label no longer wraps mid-word**
+  ("Backgrou / nd colour"). The shared picker row gave its label a fixed 76 dp;
+  it is now 140 dp. The other pickers using that row (Toolbelt) get the same wider
+  label column.
+
 ## [5.5.5] - 2026-10-05
 
 ### Added

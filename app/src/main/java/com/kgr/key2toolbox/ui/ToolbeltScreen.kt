@@ -454,7 +454,7 @@ fun <T> PickerRow(
         modifier = Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(76.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(140.dp))
         Spacer(Modifier.width(8.dp))
         Text(
             current,

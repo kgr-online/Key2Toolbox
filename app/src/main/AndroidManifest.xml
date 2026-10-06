@@ -103,6 +103,22 @@
             </intent-filter>
         </service>
 
+        <!-- Quick Settings tile: opens Google TTS engine settings. The target
+             activity isn't exported, so the tile launches it via su. -->
+        <service
+            android:name=".service.TtsTileService"
+            android:label="Google TTS"
+            android:icon="@drawable/ic_tts"
+            android:exported="true"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false" />
+        </service>
+
         <!-- Reapplies persisted ZRAM swappiness after boot fully completes,
              since the ROM's init.rc overwrites it after service.d runs. -->
         <receiver

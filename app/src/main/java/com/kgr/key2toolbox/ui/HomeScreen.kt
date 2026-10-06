@@ -55,6 +55,7 @@ val keyboardScreens = listOf(
     Screen.KbdLight,
     Screen.NavLock,
     Screen.PinKeyboard,
+    Screen.PocketKeyboardLock,
     Screen.ImeBlock,
     Screen.Calculator,
     Screen.ImeSuggestions,
@@ -65,6 +66,7 @@ val keyboardScreens = listOf(
 
 val displayScreens = listOf(
     Screen.Dt2w,
+    Screen.CallProximitySleep,
     Screen.ExtraDim,
     Screen.Recents,
     Screen.Toolbelt,
@@ -76,9 +78,7 @@ val networkScreens = listOf(
     Screen.WirelessAdb,
     Screen.BtIdle,
     Screen.LocationIdle,
-    Screen.Telemetry,
-    Screen.CallProximitySleep,
-    Screen.PocketKeyboardLock
+    Screen.Telemetry
 )
 
 val systemScreens = listOf(

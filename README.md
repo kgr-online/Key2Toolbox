@@ -18,6 +18,9 @@ accessibility-service status
 - **Adaptive keyboard backlight** daemon 
 - **Keyboard Nav Lock** - stops accidental Back/Home/Recents while typing
 - **Lockscreen PIN on Keyboard** - type your PIN on the physical keyboard
+- **Lockscreen Keyboard Lock** - disable the physical keyboard while the
+  lockscreen is showing, so the D-pad keys can't reach the emergency-call button
+  from a pocket (root; skipped automatically while Lockscreen PIN on Keyboard is on)
 - **Per-App Keyboard Block** - in chosen apps, route physical keys straight
   to the app (for games) by switching to a passthrough IME
 - **Physical Keyboard Fixes** - remap Convenience key to Ctrl (key 110) and
@@ -35,16 +38,25 @@ accessibility-service status
 
 **Display**
 - **Double-Tap to Wake** - (DT2W) Primarily needed for the 4.19 kernel. Setting in Gestures must also be toggled on
+- **Call Proximity Sleep** - force the screen off when the proximity sensor
+  reports "near" during a call, since the ROM's own proximity-screen-off never
+  blanks it on this device (configurable debounce)
 - **Extra Dim** - dim below the system minimum brightness, with an optional
   night schedule
-- **Recents Layout** - two-row grid / staggered-tile Overview, and an Overview
-  background-transparency slider (LSPosed hook)
+- **Recents Layout** - Grid, Masonry (standalone snapshot quilt) or Slim List
+  Overview, with background colour / opacity / blur and animation controls.
+  Masonry and Slim List are drawn by the accessibility service with no LSPosed;
+  Grid uses the LSPosed launcher hook when it is injected in the launcher and a
+  standalone overlay otherwise
 - **Toolbelt** - a BlackBerry Q20-style bar of five customizable icons that
   replaces the on-screen navigation. Per-slot icon + single/double/long-tap
   actions, adjustable height / icon size / haptics, Fixed / Material You /
   Transparent colour, optional pull-to-grab collapse (drag the belt away with
   the finger, spring settle). Keeps the edge back-gesture; disables the bottom
   swipe-up (LSPosed hook + accessibility service)
+- **Edge Gestures** - thin invisible strips on the left and right screen edges;
+  swipe or hold, straight or diagonal, to run Back, Home, Recents, Notifications,
+  Quick settings, Screenshot and more (accessibility service)
 
 **System**
 - **AdBlock** - systemless-hosts ad/tracker blocking, with search, add/remove,
@@ -62,6 +74,11 @@ accessibility-service status
 - **Ticker Notifications** - scrolling status-bar banner instead of heads-up
   popups, with per-app / per-category blocklist
 - **ZRAM** - compression algorithm + size (Off / 2GB / 3GB / 4GB) + swappiness selector
+- **Zygisk Detach** - stop the Play Store force-updating chosen apps, via a
+  bundled zygisk-detach module (needs root and Zygisk)
+- **Google TTS Quick Settings tile** - a shade tile that opens the Google
+  Text-to-speech engine settings (needs root; add it from the Quick Settings
+  edit screen)
 
 **Network**
 - **5GHz Hotspot Workaround** - force the WiFi region to US so 5GHz SoftAP
@@ -210,6 +227,17 @@ it `false`).
   unresolved driver/HAL-level issue from earlier debugging (sysfs write
   appears to succeed but the gesture doesn't engage) rather than a bug in
   the app itself.
+
+### Google TTS Quick Settings tile (`TtsTileService`)
+A `TileService` registered in the manifest with the `BIND_QUICK_SETTINGS_TILE`
+permission, shown as "Google TTS" with a speaker icon. Tapping it launches
+`com.google.android.tts/...googletts.settings.EngineSettings` and collapses the
+shade. That activity is not exported, so a plain `startActivity` from the app is
+refused; the tile instead runs `am start --user 0 -n <component>` through `su`,
+which means Key2 Toolbox must be granted root. If `su` is missing or denied, the
+tap fails silently. The tile is declared `ACTIVE_TILE=false` and always shows as
+inactive (it is a launcher, not a toggle), so it needs no state or listener beyond
+`onStartListening` / `onClick`.
 
 ### K2ProdFix Settings (`K2PFController`)
 Companion page for the `bb-prodfix` Magisk module (gated behind detection at
