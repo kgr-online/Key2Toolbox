@@ -604,14 +604,9 @@
     <string name="toolbelt_keep_apps">Mantieni la barra nelle app a schermo intero scelte</string>
     <string name="toolbelt_keep_hint">Nelle app scelte la barra resta visibile anche se l\'app nasconde la barra di stato o passa a schermo intero (es. un launcher con la propria opzione per nascondere la barra di stato). Selezionate: %1$d.</string>
     <string name="recents_slim_scrim_blur">Sfocatura dello sfondo</string>
-    <string name="recents_slim_blur_unsupported">La sfocatura non è disponibile al momento (il sistema la disattiva, ad esempio con il risparmio energetico).</string>
     <string name="recents_slim_anim_duration">Durata dell\'animazione</string>
     <string name="recents_slim_anim_off">Disattivata</string>
     <string name="recents_slim_anim_hint">Moltiplica il tempo di base e segue la scala delle animazioni di sistema (Opzioni sviluppatore). 100% corrisponde alla velocità di sistema.</string>
-    <string name="recents_blur_module_install">Installa il modulo di supporto alla sfocatura</string>
-    <string name="recents_blur_module_remove">Rimuovi il modulo di supporto alla sfocatura</string>
-    <string name="recents_blur_module_hint">Questa ROM non dichiara la sfocatura dello sfondo, quindi il cursore è disattivato. Il modulo imposta ro.surface_flinger.supports_background_blur=1 all\'avvio (come il modulo Enable Blurs). Richiede root e un riavvio; vale per tutto il sistema e può ridurre la fluidità su questa GPU.</string>
-    <string name="recents_blur_module_pending">Modulo installato. Riavvia per applicarlo.</string>
     <string name="recents_slim_corner_grid">Raggio degli angoli della griglia</string>
     <string name="recents_slim_corner_quilt">Raggio degli angoli del mosaico</string>
     <string name="recents_slim_corner_square">Squadrati</string>
@@ -684,4 +679,5 @@
     <string name="gestures_color_follows">Segue lo sfondo. Scegli un altro colore per smettere di seguirlo.</string>
     <string name="gestures_sys_back_off">Disattiva il gesto Indietro del sistema sotto questa striscia</string>
     <string name="gestures_sys_back_off_desc">Il gesto Indietro del sistema (navigazione a gesti) parte dallo stesso bordo e scatta insieme a questa striscia. Finché la striscia è sullo schermo, la sua sensibilità su questo lato è impostata a 0, e il tuo valore viene ripristinato appena sparisce (schermata di blocco, app escluse, servizio spento). Tieni un\'azione Indietro sulla striscia, o un altro modo per tornare indietro.</string>
+    <string name="recents_slim_blur_hint">Lo sfondo è un\'immagine sfocata dello schermo, scattata all\'apertura dei recenti.</string>
 </resources>

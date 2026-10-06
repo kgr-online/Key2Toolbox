@@ -604,14 +604,9 @@
     <string name="toolbelt_keep_apps">Balk behouden in gekozen volledig-scherm-apps</string>
     <string name="toolbelt_keep_hint">In de gekozen apps blijft de balk zichtbaar, ook als de app de statusbalk verbergt of naar volledig scherm gaat (bijv. een launcher met een eigen optie om de statusbalk te verbergen). Geselecteerd: %1$d.</string>
     <string name="recents_slim_scrim_blur">Achtergrondvervaging</string>
-    <string name="recents_slim_blur_unsupported">Vervaging is nu niet beschikbaar (het systeem schakelt deze uit, bijvoorbeeld in batterijbesparing).</string>
     <string name="recents_slim_anim_duration">Animatieduur</string>
     <string name="recents_slim_anim_off">Uit</string>
     <string name="recents_slim_anim_hint">Vermenigvuldigt de basistijd en volgt de systeemanimatieschaal (Ontwikkelaarsopties). 100% komt overeen met de systeemsnelheid.</string>
-    <string name="recents_blur_module_install">Module voor vervagingsondersteuning installeren</string>
-    <string name="recents_blur_module_remove">Module voor vervagingsondersteuning verwijderen</string>
-    <string name="recents_blur_module_hint">Deze ROM meldt geen achtergrondvervaging, dus de schuifregelaar is uitgeschakeld. De module stelt bij het opstarten ro.surface_flinger.supports_background_blur=1 in (zoals de module Enable Blurs). Vereist root en een herstart; geldt systeembreed en kan de vloeiendheid op deze GPU verminderen.</string>
-    <string name="recents_blur_module_pending">Module geïnstalleerd. Herstart om toe te passen.</string>
     <string name="recents_slim_corner_grid">Hoekradius van het raster</string>
     <string name="recents_slim_corner_quilt">Hoekradius van het mozaïek</string>
     <string name="recents_slim_corner_square">Vierkant</string>
@@ -684,4 +679,5 @@
     <string name="gestures_color_follows">Volgt je achtergrond. Kies een andere kleur om dat te stoppen.</string>
     <string name="gestures_sys_back_off">Systeemgebaar Terug onder deze strook uitschakelen</string>
     <string name="gestures_sys_back_off_desc">Het eigen Terug-gebaar van het systeem (gebarennavigatie) begint vanaf dezelfde rand en gaat samen met deze strook af. Zolang de strook op het scherm staat, is de gevoeligheid aan deze kant 0, en je waarde wordt hersteld zodra hij verdwijnt (vergrendelscherm, uitgesloten apps, dienst uit). Houd een Terug-actie op de strook, of een andere manier om terug te gaan.</string>
+    <string name="recents_slim_blur_hint">De achtergrond is een vervaagd stilstaand beeld van het scherm, gemaakt bij het openen van Recent.</string>
 </resources>

@@ -15,6 +15,20 @@ All notable changes to Key2 Toolbox are documented here.
   to be switched off and on once after updating. With a picture, Back and a background tap
   expand that tile again instead of fading.
 
+- **Recents: the blurred background is now a still picture, not the compositor's live blur.**
+  The live blur flickered about once a second while Recents was open (Adreno 512), stuck
+  until the window was removed and vanished in one frame. The screenshot taken when Recents
+  opens is now blurred once, in software, and drawn behind the scrim, so it fades with the
+  rest of the window, costs nothing per frame and no longer needs the system's cross-window
+  blur (it works under Battery Saver too). The background is frozen while Recents is open.
+  Same slider, same scale (1% = 1 dp).
+
+### Removed
+
+- **The optional "blur support" module** (`k2tb_enableblurs`) and its Recents-screen card:
+  the blur no longer needs the ROM to advertise background blur. An already installed
+  module is left on the device untouched (remove it from the root manager if unwanted).
+
 ### Fixed
 
 - **Edge gestures: the side strips no longer disappear after unlocking.** They were
