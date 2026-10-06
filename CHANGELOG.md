@@ -2,6 +2,20 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.5.7] - 2026-10-06
+
+### Fixed
+
+- **Edge gestures: the side strips no longer disappear after unlocking.** They were
+  rebuilt only on `SCREEN_ON` (still locked, so skipped) and `USER_PRESENT`, which the
+  system sent but never reached the service's receiver; after an unlock, especially a
+  biometric one, nothing rebuilt them until a setting changed. Two safety nets now
+  rebuild them: a once-a-second check while the screen is on but locked (it rebuilds as
+  soon as the keyguard is gone) and a check on accessibility events whenever they should
+  be up and are not. The saved original of the
+  system back-gesture setting no longer lives under the `gest_` prefix, so saving it
+  does not trigger a rebuild of the strips.
+
 ## [5.5.6] - 2026-10-05
 
 ### Added

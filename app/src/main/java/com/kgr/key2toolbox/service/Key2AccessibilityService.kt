@@ -843,6 +843,7 @@ class Key2AccessibilityService : AccessibilityService() {
     // ---------------------------------------------------------------- Nav Lock
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        GestureStripsController.ensure(this)
         imeActive = isImeVisible()
         reconcileNav()
 
