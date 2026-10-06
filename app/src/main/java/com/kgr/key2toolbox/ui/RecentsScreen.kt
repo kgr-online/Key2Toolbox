@@ -33,7 +33,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kgr.key2toolbox.R
-import com.kgr.key2toolbox.modules.BlurSupportController
 import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.RecentsController.LayoutMode
 import com.kgr.key2toolbox.modules.SlimRecentsController
@@ -61,24 +60,6 @@ fun RecentsScreen(onBack: () -> Unit) {
     var animPct by remember { mutableStateOf(SlimRecentsController.animDurationPercent(prefs)) }
     var gridCorner by remember { mutableStateOf(SlimRecentsController.gridCornerDp(prefs)) }
     var quiltCorner by remember { mutableStateOf(SlimRecentsController.quiltCornerDp(prefs)) }
-    // Cross-window blur can be unavailable (battery saver, unsupported GPU path): say so instead of a dead slider.
-    val blurSupported = remember {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).isCrossWindowBlurEnabled
-    }
-
-    // Optional module that makes this ROM advertise blur support (reboot needed).
-    var blurModule by remember { mutableStateOf<Boolean?>(null) } // installed?
-    var blurUpstream by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            val bi = BlurSupportController.isInstalled()
-            val bu = BlurSupportController.isUpstreamOnly()
-            withContext(Dispatchers.Main) { blurModule = bi; blurUpstream = bu }
-        }
-    }
-
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val m = RecentsController.getLayoutMode()
@@ -186,53 +167,17 @@ fun RecentsScreen(onBack: () -> Unit) {
             )
             IntSliderRow(
                 label = stringResource(R.string.recents_slim_scrim_blur),
-                value = scrimBlur, valueText = if (blurSupported) "$scrimBlur%" else "-",
+                value = scrimBlur, valueText = "$scrimBlur%",
                 range = 0f..100f, steps = 19,
-                onChange = { if (blurSupported) scrimBlur = it }, onCommit = {
-                    if (blurSupported) prefs.edit().putInt(SlimRecentsController.KEY_SCRIM_BLUR, scrimBlur).apply()
+                onChange = { scrimBlur = it }, onCommit = {
+                    prefs.edit().putInt(SlimRecentsController.KEY_SCRIM_BLUR, scrimBlur).apply()
                 }
             )
-            if (!blurSupported) {
-                Text(
-                    stringResource(R.string.recents_slim_blur_unsupported),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            // Offer the module while blur is unavailable, and keep it removable once installed.
-            val installed = blurModule
-            if (installed != null && (!blurSupported || installed)) {
-                Text(
-                    stringResource(R.string.recents_blur_module_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (installed && !blurSupported) {
-                    Text(
-                        stringResource(R.string.recents_blur_module_pending),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                if (!blurUpstream) {
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch(Dispatchers.IO) {
-                                if (installed) BlurSupportController.uninstall() else BlurSupportController.install()
-                                val now = BlurSupportController.isInstalled()
-                                withContext(Dispatchers.Main) { blurModule = now }
-                            }
-                        }
-                    ) {
-                        Text(
-                            stringResource(
-                                if (installed) R.string.recents_blur_module_remove
-                                else R.string.recents_blur_module_install
-                            )
-                        )
-                    }
-                }
-            }
+            Text(
+                stringResource(R.string.recents_slim_blur_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             // Corner radius only applies to the tile layouts; the vertical list has its own fixed pills.
             if (gridOverlay) {
                 IntSliderRow(

@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.os.Build
 import android.graphics.Rect
 import android.os.BatteryManager
 import android.os.Bundle
@@ -280,6 +282,66 @@ class Key2AccessibilityService : AccessibilityService() {
         target?.let { SlimRecentsController.resumeTask(it) }
     }
 
+    /** Decodes the screenshot off the binder/main thread. */
+    private val captureExecutor = Executors.newSingleThreadExecutor()
+
+    /**
+     * Starts a live screenshot of the whole screen and returns at once; the bitmap (half size, not trimmed) arrives in
+     * the returned future, or null on any failure. It serves two things: the front app's tile (the system keeps no
+     * snapshot of the app in front - it is taken when a task goes to the background - so without this the tile is empty;
+     * see [heroCrop]) and, blurred once, the Recents backdrop (see FrostBlur).
+     * Uses AccessibilityService.takeScreenshot (needs canTakeScreenshot in the service config; no root, and it replaced
+     * a root screencap that cost ~2 s here). Must be started BEFORE our overlay window goes up, or the scrim is in the shot.
+     */
+    private fun startFrontCapture(): java.util.concurrent.Future<Bitmap?>? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        val result = java.util.concurrent.CompletableFuture<Bitmap?>()
+        val t0 = android.os.SystemClock.uptimeMillis()
+        try {
+            takeScreenshot(android.view.Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
+                override fun onSuccess(shot: ScreenshotResult) {
+                    captureExecutor.execute {
+                        val bmp = try {
+                            val hw = Bitmap.wrapHardwareBuffer(shot.hardwareBuffer, shot.colorSpace)
+                            val half = hw?.copy(Bitmap.Config.ARGB_8888, false)?.let {
+                                Bitmap.createScaledBitmap(it, it.width / 2, it.height / 2, true).also { _ -> it.recycle() }
+                            }
+                            hw?.recycle()
+                            half
+                        } catch (e: Throwable) {
+                            Log.e("Key2Toolbox", "front capture decode failed", e); null
+                        } finally {
+                            shot.hardwareBuffer.close()
+                        }
+                        Log.d("Key2Toolbox", "front capture: ${android.os.SystemClock.uptimeMillis() - t0} ms, ok=${bmp != null}")
+                        result.complete(bmp)
+                    }
+                }
+
+                override fun onFailure(errorCode: Int) {
+                    Log.d("Key2Toolbox", "front capture failed: code=$errorCode")
+                    result.complete(null)
+                }
+            })
+        } catch (t: Throwable) {
+            Log.e("Key2Toolbox", "front capture not available", t)
+            result.complete(null)
+        }
+        return result
+    }
+
+    /** The shot trimmed of the status bar and, if it is up, the Toolbelt strip: the picture for the front app's tile. */
+    private fun heroCrop(shot: Bitmap): Bitmap {
+        val sbId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        val cropTop = if (sbId > 0) resources.getDimensionPixelSize(sbId) else 0
+        val sp = getSharedPreferences(PREFS, MODE_PRIVATE)
+        val belt = if (ToolbeltController.isEnabled(sp) && !fullscreenCached)
+            (ToolbeltController.reservedDp(sp) * resources.displayMetrics.density).toInt() else 0
+        val t = (cropTop / 2).coerceIn(0, shot.height - 1)
+        val b = (belt / 2).coerceIn(0, shot.height - 1 - t)
+        return if (t == 0 && b == 0) shot else Bitmap.createBitmap(shot, 0, t, shot.width, (shot.height - t - b).coerceAtLeast(1))
+    }
+
     private fun openRecents() {
         // The app in front, captured BEFORE the overlay window goes up so it cannot be confused with it.
         val frontPkg = foregroundPkg
@@ -287,6 +349,11 @@ class Key2AccessibilityService : AccessibilityService() {
         // shell-spawn latency to this path.
         val mode = RecentsController.getLayoutMode(this)
         val gridMode = mode == RecentsController.LayoutMode.GRID
+        // Live shot for the front app's tile, started now so it runs while the task list loads. Skipped when an overlay
+        // is already up (a refresh): the shot would include it, and the tile keeps what it has.
+        val blurPct = SlimRecentsController.scrimBlurPercent(getSharedPreferences(PREFS, MODE_PRIVATE))
+        val capture = if ((mode == RecentsController.LayoutMode.MASONRY || gridMode || (mode.isOverlay && blurPct > 0)) &&
+            !RecentsOverlays.isShowing()) startFrontCapture() else null
         val t0 = android.os.SystemClock.uptimeMillis()
         worker.execute {
             try {
@@ -302,12 +369,28 @@ class Key2AccessibilityService : AccessibilityService() {
                     // Warm the per-app banner colours here so the Palette passes
                     // don't stack up on the main thread mid-build.
                     if (masonry) SlimRecentsController.primeBannerColors(tasks)
+                    // The live shot belongs to the newest task only when that is the app we came from (if we came
+                    // from the home screen, the newest task is some other app).
+                    val topId = tasks.firstOrNull()?.takeIf { it.packageName == frontPkg }?.taskId
+                    val shot: Bitmap? = try { capture?.get(600, TimeUnit.MILLISECONDS) } catch (_: Throwable) { null }
+                    val live: Bitmap? = if (cards && topId != null) shot?.let { heroCrop(it) } else null
+                    // Blurred once, here and off the main thread: the overlay just shows the picture behind its scrim.
+                    val backdrop: Bitmap? = if (shot != null && blurPct > 0)
+                        com.kgr.key2toolbox.modules.FrostBlur.blur(shot, blurPct, resources.displayMetrics.density,
+                            resources.displayMetrics.widthPixels) else null
                     // Show the window straight after the (cheap) task list -
                     // nothing below this blocks the first frame. Cards come up
                     // with a placeholder; snapshots stream in right after.
                     mainHandler.post {
-                        if (grid) GridRecentsOverlayController.show(this, tasks, frontPkg)
-                        else SlimRecentsOverlayController.show(this, tasks, cards, frontPkg)
+                        if (grid) GridRecentsOverlayController.show(this, tasks, frontPkg, backdrop)
+                        else SlimRecentsOverlayController.show(this, tasks, cards, frontPkg, backdrop)
+                        // In the same pass as show(), so the tile has its picture from the first frame (the entrance
+                        // animation starts from it).
+                        if (live != null && topId != null) {
+                            val shot = mapOf(topId to live)
+                            if (grid) GridRecentsOverlayController.fillSnapshots(shot)
+                            else SlimRecentsOverlayController.fillSnapshots(shot)
+                        }
                         // Slim List's window just attached above the Toolbelt's
                         // in z-order (both are TYPE_ACCESSIBILITY_OVERLAY from
                         // this app; whichever attaches most recently wins).
@@ -319,14 +402,13 @@ class Key2AccessibilityService : AccessibilityService() {
                         ToolbeltOverlayController.hide()
                         ToolbeltOverlayController.refresh(this, ::handleToolbeltAction)
                     }
-                    // Masonry: stream every tile's stored snapshot in, hero
-                    // included. A root `screencap` for a live hero shot costs
-                    // ~2 s on this device's square panel - far too slow to sit on
-                    // the open path - and the hero's own stored snapshot is
-                    // usually fresh enough (the system re-snapshots the
-                    // foreground task often), so we just use it like any other.
+                    // Stream every other tile's stored snapshot in. The front app's tile got the live shot above
+                    // (a root `screencap` for it cost ~2 s here, far too slow for the open path; the accessibility
+                    // takeScreenshot API is fast and runs in parallel with the task list).
                     if (cards && tasks.isNotEmpty()) {
-                        val snaps = SlimRecentsController.loadSnapshots(tasks.map { it.taskId })
+                        // The stored snapshot of the app in front is stale or missing: skip it when we have a live one.
+                        val ids = if (live != null) tasks.drop(1).map { it.taskId } else tasks.map { it.taskId }
+                        val snaps = SlimRecentsController.loadSnapshots(ids)
                         mainHandler.post {
                             if (grid) GridRecentsOverlayController.fillSnapshots(snaps)
                             else SlimRecentsOverlayController.fillSnapshots(snaps)
@@ -843,6 +925,7 @@ class Key2AccessibilityService : AccessibilityService() {
     // ---------------------------------------------------------------- Nav Lock
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        GestureStripsController.ensure(this)
         imeActive = isImeVisible()
         reconcileNav()
 

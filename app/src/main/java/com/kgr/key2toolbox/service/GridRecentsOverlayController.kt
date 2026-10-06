@@ -193,10 +193,10 @@ object GridRecentsOverlayController {
      * snapshots stream in afterwards through [fillSnapshots]. [frontPkg] is the app that was in front when
      * Recents was opened, read before this window existed.
      */
-    fun show(svc: AccessibilityService, tasks: List<SlimTask>, frontPkg: String? = null) = safeUi {
+    fun show(svc: AccessibilityService, tasks: List<SlimTask>, frontPkg: String? = null, backdrop: Bitmap? = null) = safeUi {
         Log.d("Key2Toolbox", "GridRecents.show: ${tasks.size} tasks")
         if (root == null) frontPackage = frontPkg
-        if (root != null) rebuild(svc, tasks) else attach(svc, tasks)
+        if (root != null) rebuild(svc, tasks) else attach(svc, tasks, backdrop)
     }
 
     fun fillSnapshots(map: Map<Int, Bitmap>) = safeUi {
@@ -232,10 +232,8 @@ object GridRecentsOverlayController {
         val target = if (canExpand) tiles[wanted] else null
         val targetThumb = if (canExpand) thumbs[wanted] else null
         if (target != null && targetThumb != null) {
-            OverlayWindow.blurOff(wm, v, params)
             expandAndFade(v, tiles, headers, closeAll, target, targetThumb, remove)
         } else {
-            OverlayWindow.blurOff(wm, v, params)
             v.animate().alpha(0f).scaleX(CLOSE_SCALE).scaleY(CLOSE_SCALE)
                 .setDuration(animMs(v.context, CLOSE_MS))
                 .setInterpolator(PathInterpolator(0.3f, 0f, 0.8f, 0.15f))
@@ -251,13 +249,14 @@ object GridRecentsOverlayController {
 
     // ------------------------------------------------------------------ window
 
-    private fun attach(svc: AccessibilityService, tasks: List<SlimTask>) {
+    private fun attach(svc: AccessibilityService, tasks: List<SlimTask>, backdrop: Bitmap?) {
         val wm = svc.getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
         val container = FrameLayout(svc).apply {
             setBackgroundColor(SlimRecentsController.scrimColor(svc))
             clipChildren = false // the expanding tile grows past its slot
         }
+        OverlayWindow.addBackdrop(svc, container, backdrop)
         val area = FrameLayout(svc).apply { clipChildren = false }
         val hsv = HorizontalScrollView(svc).apply {
             isHorizontalScrollBarEnabled = false
@@ -296,14 +295,6 @@ object GridRecentsOverlayController {
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) { fitInsetsTypes = 0; fitInsetsSides = 0 }
-            // Optional blur behind the overlay; same recipe as the other overlay (blur needs DIM_BEHIND plus a
-            // non-zero dimAmount to get a drawn layer, verified on LineageOS 23).
-            val blur = SlimRecentsController.scrimBlurRadiusPx(svc)
-            if (blur > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && wm.isCrossWindowBlurEnabled) {
-                flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND or WindowManager.LayoutParams.FLAG_DIM_BEHIND
-                blurBehindRadius = blur
-                dimAmount = 0.01f
-            }
         }
         try { wm.addView(container, lp) } catch (_: Exception) { return }
         windowManager = wm
@@ -590,6 +581,7 @@ object GridRecentsOverlayController {
             order++
         }
         closeAllView?.let { it.alpha = 0f; it.animate().alpha(1f).setStartDelay(dur / 2).setDuration(dur / 2).start() }
+        OverlayWindow.backdropOf(window)?.let { it.alpha = 0f; it.animate().alpha(1f).setDuration(dur).start() }
         (window.background as? ColorDrawable)?.let { bg ->
             val full = bg.alpha
             bg.alpha = 0
@@ -631,6 +623,7 @@ object GridRecentsOverlayController {
         val fadeStart = (dur * 0.4f).toLong()
         window.animate().alpha(0f).setStartDelay(fadeStart).setDuration(dur - fadeStart + animMs(ctx, 60L))
             .withEndAction { safeUi(remove) }.start()
+        OverlayWindow.backdropOf(window)?.animate()?.alpha(0f)?.setDuration(dur)?.start()
         (window.background as? ColorDrawable)?.let { bg ->
             ValueAnimator.ofInt(bg.alpha, 0).apply {
                 duration = dur

@@ -258,6 +258,7 @@ object SlimRecentsOverlayController {
         tasks: List<SlimTask>,
         cards: Boolean = false,
         frontPkg: String? = null,
+        backdrop: android.graphics.Bitmap? = null,
     ) = safeUi {
         cardsMode = cards
         // Package that was in front when Recents was opened. Captured by the caller BEFORE the window goes up,
@@ -268,7 +269,7 @@ object SlimRecentsOverlayController {
         if (root != null) {
             rebuildRows(svc, tasks)
         } else {
-            attach(svc, tasks)
+            attach(svc, tasks, backdrop)
         }
     }
 
@@ -316,10 +317,8 @@ object SlimRecentsOverlayController {
             // Duration 0 (setting or system animator scale off): no animators at all, just drop the window.
             val animating = animate && animMs(v.context, CLOSE_MS) > 0L
             if (animating && cardsMode && target != null && targetThumb != null) {
-                OverlayWindow.blurOff(wm, v, params)
                 expandAndFade(v, cards, headers, target, targetThumb, remove)
             } else if (animating) {
-                OverlayWindow.blurOff(wm, v, params)
                 v.animate()
                     .alpha(0f).scaleX(CLOSE_SCALE).scaleY(CLOSE_SCALE)
                     .setDuration(animMs(v.context, CLOSE_MS))
@@ -375,6 +374,8 @@ object SlimRecentsOverlayController {
         window.animate().alpha(0f).setStartDelay(fadeStart)
             .setDuration(dur - fadeStart + animMs(ctx, EXPAND_FADE_TAIL_MS))
             .withEndAction { safeUi(remove) }.start()
+        // The blurred still behind everything fades with the scrim.
+        OverlayWindow.backdropOf(window)?.animate()?.alpha(0f)?.setDuration(dur)?.start()
         // The scrim goes with the other tiles, so the growing tile ends up over whatever is behind it.
         (window.background as? android.graphics.drawable.ColorDrawable)?.let { bg ->
             ValueAnimator.ofInt(bg.alpha, 0).apply {
@@ -405,6 +406,8 @@ object SlimRecentsOverlayController {
                 .setStartDelay((dur / 5) + order * 22L).setDuration(dur).setInterpolator(ease).start()
             order++
         }
+        // The blurred still comes up with the scrim instead of replacing the screen at once.
+        OverlayWindow.backdropOf(window)?.let { it.alpha = 0f; it.animate().alpha(1f).setDuration(dur).start() }
         (window.background as? android.graphics.drawable.ColorDrawable)?.let { bg ->
             val full = bg.alpha
             bg.alpha = 0
@@ -439,7 +442,7 @@ object SlimRecentsOverlayController {
         return (ToolbeltController.reservedDp(sp) * ctx.resources.displayMetrics.density).toInt()
     }
 
-    private fun attach(svc: AccessibilityService, tasks: List<SlimTask>) {
+    private fun attach(svc: AccessibilityService, tasks: List<SlimTask>, backdrop: android.graphics.Bitmap?) {
         val wm = svc.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val belt = beltInsetPx(svc)
 
@@ -447,6 +450,7 @@ object SlimRecentsOverlayController {
             setBackgroundColor(SlimRecentsController.scrimColor(svc))
             clipChildren = false // the newest tile scales beyond its slot during open/close (cards mode)
         }
+        OverlayWindow.addBackdrop(svc, container, backdrop)
 
         val list = LinearLayout(svc).apply {
             orientation = LinearLayout.VERTICAL
@@ -544,17 +548,6 @@ object SlimRecentsOverlayController {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 fitInsetsTypes = 0
                 fitInsetsSides = 0
-            }
-            // Optional blur of whatever is behind the overlay (setting in Recents). Only when the system
-            // allows cross-window blur (off under battery saver or on devices without the feature).
-            val blur = SlimRecentsController.scrimBlurRadiusPx(svc)
-            if (blur > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && wm.isCrossWindowBlurEnabled) {
-                // FLAG_DIM_BEHIND is needed too: the blur is drawn through the window's dim layer, whose
-                // alpha comes from dimAmount (0 by default, so nothing blurred). A 1% dim is invisible and
-                // gives the layer a non-zero alpha. (Found with dumpsys on LineageOS 23 in Q25 Toolbox.)
-                flags = flags or WindowManager.LayoutParams.FLAG_BLUR_BEHIND or WindowManager.LayoutParams.FLAG_DIM_BEHIND
-                blurBehindRadius = blur
-                dimAmount = 0.01f
             }
         }
 
