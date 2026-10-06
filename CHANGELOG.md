@@ -4,6 +4,17 @@ All notable changes to Key2 Toolbox are documented here.
 
 ## [5.5.7] - 2026-10-06
 
+### Changed
+
+- **Recents: the tile of the app you came from now has a picture** (it was empty). The
+  system only keeps a snapshot of a task when it goes to the background, so the app in
+  front never had one. It is now captured live with the accessibility service's
+  `takeScreenshot` (no root; the root `screencap` it replaces cost ~2 s here), started
+  before the overlay appears and in parallel with loading the task list, so it adds no
+  delay. Needs the `canTakeScreenshot` capability, so the accessibility service may need
+  to be switched off and on once after updating. With a picture, Back and a background tap
+  expand that tile again instead of fading.
+
 ### Fixed
 
 - **Edge gestures: the side strips no longer disappear after unlocking.** They were
