@@ -604,14 +604,9 @@
     <string name="toolbelt_keep_apps">Mantén la barra a les apps a pantalla completa triades</string>
     <string name="toolbelt_keep_hint">A les apps triades la barra continua visible encara que l\'app amagui la barra d\'estat o passi a pantalla completa (p. ex. un launcher amb la seva pròpia opció d\'amagar la barra d\'estat). Seleccionades: %1$d.</string>
     <string name="recents_slim_scrim_blur">Desenfocament del fons</string>
-    <string name="recents_slim_blur_unsupported">El desenfocament no està disponible ara (el sistema el desactiva, per exemple amb l\'estalvi de bateria).</string>
     <string name="recents_slim_anim_duration">Durada de l\'animació</string>
     <string name="recents_slim_anim_off">Desactivada</string>
     <string name="recents_slim_anim_hint">Multiplica el temps base i segueix l\'escala d\'animació del sistema (Opcions de desenvolupador). 100% iguala la velocitat del sistema.</string>
-    <string name="recents_blur_module_install">Instal·la el mòdul de suport de desenfocament</string>
-    <string name="recents_blur_module_remove">Treu el mòdul de suport de desenfocament</string>
-    <string name="recents_blur_module_hint">Aquest ROM no declara suport de desenfocament de fons, així que el control està desactivat. El mòdul fixa ro.surface_flinger.supports_background_blur=1 a l\'arrencada (igual que el mòdul Enable Blurs). Cal root i reiniciar; s\'aplica a tot el sistema i pot restar fluïdesa en aquesta GPU.</string>
-    <string name="recents_blur_module_pending">Mòdul instal·lat. Reinicia per aplicar-lo.</string>
     <string name="recents_slim_corner_grid">Radi de les cantonades de la quadrícula</string>
     <string name="recents_slim_corner_quilt">Radi de les cantonades del mosaic</string>
     <string name="recents_slim_corner_square">Quadrades</string>
@@ -684,4 +679,5 @@
     <string name="gestures_color_follows">Segueix el teu fons de pantalla. Tria un altre color per deixar de seguir-lo.</string>
     <string name="gestures_sys_back_off">Desactiva el gest Enrere del sistema sota aquesta franja</string>
     <string name="gestures_sys_back_off_desc">El gest Enrere propi del sistema (navegació per gestos) arrenca des de la mateixa vora i es dispara alhora que aquesta franja. Mentre la franja és a la pantalla, la seva sensibilitat en aquest costat es posa a 0, i el teu valor es restaura tan bon punt desapareix (pantalla de bloqueig, apps excloses, servei apagat). Deixa una acció Enrere a la franja, o una altra manera de tornar enrere.</string>
+    <string name="recents_slim_blur_hint">El fons és una imatge desenfocada de la pantalla, presa en obrir els recents.</string>
 </resources>

@@ -604,14 +604,9 @@
     <string name="toolbelt_keep_apps">Garder la barre dans les apps plein écran choisies</string>
     <string name="toolbelt_keep_hint">Dans les apps choisies, la barre reste visible même si l\'app masque la barre d\'état ou passe en plein écran (p. ex. un launcher avec sa propre option de masquage de la barre d\'état). Sélection : %1$d.</string>
     <string name="recents_slim_scrim_blur">Flou d\'arrière-plan</string>
-    <string name="recents_slim_blur_unsupported">Le flou n\'est pas disponible pour le moment (le système le désactive, par exemple en économie d\'énergie).</string>
     <string name="recents_slim_anim_duration">Durée de l\'animation</string>
     <string name="recents_slim_anim_off">Désactivée</string>
     <string name="recents_slim_anim_hint">Multiplie la durée de base et suit l\'échelle d\'animation du système (Options pour les développeurs). 100 % correspond à la vitesse du système.</string>
-    <string name="recents_blur_module_install">Installer le module de prise en charge du flou</string>
-    <string name="recents_blur_module_remove">Retirer le module de prise en charge du flou</string>
-    <string name="recents_blur_module_hint">Cette ROM n\'annonce pas le flou d\'arrière-plan, le curseur est donc désactivé. Le module définit ro.surface_flinger.supports_background_blur=1 au démarrage (comme le module Enable Blurs). Nécessite root et un redémarrage ; s\'applique à tout le système et peut réduire la fluidité sur ce GPU.</string>
-    <string name="recents_blur_module_pending">Module installé. Redémarrez pour l\'appliquer.</string>
     <string name="recents_slim_corner_grid">Rayon des coins de la grille</string>
     <string name="recents_slim_corner_quilt">Rayon des coins de la mosaïque</string>
     <string name="recents_slim_corner_square">Carrés</string>
@@ -684,4 +679,5 @@
     <string name="gestures_color_follows">Suit votre fond d\'écran. Choisissez une autre couleur pour arrêter.</string>
     <string name="gestures_sys_back_off">Désactiver le geste Retour du système sous cette bande</string>
     <string name="gestures_sys_back_off_desc">Le geste Retour du système (navigation par gestes) part du même bord et se déclenche en même temps que cette bande. Tant que la bande est à l\'écran, sa sensibilité de ce côté est mise à 0, et votre valeur est rétablie dès qu\'elle disparaît (écran de verrouillage, apps exclues, service arrêté). Gardez une action Retour sur la bande, ou un autre moyen de revenir en arrière.</string>
+    <string name="recents_slim_blur_hint">L\'arrière-plan est une image floutée de l\'écran, prise à l\'ouverture des récents.</string>
 </resources>

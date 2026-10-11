@@ -2,6 +2,45 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.5.7] - 2026-10-06
+
+### Changed
+
+- **Recents: the tile of the app you came from now has a picture** (it was empty). The
+  system only keeps a snapshot of a task when it goes to the background, so the app in
+  front never had one. It is now captured live with the accessibility service's
+  `takeScreenshot` (no root; the root `screencap` it replaces cost ~2 s here), started
+  before the overlay appears and in parallel with loading the task list, so it adds no
+  delay. Needs the `canTakeScreenshot` capability, so the accessibility service may need
+  to be switched off and on once after updating. With a picture, Back and a background tap
+  expand that tile again instead of fading.
+
+- **Recents: the blurred background is now a still picture, not the compositor's live blur.**
+  The live blur flickered about once a second while Recents was open (Adreno 512), stuck
+  until the window was removed and vanished in one frame. The screenshot taken when Recents
+  opens is now blurred once, in software, and drawn behind the scrim, so it fades with the
+  rest of the window, costs nothing per frame and no longer needs the system's cross-window
+  blur (it works under Battery Saver too). The background is frozen while Recents is open.
+  Same slider, same scale (1% = 1 dp).
+
+### Removed
+
+- **The optional "blur support" module** (`k2tb_enableblurs`) and its Recents-screen card:
+  the blur no longer needs the ROM to advertise background blur. An already installed
+  module is left on the device untouched (remove it from the root manager if unwanted).
+
+### Fixed
+
+- **Edge gestures: the side strips no longer disappear after unlocking.** They were
+  rebuilt only on `SCREEN_ON` (still locked, so skipped) and `USER_PRESENT`, which the
+  system sent but never reached the service's receiver; after an unlock, especially a
+  biometric one, nothing rebuilt them until a setting changed. Two safety nets now
+  rebuild them: a once-a-second check while the screen is on but locked (it rebuilds as
+  soon as the keyguard is gone) and a check on accessibility events whenever they should
+  be up and are not. The saved original of the
+  system back-gesture setting no longer lives under the `gest_` prefix, so saving it
+  does not trigger a rebuild of the strips.
+
 ## [5.5.6] - 2026-10-05
 
 ### Added

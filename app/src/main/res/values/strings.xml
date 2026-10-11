@@ -665,14 +665,9 @@
     <string name="toolbelt_keep_apps">Keep the belt in selected fullscreen apps</string>
     <string name="toolbelt_keep_hint">In the chosen apps the belt stays visible even when the app hides the status bar or goes fullscreen (e.g. a launcher with its own hide-status-bar option). Selected: %1$d.</string>
     <string name="recents_slim_scrim_blur">Background blur</string>
-    <string name="recents_slim_blur_unsupported">Blur is unavailable right now (the system turns it off, for example in battery saver).</string>
     <string name="recents_slim_anim_duration">Animation duration</string>
     <string name="recents_slim_anim_off">Off</string>
     <string name="recents_slim_anim_hint">Multiplies the base time and follows the system animation scale (Developer options). 100% matches the system speed.</string>
-    <string name="recents_blur_module_install">Install blur support module</string>
-    <string name="recents_blur_module_remove">Remove blur support module</string>
-    <string name="recents_blur_module_hint">This ROM does not advertise background blur, so the slider is off. The module sets ro.surface_flinger.supports_background_blur=1 at boot (same as the Enable Blurs module). Needs root and a reboot; applies system-wide and may cost smoothness on this GPU.</string>
-    <string name="recents_blur_module_pending">Module installed. Reboot to apply.</string>
     <string name="recents_slim_corner_grid">Grid corner radius</string>
     <string name="recents_slim_corner_quilt">Masonry corner radius</string>
     <string name="recents_slim_corner_square">Square</string>
@@ -745,4 +740,5 @@
     <string name="gestures_color_follows">Follows your wallpaper. Pick another colour to stop.</string>
     <string name="gestures_sys_back_off">Switch off the system back gesture under this strip</string>
     <string name="gestures_sys_back_off_desc">The system\'s own edge-back gesture (gesture navigation) starts from the same edge and fires together with this strip. While the strip is on screen, its sensitivity on this side is set to 0, and your value is restored as soon as the strip goes away (lockscreen, excluded apps, service off). Keep a Back action on the strip, or another way to go back.</string>
+    <string name="recents_slim_blur_hint">The background is a blurred still of the screen, taken when Recents opens.</string>
 </resources>
