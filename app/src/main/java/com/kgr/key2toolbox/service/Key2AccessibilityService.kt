@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.inputfix.CalculatorInputFix
+import com.kgr.key2toolbox.modules.PinKeysRoot
 import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
 import android.media.AudioManager
 import com.kgr.key2toolbox.modules.AutoFocusController
@@ -178,6 +179,8 @@ class Key2AccessibilityService : AccessibilityService() {
 
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
         if (key == null) return@OnSharedPreferenceChangeListener
+        refreshKeyFilter()
+        if (key == KEY_PIN_INPUT) reconcilePinKeysRoot()
         if (key == KEY_NAV_LOCK || key == KEY_NAV_GESTURE || key == KEY_NAV_ALWAYS_OFF) {
             reconcileNav()
         }
@@ -209,6 +212,43 @@ class Key2AccessibilityService : AccessibilityService() {
             }
             refreshToolbelt(rebuild = true)
         }
+    }
+
+    // Whether the key filter is currently requested from the system (the manifest config asks for it by default).
+    private var keyFilterOn = true
+
+    /**
+     * Asks the system to route key events through [onKeyEvent] only while something here can use them. With the filter
+     * on, EVERY key press in EVERY app waits for a binder round trip into this process (up to ~500 ms when it is slow),
+     * and under CPU pressure in a heavy app that delay is what makes keys stick or repeat. So it is on only for:
+     * features that act anywhere (IME suggestion shortcuts, Nav Lock's Back gate, the Recents overlay's close keys),
+     * the PIN pad (while the keyguard is up), and package-scoped fixes (while their app is in front). Re-evaluated
+     * whenever one of those inputs changes.
+     */
+    private fun refreshKeyFilter(force: Boolean = false) {
+        val p = prefs ?: return
+        val pkg = foregroundPkg
+        val anywhere = imeSuggestionsEnabled() ||
+            (navLockEnabled() && gestureMode()) ||
+            RecentsController.getLayoutMode(this).isOverlay
+        val scoped = pkg != null && (
+            (calculatorEnabled() && CalculatorInputFix.isCalculatorPackage(pkg)) ||
+            (chatComposerEnabled() && composerHandler.supportsPackage(pkg)) ||
+            (inCallShortcutsEnabled() && isGoogleDialerForeground()) ||
+            isAutoFocusEnabledForForeground())
+        val want = anywhere || scoped || (pinInputEnabled() && isDeviceLocked())
+        if (!force && want == keyFilterOn) return
+        val info = serviceInfo ?: return
+        info.flags = if (want) info.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+        else info.flags and AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS.inv()
+        serviceInfo = info
+        keyFilterOn = want
+    }
+
+    /** Root daemon for the lockscreen PIN digits (see PinKeysRoot); root shell, so off the main thread. */
+    private fun reconcilePinKeysRoot() {
+        val p = prefs ?: return
+        worker.execute { try { PinKeysRoot.reconcile(this, p) } catch (_: Throwable) { } }
     }
 
     /** (Re)attach or detach the toolbelt overlay to match current settings. */
@@ -528,11 +568,11 @@ class Key2AccessibilityService : AccessibilityService() {
         p.registerOnSharedPreferenceChangeListener(prefListener)
 
         serviceInfo?.let { info ->
-            info.flags = info.flags or
-                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
-                AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+            info.flags = info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             serviceInfo = info
         }
+        refreshKeyFilter(force = true)
+        reconcilePinKeysRoot()
 
         // Seed navDisabled from the real kernel state and reconcile.
         forceReconcile()
@@ -565,6 +605,9 @@ class Key2AccessibilityService : AccessibilityService() {
         val rx = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 Log.d("Key2Toolbox", "Screen state changed: ${intent?.action}")
+                // The keyguard can lag the screen change by a moment, so look again shortly after.
+                mainHandler.post { refreshKeyFilter() }
+                mainHandler.postDelayed({ refreshKeyFilter() }, 1000)
                 if (intent?.action == Intent.ACTION_SCREEN_OFF) {
                     // A TYPE_ACCESSIBILITY_OVERLAY window can render above the
                     // keyguard and doesn't tear itself down just because the
@@ -920,10 +963,19 @@ class Key2AccessibilityService : AccessibilityService() {
         imeActive = isImeVisible()
         reconcileNav()
 
-        val pkg = foregroundAppPackage()
+        // Only re-derive the foreground app when a window actually changed: each call is a windows() query plus a
+        // root-node fetch per window (several synchronous binder round trips on the main looper, the thread
+        // onKeyEvent is delivered on), and the continuous typeViewFocused events cannot change it. A window event
+        // from the package already tracked cannot either.
+        val windowEvent = event == null ||
+            event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        val eventPkg = event?.packageName?.toString()
+        val pkg = if (windowEvent && (eventPkg == null || eventPkg != foregroundPkg)) foregroundAppPackage() else null
         val pkgChanged = pkg != null && pkg != foregroundPkg
         if (pkgChanged) {
             foregroundPkg = pkg
+            refreshKeyFilter()
             reconcileImeBlock()
             SlimRecentsOverlayController.onForegroundChanged(pkg!!)
             GestureStripsController.onForegroundChanged(this, pkg)
@@ -1395,8 +1447,11 @@ class Key2AccessibilityService : AccessibilityService() {
             calculatorFix.onKeyEvent(this, event)
         ) return true
 
-        // PIN Input: map physical keys to the lockscreen PIN pad.
+        // PIN Input: map physical keys to the lockscreen PIN pad. With root available the daemon types the letter
+        // digits (it also works before the first unlock), so those keys are left to it: doing both would type twice.
+        // Raw digits, Enter and Delete stay on this path.
         if (!pinInputEnabled()) return false
+        if (PinKeysRoot.isActive(prefs) && PinKeysRoot.isLetterDigit(kc)) return false
         if (event.action != KeyEvent.ACTION_DOWN) return false
         if (!isDeviceLocked()) return false
 

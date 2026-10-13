@@ -16,7 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.kgr.key2toolbox.R
+import com.kgr.key2toolbox.modules.PinKeysRoot
 import com.kgr.key2toolbox.service.Key2AccessibilityService
 import com.kgr.key2toolbox.service.isKey2AccessibilityServiceEnabled
 
@@ -28,6 +32,10 @@ fun PinKeyboardScreen(onBack: () -> Unit) {
     }
 
     var serviceEnabled by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    // The root daemon follows this switch; the service's own listener does too, but it may not be running.
+    fun syncDaemon() { scope.launch(Dispatchers.IO) { PinKeysRoot.reconcile(context, prefs) } }
+
     var enabled by remember { mutableStateOf(prefs.getBoolean(Key2AccessibilityService.KEY_PIN_INPUT, true)) }
 
     LaunchedEffect(Unit) {
@@ -49,6 +57,7 @@ fun PinKeyboardScreen(onBack: () -> Unit) {
                 onCheckedChange = { checked ->
                     enabled = checked
                     prefs.edit().putBoolean(Key2AccessibilityService.KEY_PIN_INPUT, checked).apply()
+                    syncDaemon()
                 }
             )
         }
