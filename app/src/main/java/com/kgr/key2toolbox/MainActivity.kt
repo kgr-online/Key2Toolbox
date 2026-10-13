@@ -60,6 +60,11 @@ class MainActivity : ComponentActivity() {
         // prompt (FolkPatch/APatch manager) on first launch.
         lifecycleScope.launch(Dispatchers.IO) {
             if (RootShell.isRootAvailable()) {
+                // Ensure required root directories exist on fresh setups (Magisk/KernelSU/APatch)
+                RootShell.run("mkdir -p /data/adb/modules /data/adb/service.d /data/adb/post-fs-data.d && chmod 755 /data/adb/modules /data/adb/service.d /data/adb/post-fs-data.d")
+                // Grant WRITE_SECURE_SETTINGS so Settings.Global can be updated directly without su shells
+                RootShell.run("pm grant $packageName android.permission.WRITE_SECURE_SETTINGS 2>/dev/null")
+
                 // Once per app launch: make sure AdBlock's hosts file is mounted even where the root
                 // manager does not overlay module files (see AdBlockController.ensureMounted).
                 try {

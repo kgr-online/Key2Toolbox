@@ -354,7 +354,7 @@ object CtrlKeyController {
         if (sym == true) updated = updated.replace(KEY_100_LINE, "key 100   SYM")
         if (sym == false) updated = updated.replace(KEY_100_LINE, "key 100   ALT_RIGHT")
 
-        val mk = RootShell.run("mkdir -p '${stagedPath.substringBeforeLast('/')}'")
+        val mk = RootShell.run("mkdir -p /data/adb/modules '${stagedPath.substringBeforeLast('/')}'")
         if (!mk.success) return mk
         val w = writeRootFile(updated, stagedPath, "0644", null)
         if (!w.success) return w

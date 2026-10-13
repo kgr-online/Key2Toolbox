@@ -542,7 +542,7 @@
     <string name="recents_xposed_hint">Abre tu gestor de Xposed (LSPosed / Vector), activa \"Key2 Toolbox\", marca el launcher (com.android.launcher3) y esta app en su ámbito y luego fuerza la detención del launcher. Necesita un framework Xposed sobre APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Disposición de la Vista general</string>
     <string name="recents_grid_desc">Cuadrícula fuerza la disposición de tableta a dos filas para Recientes (la pantalla de inicio y el dock pueden desplazarse un poco, ya que comparten el perfil de disposición). Mosaico y Lista Fina se dibujan como su propia superposición y nunca tocan el launcher.</string>
-    <string name="recents_mode_stock">De serie (una fila)</string>
+    <string name="recents_mode_stock">De serie</string>
     <string name="recents_mode_grid">Cuadrícula (dos filas)</string>
     <string name="recents_mode_masonry">Mosaico (mosaico de capturas)</string>
     <string name="recents_mode_slim">Lista Fina (vertical, sin capturas)</string>
@@ -585,6 +585,23 @@
     <string name="toolbelt_privacy_indicator">Ocultar el icono de privacidad de ubicación</string>
     <string name="toolbelt_privacy_indicator_hint">Cada vez que una app lee tu ubicación, Android vuelve a forzar brevemente la barra de navegación sobre la app a pantalla completa para mostrar el icono de ubicación en la barra de estado. Esto desactiva ese icono en todo el sistema (device_config privacy location_indicators_enabled = false) y congela la sincronización de flags para que sobreviva a un reinicio. Concesiones: pierdes el aviso visual de que una app está usando el GPS, y ningún otro flag de device_config se actualizará desde el servidor. Los iconos de micrófono y cámara no se ven afectados. Necesita root.</string>
     <string name="toolbelt_debug_hint">¿La barra de navegación no se oculta después de activarlo? Ejecuta: adb logcat | grep Key2Toolbox-Xposed y cada hook registra si se ha enganchado. Los nombres de clase del launcher pueden cambiar entre versiones de LineageOS; hace falta reiniciar el launcher para que la barra de navegación se recoloque.</string>
+    <string name="toolbelt_per_app_visibility_title">Cuando la app está a pantalla completa</string>
+    <string name="toolbelt_per_app_vis_default">Usar el ajuste global</string>
+    <string name="toolbelt_per_app_vis_hide_fullscreen">Ocultar la toolbar</string>
+    <string name="toolbelt_per_app_vis_keep_fullscreen">Mantener la toolbar</string>
+    <string name="toolbelt_per_app_settings">Ajustes por aplicación</string>
+    <string name="toolbelt_per_app_settings_hint">Elige el color de la barra y la visibilidad para cada app de forma individual.</string>
+    <string name="toolbelt_per_app_count">%1$d personalizadas de %2$d apps</string>
+    <string name="toolbelt_per_app_title">Ajustes por aplicación del Toolbelt</string>
+    <string name="toolbelt_per_app_filter_all">Todas (%1$d)</string>
+    <string name="toolbelt_per_app_filter_custom">Personalizadas (%1$d)</string>
+    <string name="toolbelt_per_app_color_title">Color de la barra</string>
+    <string name="toolbelt_per_app_color_default">Por defecto (seguir ajuste global)</string>
+    <string name="toolbelt_per_app_color_black">Fijo (negro)</string>
+    <string name="toolbelt_per_app_color_material">Material You</string>
+    <string name="toolbelt_per_app_color_follow">Seguir la app</string>
+    <string name="toolbelt_per_app_summary_format">Color: %1$s · %2$s</string>
+    <string name="toolbelt_per_app_reset">Restablecer a por defecto</string>
     <string name="settings_import_script_modules_restored"> También restaurados y aplicados en directo: %1$s.</string>
     <string-array name="toolbelt_haptic_levels">
         <item>Desactivado</item>
@@ -595,8 +612,9 @@
     <string-array name="toolbelt_color_modes">
         <item>Fijo (negro)</item>
         <item>Material You</item>
-        <item>Translúcido</item>
-    </string-array>    <string name="telemetry_show_details">Mostrar estado por app (%1$d)</string>
+        <item>Seguir la app</item>
+    </string-array>
+    <string name="telemetry_show_details">Mostrar estado por app (%1$d)</string>
     <string name="telemetry_hide_details">Ocultar estado por app</string>
     <string name="telemetry_surface_blocked">bloqueado</string>
     <string name="telemetry_surface_leaking">activo</string>    <string name="toolbelt_statusbar_choose">Elegir apps</string>
@@ -680,4 +698,56 @@
     <string name="gestures_sys_back_off">Desactivar el gesto Atrás del sistema bajo esta franja</string>
     <string name="gestures_sys_back_off_desc">El gesto Atrás propio del sistema (navegación por gestos) arranca desde el mismo borde y se dispara a la vez que esta franja. Mientras la franja está en pantalla, su sensibilidad en este lado se pone a 0, y tu valor se restaura en cuanto desaparece (pantalla de bloqueo, apps excluidas, servicio apagado). Deja una acción Atrás en la franja, u otra forma de retroceder.</string>
     <string name="recents_slim_blur_hint">El fondo es una imagen desenfocada de la pantalla, tomada al abrir los recientes.</string>
+    <string name="title_call_proximity_sleep">Suspensión por proximidad en llamadas</string>
+    <string name="subtitle_call_proximity_sleep">Apaga la pantalla por proximidad durante las llamadas</string>
+    <string name="desc_call_proximity_sleep">El apagado de pantalla por proximidad de PowerManager no funciona en este dispositivo: el marcador detecta bien cerca y lejos, pero la pantalla nunca se apaga durante la llamada. Esto fuerza la suspensión directamente cuando el sensor indica \"cerca\" durante el tiempo de espera elegido, de modo que al acercar el teléfono a la oreja la pantalla y el teclado se apagan de forma fiable en lugar de quedar ambos activos.</string>
+    <string name="call_proximity_sleep_debounce_label">Espera antes de forzar la suspensión</string>
+    <string name="status_call_proximity_sleep_enabled">Suspensión por proximidad en llamadas activada. Espera: %1$d ms.</string>
+    <string name="status_call_proximity_sleep_disabled">Suspensión por proximidad en llamadas desactivada.</string>
+    <string name="title_pocket_kbd_lock">Bloqueo del teclado en la pantalla de bloqueo</string>
+    <string name="subtitle_pocket_kbd_lock">Desactiva el teclado físico con el dispositivo bloqueado</string>
+    <string name="desc_pocket_kbd_lock">Desactiva el teclado físico mientras se muestra la pantalla de bloqueo. Las teclas de dirección de este teclado pueden mover el foco en la pantalla de bloqueo y activar lo que esté enfocado, incluido el botón de llamada de emergencia, sin tocar la pantalla, lo que puede provocar una llamada accidental desde el bolsillo. Requiere root.</string>
+    <string name="pocket_kbd_lock_pin_keyboard_note">Se omite automáticamente mientras \"PIN de bloqueo en el teclado\" esté activado, para que nunca te quedes sin tu propio método de desbloqueo.</string>
+    <string name="status_pocket_kbd_lock_enabled">Bloqueo del teclado en la pantalla de bloqueo activado.</string>
+    <string name="status_pocket_kbd_lock_disabled">Bloqueo del teclado en la pantalla de bloqueo desactivado.</string>
+    <string name="desc_zygisk_detach">Desvincula las apps elegidas de Play Store para que deje de actualizarlas contra tu ajuste de actualización automática. Al activarlo se instala el módulo zygisk-detach (un hook de Zygisk sobre libbinder); elige abajo las apps que desvincular. Al desactivarlo se deshabilita el módulo, pero se conserva tu lista. Necesita root y Zygisk. Instalar, activar o desactivar el módulo surte efecto al reiniciar, mientras que los cambios en la lista se aplican en cuanto se reinicia Play Store.</string>
+    <string name="recents_slim_appearance_section">Apariencia</string>
+    <string name="recents_slim_scrim_color">Color de fondo</string>
+    <string-array name="recents_slim_scrim_color_modes">
+        <item>Oscuro</item>
+        <item>Material You</item>
+    </string-array>
+    <string name="recents_slim_scrim_opacity">Opacidad del fondo</string>
+    <string name="status_zygisk_detach_applied">Aplicado. %1$d desvinculadas; se detuvo Play Store para que vuelva a leer la lista.</string>
+    <string name="status_zygisk_detach_apply_failed">No se pudo actualizar la lista de desvinculadas: %1$s</string>
+    <string name="status_zygisk_detach_denylist_removed">Play Store se quitó de la DenyList y se detuvo. Cargará el hook la próxima vez que se inicie.</string>
+    <string name="status_zygisk_detach_disabled">Zygisk Detach desactivado. Reinicia para descargar el hook. Tu lista se conserva.</string>
+    <string name="status_zygisk_detach_enabled">Zygisk Detach activado.</string>
+    <string name="status_zygisk_detach_installing_module">Instalando módulo…</string>
+    <string name="status_zygisk_detach_module_failed">Error al instalar el módulo: %1$s</string>
+    <string name="subtitle_zygisk_detach">Evita que Play Store fuerce la actualización de las apps elegidas</string>
+    <string name="telemetry_app_list_desc">Toca para bloquear o desbloquear la telemetría de una app concreta.</string>
+    <string name="telemetry_app_list_empty">No se han detectado apps con telemetría.</string>
+    <string name="telemetry_app_list_title">Apps detectadas</string>
+    <string name="telemetry_app_status_blocked">Bloqueada</string>
+    <string name="telemetry_app_status_unblocked">No bloqueada</string>
+    <string name="telemetry_detect_apps">Detectar apps</string>
+    <string name="title_zygisk_detach">Zygisk Detach</string>
+    <string name="toolbelt_bar_opacity">Opacidad del fondo</string>
+    <string name="zygisk_detach_denylisted">Play Store está en la DenyList de Magisk (aplicada), así que los módulos de Zygisk no se cargan en ella y desvincular no hace nada en silencio.</string>
+    <string name="zygisk_detach_disabled_hint">Activa Zygisk Detach arriba para gestionar la lista.</string>
+    <string name="zygisk_detach_enable">Activar Zygisk Detach</string>
+    <string name="zygisk_detach_filter_all">Todas las apps</string>
+    <string name="zygisk_detach_filter_user">Apps de usuario</string>
+    <string name="zygisk_detach_list_unreadable">No se pudo leer la lista de desvinculadas - puede estar dañada. Al aplicar se sustituye por tu selección actual.</string>
+    <string name="zygisk_detach_loading_apps">Cargando apps…</string>
+    <string name="zygisk_detach_module_missing">Módulo: no instalado</string>
+    <string name="zygisk_detach_module_version">Módulo: %1$s</string>
+    <string name="zygisk_detach_no_match">Ninguna app coincide con \"%1$s\"</string>
+    <string name="zygisk_detach_no_zygisk">Parece que Zygisk no está activado. Actívalo en los ajustes de Magisk y reinicia - el hook no puede cargarse sin él.</string>
+    <string name="zygisk_detach_not_installed">no instalado</string>
+    <string name="zygisk_detach_reboot_required">Hace falta reiniciar para que el hook de Zygisk recoja este cambio. Puedes editar la lista ahora, pero la desvinculación solo surtirá efecto tras el reinicio.</string>
+    <string name="zygisk_detach_remove_from_denylist">Quitar de la DenyList</string>
+    <string name="zygisk_detach_section_apps">Apps desvinculadas</string>
+    <string name="zygisk_detach_selected_count">%1$d seleccionadas</string>
 </resources>

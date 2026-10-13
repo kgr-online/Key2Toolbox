@@ -2,6 +2,33 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.5.8] - 2026-10-13
+
+### Changed
+
+- **Toolbelt rewritten around one decision function** (`ToolbeltPolicy`, unit tested). Per-app settings beat the
+  global ones. Fullscreen and the soft keyboard only hide the belt; they never change its colour. The old "keep belt in
+  fullscreen" list is now a per-app option and is migrated on first start.
+- **Per-app Toolbelt settings** (colour and fullscreen behaviour): for each app, "when it is fullscreen" is use the
+  global setting, hide the toolbar or keep it.
+- **Icon colour follows the bar the user actually sees** (bar colour composited over the app behind it), so light/dark
+  icons can no longer disagree with the bar at any opacity. New colour mode "Follow the app": a light or dark bar
+  chosen from the app's own pixels just above the belt, with hysteresis (no flicker on mid greys).
+- **Colour changes fade** (about 0.2 s) instead of snapping, for the bar and the icons together.
+- **While any input-method window is up**, including the short physical-keyboard strip, the belt is always opaque black.
+- **Recents: the Grid layout is hidden on Lineage 23**, whose Overview already has two rows (it stays visible if it is
+  the saved choice). "Stock (single row)" is now just "Stock" in every language.
+- **Lineage 23 support** (Android 16): Platform detection, Recents hooks that match the new launcher signatures
+  (`applyLoadPlan(List, int)`, `ScrimColors`), task snapshots found in their per-user subdirectory, and the module
+  directories created on fresh root setups. `WRITE_SECURE_SETTINGS` is granted at first launch with root.
+- **Translations**: Call Proximity Sleep, Lockscreen Keyboard Lock, Zygisk Detach, the Telemetry app list, the Slim Recents
+  background and the Toolbelt per-app settings are now translated in every language (all keys are covered).
+
+### Fixed
+
+- **A2DP offload on Lineage 23:** the BBProbFix toggle wrote props that leave Bluetooth without sound there. The toggle
+  is hidden on Lineage 23 (use Developer options) and a leftover block is removed.
+
 ## [5.5.7] - 2026-10-06
 
 ### Changed

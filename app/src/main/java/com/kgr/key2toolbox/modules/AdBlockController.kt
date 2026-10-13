@@ -125,7 +125,7 @@ object AdBlockController {
 
         // install(1) writes into an existing directory but won't create missing
         // parents - MODULE_DIR itself has to exist before hosts_ctl.sh can land in it.
-        val mkModuleDir = RootShell.run("mkdir -p '$MODULE_DIR'")
+        val mkModuleDir = RootShell.run("mkdir -p /data/adb/modules '$MODULE_DIR'")
         if (!mkModuleDir.success) return mkModuleDir
 
         val ctl = AssetInstaller.installFromAsset(context, ASSET_HOSTS_CTL, HOSTS_CTL)

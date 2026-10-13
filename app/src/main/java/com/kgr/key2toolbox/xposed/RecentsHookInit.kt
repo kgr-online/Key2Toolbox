@@ -76,10 +76,15 @@ class RecentsHookInit : IXposedHookLoadPackage {
 
         XposedBridge.log("[$TAG] loaded in ${lpparam.packageName}, installing Recents hooks")
         val cl = lpparam.classLoader
-        forceOverviewTablet(cl)
-        fixupOverviewDeviceProfile(cl)
-        guardNavButtonLayoutFactory(cl)
-        forceShowAsGrid(cl)
+        if (!com.kgr.key2toolbox.core.Platform.isLineage23) {
+            // LineageOS 22 (Android 15): requires forcing tablet DeviceProfile to achieve 2-row Overview grid
+            forceOverviewTablet(cl)
+            fixupOverviewDeviceProfile(cl)
+            guardNavButtonLayoutFactory(cl)
+            forceShowAsGrid(cl)
+        } else {
+            XposedBridge.log("[$TAG] LineageOS 23 detected: using native OverviewTiles, skipping tablet spoofing")
+        }
         filterLauncherFromOverview(cl)
         scaleOverviewScrim(cl)
     }
@@ -301,25 +306,40 @@ class RecentsHookInit : IXposedHookLoadPackage {
      * stock layout too.
      */
     private fun filterLauncherFromOverview(cl: ClassLoader) {
-        try {
-            XposedHelpers.findAndHookMethod(
-                "com.android.quickstep.views.RecentsView", cl, "applyLoadPlan",
-                "java.util.List",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        if (!gridActive()) return
-                        val src = param.args.getOrNull(0) as? List<*> ?: return
-                        val kept = src.filterNot { isLauncherGroupTask(it) }
-                        if (kept.size != src.size) {
-                            param.args[0] = ArrayList(kept)
-                            XposedBridge.log("[$TAG] applyLoadPlan: dropped ${src.size - kept.size} launcher/home tile(s)")
-                        }
-                    }
+        val hook = object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                if (!gridActive()) return
+                val src = param.args.getOrNull(0) as? List<*> ?: return
+                val kept = src.filterNot { isLauncherGroupTask(it) }
+                if (kept.size != src.size) {
+                    param.args[0] = ArrayList(kept)
+                    XposedBridge.log("[$TAG] applyLoadPlan: dropped ${src.size - kept.size} launcher/home tile(s)")
                 }
-            )
+            }
+        }
+        val recentsViewClass = try {
+            XposedHelpers.findClass("com.android.quickstep.views.RecentsView", cl)
+        } catch (_: Throwable) {
+            return
+        }
+
+        var hooked = false
+        // Lineage 22 (Android 15): applyLoadPlan(List)
+        try {
+            XposedHelpers.findAndHookMethod(recentsViewClass, "applyLoadPlan", "java.util.List", hook)
+            hooked = true
+        } catch (_: Throwable) {}
+
+        // Lineage 23 (Android 16): applyLoadPlan(List, int)
+        try {
+            XposedHelpers.findAndHookMethod(recentsViewClass, "applyLoadPlan", "java.util.List", Int::class.javaPrimitiveType, hook)
+            hooked = true
+        } catch (_: Throwable) {}
+
+        if (hooked) {
             XposedBridge.log("[$TAG] hooked RecentsView.applyLoadPlan (launcher-tile filter)")
-        } catch (t: Throwable) {
-            XposedBridge.log("[$TAG] applyLoadPlan hook failed: ${t.message}")
+        } else {
+            XposedBridge.log("[$TAG] applyLoadPlan hook failed on all signatures")
         }
     }
 
@@ -343,11 +363,8 @@ class RecentsHookInit : IXposedHookLoadPackage {
      * Overview background scrim opacity - scale the returned ARGB int's alpha by
      * the configured factor so the wallpaper shows through.
      *
-     * On this build Overview is a separate `RecentsActivity` (FallbackRecentsView),
-     * whose scrim comes from `com.android.quickstep.fallback.RecentsState
-     * .getScrimColor(Context)` - NOT the in-launcher `OverviewState`. Both are
-     * hooked (plus the older `views.RecentsState` name) so it works regardless
-     * of which path the launcher takes; each has its own first-arg type.
+     * In Lineage 22 (Android 15), getScrimColor returns an Int (ARGB).
+     * In Lineage 23 (Android 16), getScrimColor returns a ScrimColors(backgroundColor, foregroundColor).
      */
     private fun scaleOverviewScrim(cl: ClassLoader) {
         val scale = object : XC_MethodHook() {
@@ -356,9 +373,24 @@ class RecentsHookInit : IXposedHookLoadPackage {
                     ?: currentApplication() ?: return
                 val factor = scrimAlpha(ctx)
                 if (factor >= 0.999f) return
-                val base = param.result as? Int ?: return
-                val a = (Color.alpha(base) * factor).toInt().coerceIn(0, 255)
-                param.result = Color.argb(a, Color.red(base), Color.green(base), Color.blue(base))
+                val result = param.result ?: return
+
+                if (result is Int) {
+                    // Lineage 22 (Android 15) path: primitive ARGB int
+                    val a = (Color.alpha(result) * factor).toInt().coerceIn(0, 255)
+                    param.result = Color.argb(a, Color.red(result), Color.green(result), Color.blue(result))
+                } else if (result.javaClass.name.endsWith(".ScrimColors")) {
+                    // Lineage 23 (Android 16) path: ScrimColors object (backgroundColor, foregroundColor)
+                    try {
+                        val bg = XposedHelpers.getIntField(result, "backgroundColor")
+                        val fg = XposedHelpers.getIntField(result, "foregroundColor")
+                        val aBg = (Color.alpha(bg) * factor).toInt().coerceIn(0, 255)
+                        val newBg = Color.argb(aBg, Color.red(bg), Color.green(bg), Color.blue(bg))
+                        param.result = XposedHelpers.newInstance(result.javaClass, newBg, fg)
+                    } catch (t: Throwable) {
+                        XposedBridge.log("[$TAG] ScrimColors alpha scale failed: ${t.message}")
+                    }
+                }
             }
         }
         val candidates = listOf(
