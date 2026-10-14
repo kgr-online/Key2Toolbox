@@ -1,5 +1,6 @@
 package com.kgr.key2toolbox.modules
 
+import com.kgr.key2toolbox.core.Platform
 import com.kgr.key2toolbox.core.RootShell
 
 /**
@@ -66,6 +67,13 @@ object K2PFController {
         )
     }
 
+    /** Removes a leftover A2DP block (written on Lineage 22) so Lineage 23's own offload toggle works. */
+    fun cleanupA2dpOnLineage23() {
+        if (Platform.isLineage23 && readProp().contains("ro.bluetooth.a2dp_offload.supported=1")) {
+            setA2dpOffload(false)
+        }
+    }
+
     /** true if the A2DP offload props are present and enabled */
     fun isA2dpOffloadEnabled(): Boolean {
         val content = readProp()
@@ -118,7 +126,12 @@ object K2PFController {
         RootShell.run("printf '%s' '$escaped' > '$SYSTEM_PROP'")
     }
 
+    /**
+     * On Lineage 23 the ROM owns A2DP offload (Developer options toggle). Forcing these props
+     * from the module leaves Bluetooth without sound, so the block is never written there.
+     */
     fun setA2dpOffload(enabled: Boolean) {
+        val enable = enabled && !Platform.isLineage23
         setPropBlock(
             marker = "Bluetooth A2DP offload",
             lines = listOf(
@@ -127,10 +140,10 @@ object K2PFController {
                 "persist.bluetooth.a2dp_offload.disabled=false",
                 "persist.bt.a2dp.aac_disable=false"
             ),
-            enable = enabled
+            enable = enable
         )
         // persist props can be applied live
-        if (enabled) {
+        if (enable) {
             RootShell.run("setprop vendor.audio.feature.a2dp_offload.enable true")
             RootShell.run("setprop ro.bluetooth.a2dp_offload.supported 1")
             RootShell.run("setprop persist.bluetooth.a2dp_offload.disabled false")

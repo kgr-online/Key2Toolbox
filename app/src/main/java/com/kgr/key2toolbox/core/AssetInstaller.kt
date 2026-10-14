@@ -31,7 +31,8 @@ object AssetInstaller {
         val tmp = File(context.filesDir, assetName)
         tmp.writeText(content)
 
-        return RootShell.run("install -m 755 '${tmp.absolutePath}' '$targetPath'")
+        val parentDir = targetPath.substringBeforeLast('/')
+        return RootShell.run("mkdir -p '$parentDir' && install -m 755 '${tmp.absolutePath}' '$targetPath'")
     }
 
     fun removeFile(targetPath: String): ShellResult =

@@ -542,7 +542,7 @@
     <string name="recents_xposed_hint">Ouvre ton gestionnaire Xposed (LSPosed / Vector), active \"Key2 Toolbox\", coche le launcher (com.android.launcher3) et cette app dans sa portée, puis force l\'arrêt du launcher. Nécessite un framework Xposed sur APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Disposition de l\'Aperçu</string>
     <string name="recents_grid_desc">Grille force la disposition tablette à deux rangées pour les Récents (l\'écran d\'accueil et le dock peuvent bouger légèrement, car ils partagent le profil de disposition). Mosaïque et Liste Fine sont dessinées comme leur propre surimpression et ne touchent jamais le launcher.</string>
-    <string name="recents_mode_stock">Par défaut (une rangée)</string>
+    <string name="recents_mode_stock">Par défaut</string>
     <string name="recents_mode_grid">Grille (deux rangées)</string>
     <string name="recents_mode_masonry">Mosaïque (patchwork de captures)</string>
     <string name="recents_mode_slim">Liste Fine (vertical, sans captures)</string>
@@ -595,7 +595,6 @@
     <string-array name="toolbelt_color_modes">
         <item>Fixe (noir)</item>
         <item>Material You</item>
-        <item>Translucide</item>
     </string-array>    <string name="telemetry_show_details">Afficher l\'état par app (%1$d)</string>
     <string name="telemetry_hide_details">Masquer l\'état par app</string>
     <string name="telemetry_surface_blocked">bloqué</string>
@@ -680,4 +679,73 @@
     <string name="gestures_sys_back_off">Désactiver le geste Retour du système sous cette bande</string>
     <string name="gestures_sys_back_off_desc">Le geste Retour du système (navigation par gestes) part du même bord et se déclenche en même temps que cette bande. Tant que la bande est à l\'écran, sa sensibilité de ce côté est mise à 0, et votre valeur est rétablie dès qu\'elle disparaît (écran de verrouillage, apps exclues, service arrêté). Gardez une action Retour sur la bande, ou un autre moyen de revenir en arrière.</string>
     <string name="recents_slim_blur_hint">L\'arrière-plan est une image floutée de l\'écran, prise à l\'ouverture des récents.</string>
+    <string name="title_call_proximity_sleep">Veille par proximité en appel</string>
+    <string name="subtitle_call_proximity_sleep">Éteindre l\'écran par proximité pendant les appels</string>
+    <string name="desc_call_proximity_sleep">L\'extinction d\'écran par proximité de PowerManager ne fonctionne pas sur cet appareil : l\'application Téléphone détecte correctement proche et éloigné, mais l\'écran ne s\'éteint jamais pendant un appel. Cette fonction force la mise en veille directement lorsque le capteur indique « proche » pendant le délai choisi, de sorte que le téléphone contre l\'oreille éteint de façon fiable l\'écran et le clavier au lieu de les laisser actifs.</string>
+    <string name="call_proximity_sleep_debounce_label">Délai avant de forcer la veille</string>
+    <string name="status_call_proximity_sleep_enabled">Veille par proximité en appel activée. Délai : %1$d ms.</string>
+    <string name="status_call_proximity_sleep_disabled">Veille par proximité en appel désactivée.</string>
+    <string name="title_pocket_kbd_lock">Verrouillage du clavier sur l\'écran de verrouillage</string>
+    <string name="subtitle_pocket_kbd_lock">Désactiver le clavier physique lorsque l\'appareil est verrouillé</string>
+    <string name="desc_pocket_kbd_lock">Désactive le clavier physique tant que l\'écran de verrouillage est affiché. Les touches directionnelles de ce clavier peuvent déplacer le focus sur l\'écran de verrouillage et activer l\'élément sélectionné, y compris le bouton d\'appel d\'urgence, sans toucher l\'écran, ce qui peut déclencher un appel accidentel depuis une poche. Nécessite root.</string>
+    <string name="pocket_kbd_lock_pin_keyboard_note">Ignoré automatiquement tant que « Code PIN de verrouillage sur le clavier » est activé, afin que vous ne soyez jamais privé de votre propre méthode de déverrouillage.</string>
+    <string name="status_pocket_kbd_lock_enabled">Verrouillage du clavier sur l\'écran de verrouillage activé.</string>
+    <string name="status_pocket_kbd_lock_disabled">Verrouillage du clavier sur l\'écran de verrouillage désactivé.</string>
+    <string name="desc_zygisk_detach">Détache les applis choisies du Play Store pour qu\'il cesse de les mettre à jour malgré votre réglage de mise à jour automatique. L\'activation installe le module zygisk-detach (un hook Zygisk sur libbinder) ; choisissez ci-dessous les applis à détacher. La désactivation coupe le module mais conserve votre liste. Nécessite le root et Zygisk. L\'installation, l\'activation ou la désactivation du module prend effet au démarrage, tandis que les modifications de la liste s\'appliquent dès que le Play Store redémarre.</string>
+    <string name="recents_slim_appearance_section">Apparence</string>
+    <string name="recents_slim_scrim_color">Couleur de l\'arrière-plan</string>
+    <string-array name="recents_slim_scrim_color_modes">
+        <item>Sombre</item>
+        <item>Material You</item>
+    </string-array>
+    <string name="recents_slim_scrim_opacity">Opacité de l\'arrière-plan</string>
+    <string name="status_zygisk_detach_applied">Appliqué. %1$d détachée(s) ; le Play Store a été arrêté pour relire la liste.</string>
+    <string name="status_zygisk_detach_apply_failed">Impossible de mettre à jour la liste de détachement : %1$s</string>
+    <string name="status_zygisk_detach_denylist_removed">Play Store retiré de la DenyList et arrêté. Il chargera le hook à son prochain démarrage.</string>
+    <string name="status_zygisk_detach_disabled">Zygisk Detach désactivé. Redémarrez pour décharger le hook. Votre liste de détachement est conservée.</string>
+    <string name="status_zygisk_detach_enabled">Zygisk Detach activé.</string>
+    <string name="status_zygisk_detach_installing_module">Installation du module…</string>
+    <string name="status_zygisk_detach_module_failed">Échec de l\'installation du module : %1$s</string>
+    <string name="subtitle_zygisk_detach">Empêche le Play Store de forcer la mise à jour des applis choisies</string>
+    <string name="telemetry_app_list_desc">Touchez pour bloquer ou débloquer la télémétrie d\'une appli en particulier.</string>
+    <string name="telemetry_app_list_empty">Aucune appli avec télémétrie détectée.</string>
+    <string name="telemetry_app_list_title">Applis détectées</string>
+    <string name="telemetry_app_status_blocked">Bloquée</string>
+    <string name="telemetry_app_status_unblocked">Non bloquée</string>
+    <string name="telemetry_detect_apps">Détecter les applis</string>
+    <string name="title_zygisk_detach">Zygisk Detach</string>
+    <string name="toolbelt_bar_opacity">Opacité de l\'arrière-plan</string>
+    <string name="toolbelt_per_app_color_black">Fixe (noir)</string>
+    <string name="toolbelt_per_app_color_default">Par défaut (réglage global)</string>
+    <string name="toolbelt_per_app_color_follow">Suivre l\'appli</string>
+    <string name="toolbelt_per_app_color_material">Material You</string>
+    <string name="toolbelt_per_app_color_title">Couleur de la barre</string>
+    <string name="toolbelt_per_app_count">%1$d personnalisées sur %2$d applis</string>
+    <string name="toolbelt_per_app_filter_all">Toutes (%1$d)</string>
+    <string name="toolbelt_per_app_filter_custom">Personnalisées (%1$d)</string>
+    <string name="toolbelt_per_app_reset">Rétablir par défaut</string>
+    <string name="toolbelt_per_app_settings">Réglages par appli</string>
+    <string name="toolbelt_per_app_settings_hint">Configurez individuellement la couleur et la visibilité de la barre pour chaque appli.</string>
+    <string name="toolbelt_per_app_summary_format">Couleur : %1$s · %2$s</string>
+    <string name="toolbelt_per_app_title">Réglages du Toolbelt par appli</string>
+    <string name="toolbelt_per_app_vis_default">Utiliser le réglage global</string>
+    <string name="toolbelt_per_app_vis_hide_fullscreen">Masquer la barre d\'outils</string>
+    <string name="toolbelt_per_app_vis_keep_fullscreen">Conserver la barre d\'outils</string>
+    <string name="toolbelt_per_app_visibility_title">Quand l\'appli est en plein écran</string>
+    <string name="zygisk_detach_denylisted">Le Play Store figure dans la DenyList de Magisk (appliquée) : les modules Zygisk n\'y sont donc pas chargés et le détachement ne fait silencieusement rien.</string>
+    <string name="zygisk_detach_disabled_hint">Activez Zygisk Detach ci-dessus pour gérer la liste.</string>
+    <string name="zygisk_detach_enable">Activer Zygisk Detach</string>
+    <string name="zygisk_detach_filter_all">Toutes les applis</string>
+    <string name="zygisk_detach_filter_user">Applis utilisateur</string>
+    <string name="zygisk_detach_list_unreadable">Impossible de lire la liste de détachement : elle est peut-être corrompue. Appliquer la remplace par votre sélection actuelle.</string>
+    <string name="zygisk_detach_loading_apps">Chargement des applis…</string>
+    <string name="zygisk_detach_module_missing">Module : non installé</string>
+    <string name="zygisk_detach_module_version">Module : %1$s</string>
+    <string name="zygisk_detach_no_match">Aucune appli ne correspond à « %1$s »</string>
+    <string name="zygisk_detach_no_zygisk">Zygisk ne semble pas activé. Activez-le dans les réglages de Magisk, puis redémarrez : le hook ne peut pas se charger sans lui.</string>
+    <string name="zygisk_detach_not_installed">non installé</string>
+    <string name="zygisk_detach_reboot_required">Redémarrage requis pour que le hook Zygisk prenne en compte ce changement. Vous pouvez modifier la liste dès maintenant, mais le détachement ne prendra effet qu\'après le redémarrage.</string>
+    <string name="zygisk_detach_remove_from_denylist">Retirer de la DenyList</string>
+    <string name="zygisk_detach_section_apps">Applis détachées</string>
+    <string name="zygisk_detach_selected_count">%1$d sélectionnée(s)</string>
 </resources>

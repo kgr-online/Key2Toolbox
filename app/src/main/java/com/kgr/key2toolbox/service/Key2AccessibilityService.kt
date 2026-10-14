@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Build
 import android.graphics.Rect
@@ -18,6 +19,7 @@ import android.os.Handler
 import android.os.Looper
 import android.telecom.TelecomManager
 import android.util.Log
+import android.view.Display
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -26,6 +28,7 @@ import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.inputfix.CalculatorInputFix
+import com.kgr.key2toolbox.modules.PinKeysRoot
 import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
 import android.media.AudioManager
 import com.kgr.key2toolbox.modules.AutoFocusController
@@ -176,6 +179,8 @@ class Key2AccessibilityService : AccessibilityService() {
 
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
         if (key == null) return@OnSharedPreferenceChangeListener
+        refreshKeyFilter()
+        if (key == KEY_PIN_INPUT) reconcilePinKeysRoot()
         if (key == KEY_NAV_LOCK || key == KEY_NAV_GESTURE || key == KEY_NAV_ALWAYS_OFF) {
             reconcileNav()
         }
@@ -188,14 +193,12 @@ class Key2AccessibilityService : AccessibilityService() {
             reconcileImeBlock()
         }
         if (key.startsWith("toolbelt_")) {
-            if (key == ToolbeltController.KEY_BELT_KEEP_APPS) ToolbeltOverlayController.setForegroundFullscreen(fullscreenCached && !beltExempt())
             // Anything that changes the reserved bottom inset needs a launcher
             // restart - the taskbar only re-reads that on recreation on this build.
             if (key == ToolbeltController.KEY_ENABLED ||
                 key == ToolbeltController.KEY_HEIGHT_DP ||
                 key == ToolbeltController.KEY_COLLAPSIBLE ||
-                key == ToolbeltController.KEY_COLLAPSED ||
-                key == ToolbeltController.KEY_COLOR_MODE
+                key == ToolbeltController.KEY_COLLAPSED
             ) {
                 val on = prefs?.getBoolean(ToolbeltController.KEY_ENABLED, false) ?: false
                 worker.execute {
@@ -211,14 +214,41 @@ class Key2AccessibilityService : AccessibilityService() {
         }
     }
 
+    // Whether the key filter is currently requested from the system (the manifest config asks for it by default).
+    private var keyFilterOn = true
+
     /**
-     * Apps whose belt ignores the fullscreen auto-hide: the explicit "keep belt"
-     * list, e.g. a launcher that hides its own status bar.
+     * Asks the system to route key events through [onKeyEvent] only while something here can use them. With the filter
+     * on, EVERY key press in EVERY app waits for a binder round trip into this process (up to ~500 ms when it is slow),
+     * and under CPU pressure in a heavy app that delay is what makes keys stick or repeat. So it is on only for:
+     * features that act anywhere (IME suggestion shortcuts, Nav Lock's Back gate, the Recents overlay's close keys),
+     * the PIN pad (while the keyguard is up), and package-scoped fixes (while their app is in front). Re-evaluated
+     * whenever one of those inputs changes.
      */
-    private fun beltExempt(): Boolean {
-        val sp = prefs ?: return false
-        val pkg = foregroundPkg ?: return false
-        return pkg in ToolbeltController.beltKeepApps(sp)
+    private fun refreshKeyFilter(force: Boolean = false) {
+        val p = prefs ?: return
+        val pkg = foregroundPkg
+        val anywhere = imeSuggestionsEnabled() ||
+            (navLockEnabled() && gestureMode()) ||
+            RecentsController.getLayoutMode(this).isOverlay
+        val scoped = pkg != null && (
+            (calculatorEnabled() && CalculatorInputFix.isCalculatorPackage(pkg)) ||
+            (chatComposerEnabled() && composerHandler.supportsPackage(pkg)) ||
+            (inCallShortcutsEnabled() && isGoogleDialerForeground()) ||
+            isAutoFocusEnabledForForeground())
+        val want = anywhere || scoped || (pinInputEnabled() && isDeviceLocked())
+        if (!force && want == keyFilterOn) return
+        val info = serviceInfo ?: return
+        info.flags = if (want) info.flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+        else info.flags and AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS.inv()
+        serviceInfo = info
+        keyFilterOn = want
+    }
+
+    /** Root daemon for the lockscreen PIN digits (see PinKeysRoot); root shell, so off the main thread. */
+    private fun reconcilePinKeysRoot() {
+        val p = prefs ?: return
+        worker.execute { try { PinKeysRoot.reconcile(this, p) } catch (_: Throwable) { } }
     }
 
     /** (Re)attach or detach the toolbelt overlay to match current settings. */
@@ -534,14 +564,15 @@ class Key2AccessibilityService : AccessibilityService() {
         instance = this
         val p = getSharedPreferences(PREFS, MODE_PRIVATE)
         prefs = p
+        ToolbeltController.migrateKeepApps(p) // before the listener, so the rewrite does not trigger it
         p.registerOnSharedPreferenceChangeListener(prefListener)
 
         serviceInfo?.let { info ->
-            info.flags = info.flags or
-                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
-                AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+            info.flags = info.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             serviceInfo = info
         }
+        refreshKeyFilter(force = true)
+        reconcilePinKeysRoot()
 
         // Seed navDisabled from the real kernel state and reconcile.
         forceReconcile()
@@ -574,6 +605,9 @@ class Key2AccessibilityService : AccessibilityService() {
         val rx = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 Log.d("Key2Toolbox", "Screen state changed: ${intent?.action}")
+                // The keyguard can lag the screen change by a moment, so look again shortly after.
+                mainHandler.post { refreshKeyFilter() }
+                mainHandler.postDelayed({ refreshKeyFilter() }, 1000)
                 if (intent?.action == Intent.ACTION_SCREEN_OFF) {
                     // A TYPE_ACCESSIBILITY_OVERLAY window can render above the
                     // keyguard and doesn't tear itself down just because the
@@ -929,13 +963,23 @@ class Key2AccessibilityService : AccessibilityService() {
         imeActive = isImeVisible()
         reconcileNav()
 
-        val pkg = foregroundAppPackage()
+        // Only re-derive the foreground app when a window actually changed: each call is a windows() query plus a
+        // root-node fetch per window (several synchronous binder round trips on the main looper, the thread
+        // onKeyEvent is delivered on), and the continuous typeViewFocused events cannot change it. A window event
+        // from the package already tracked cannot either.
+        val windowEvent = event == null ||
+            event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        val eventPkg = event?.packageName?.toString()
+        val pkg = if (windowEvent && (eventPkg == null || eventPkg != foregroundPkg)) foregroundAppPackage() else null
         val pkgChanged = pkg != null && pkg != foregroundPkg
         if (pkgChanged) {
             foregroundPkg = pkg
+            refreshKeyFilter()
             reconcileImeBlock()
             SlimRecentsOverlayController.onForegroundChanged(pkg!!)
             GestureStripsController.onForegroundChanged(this, pkg)
+            ToolbeltOverlayController.setForegroundApp(pkg)
         }
 
         // Toolbelt: keep the belt attached; slide it away while the soft keyboard
@@ -945,9 +989,12 @@ class Key2AccessibilityService : AccessibilityService() {
         // short physical-keyboard toolbar strip - the belt hides for that too in
         // translucent mode, where it would otherwise show through.
         ToolbeltOverlayController.setImeVisible(imeActive, anyImeWindow())
-        ToolbeltOverlayController.setForegroundFullscreen(fullscreenCached && !beltExempt())
+        ToolbeltOverlayController.setForegroundFullscreen(fullscreenCached)
         refreshToolbelt()
         scheduleFullscreenProbe(event, pkgChanged)
+        when (event?.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> ToolbeltOverlayController.onContentChanged()
+        }
 
         // In-Call Shortcuts: open the dialpad tab the moment the in-call screen appears.
         if (inCallShortcutsEnabled() && isGoogleDialerForeground() &&
@@ -1029,7 +1076,7 @@ class Key2AccessibilityService : AccessibilityService() {
             if (value != fullscreenCached) {
                 fullscreenCached = value
                 mainHandler.post {
-                    ToolbeltOverlayController.setForegroundFullscreen(value && !beltExempt())
+                    ToolbeltOverlayController.setForegroundFullscreen(value)
                     refreshToolbelt()
                 }
             }
@@ -1116,24 +1163,21 @@ class Key2AccessibilityService : AccessibilityService() {
         }
     }
 
+    private fun desiredNavDisabled(): Boolean {
+        if (alwaysOff()) return true
+        return if (!navLockEnabled() || gestureMode()) false else imeActive
+    }
+
     /** Compute and apply the desired capacitive-button state from current settings. */
     private fun reconcileNav() {
-        val desired = when {
-            alwaysOff() -> true                          // permanently disabled
-            !navLockEnabled() || gestureMode() -> false   // buttons stay live (gesture mode gates in onKeyEvent)
-            else -> imeActive                             // disable-while-typing mode
-        }
+        val desired = desiredNavDisabled()
         Log.d("Key2Toolbox", "reconcileNav: desired=$desired, currentCache=$navDisabled, alwaysOff=${alwaysOff()}, imeActive=$imeActive")
         if (desired != navDisabled) applyNavDisabled(desired)
     }
 
     private fun forceReconcile() {
         worker.execute {
-            val desired = when {
-                alwaysOff() -> true                          // permanently disabled
-                !navLockEnabled() || gestureMode() -> false   // buttons stay live (gesture mode gates in onKeyEvent)
-                else -> imeActive                             // disable-while-typing mode
-            }
+            val desired = desiredNavDisabled()
             Log.d("Key2Toolbox", "forceReconcile: desired=$desired, alwaysOff=${alwaysOff()}, imeActive=$imeActive")
             // Always apply directly to the hardware to override any driver/kernel-level resets
             navDisabled = desired
@@ -1403,8 +1447,11 @@ class Key2AccessibilityService : AccessibilityService() {
             calculatorFix.onKeyEvent(this, event)
         ) return true
 
-        // PIN Input: map physical keys to the lockscreen PIN pad.
+        // PIN Input: map physical keys to the lockscreen PIN pad. With root available the daemon types the letter
+        // digits (it also works before the first unlock), so those keys are left to it: doing both would type twice.
+        // Raw digits, Enter and Delete stay on this path.
         if (!pinInputEnabled()) return false
+        if (PinKeysRoot.isActive(prefs) && PinKeysRoot.isLetterDigit(kc)) return false
         if (event.action != KeyEvent.ACTION_DOWN) return false
         if (!isDeviceLocked()) return false
 

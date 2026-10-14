@@ -542,7 +542,7 @@
     <string name="recents_xposed_hint">Obre el teu gestor d\'Xposed (LSPosed / Vector), activa \"Key2 Toolbox\", marca el launcher (com.android.launcher3) i aquesta app al seu àmbit i després força l\'aturada del launcher. Necessita un entorn Xposed sobre APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Disposició de la Vista general</string>
     <string name="recents_grid_desc">Graella força la disposició de tauleta a dues files per a Recents (la pantalla d\'inici i el dock es poden desplaçar una mica, ja que comparteixen el perfil de disposició). El Mosaic i la Llista Prima es dibuixen com a superposició pròpia i no toquen mai el launcher.</string>
-    <string name="recents_mode_stock">De sèrie (una fila)</string>
+    <string name="recents_mode_stock">De sèrie</string>
     <string name="recents_mode_grid">Graella (dues files)</string>
     <string name="recents_mode_masonry">Mosaic (mosaic de captures)</string>
     <string name="recents_mode_slim">Llista Prima (vertical, sense captures)</string>
@@ -595,7 +595,6 @@
     <string-array name="toolbelt_color_modes">
         <item>Fix (negre)</item>
         <item>Material You</item>
-        <item>Translúcid</item>
     </string-array>    <string name="telemetry_show_details">Mostra l\'estat per app (%1$d)</string>
     <string name="telemetry_hide_details">Amaga l\'estat per app</string>
     <string name="telemetry_surface_blocked">blocat</string>
@@ -680,4 +679,73 @@
     <string name="gestures_sys_back_off">Desactiva el gest Enrere del sistema sota aquesta franja</string>
     <string name="gestures_sys_back_off_desc">El gest Enrere propi del sistema (navegació per gestos) arrenca des de la mateixa vora i es dispara alhora que aquesta franja. Mentre la franja és a la pantalla, la seva sensibilitat en aquest costat es posa a 0, i el teu valor es restaura tan bon punt desapareix (pantalla de bloqueig, apps excloses, servei apagat). Deixa una acció Enrere a la franja, o una altra manera de tornar enrere.</string>
     <string name="recents_slim_blur_hint">El fons és una imatge desenfocada de la pantalla, presa en obrir els recents.</string>
+    <string name="title_call_proximity_sleep">Suspensió per proximitat en trucades</string>
+    <string name="subtitle_call_proximity_sleep">Apaga la pantalla per proximitat durant les trucades</string>
+    <string name="desc_call_proximity_sleep">L\'apagada de pantalla per proximitat de PowerManager no funciona en aquest dispositiu: el marcador detecta bé a prop i lluny, però la pantalla mai s\'apaga durant la trucada. Això força la suspensió directament quan el sensor indica \"a prop\" durant el temps d\'espera triat, de manera que en acostar el telèfon a l\'orella la pantalla i el teclat s\'apaguen de manera fiable en lloc de quedar tots dos actius.</string>
+    <string name="call_proximity_sleep_debounce_label">Espera abans de forçar la suspensió</string>
+    <string name="status_call_proximity_sleep_enabled">Suspensió per proximitat en trucades activada. Espera: %1$d ms.</string>
+    <string name="status_call_proximity_sleep_disabled">Suspensió per proximitat en trucades desactivada.</string>
+    <string name="title_pocket_kbd_lock">Bloqueig del teclat a la pantalla de bloqueig</string>
+    <string name="subtitle_pocket_kbd_lock">Desactiva el teclat físic amb el dispositiu bloquejat</string>
+    <string name="desc_pocket_kbd_lock">Desactiva el teclat físic mentre es mostra la pantalla de bloqueig. Les tecles de direcció d\'aquest teclat poden moure el focus a la pantalla de bloqueig i activar el que estigui enfocat, inclòs el botó de trucada d\'emergència, sense tocar la pantalla, cosa que pot provocar una trucada accidental des de la butxaca. Requereix root.</string>
+    <string name="pocket_kbd_lock_pin_keyboard_note">S\'omet automàticament mentre \"PIN de bloqueig de pantalla amb el teclat\" estigui activat, perquè mai et quedis sense el teu propi mètode de desbloqueig.</string>
+    <string name="status_pocket_kbd_lock_enabled">Bloqueig del teclat a la pantalla de bloqueig activat.</string>
+    <string name="status_pocket_kbd_lock_disabled">Bloqueig del teclat a la pantalla de bloqueig desactivat.</string>
+    <string name="desc_zygisk_detach">Desvincula les apps triades de Play Store perquè deixi d\'actualitzar-les contra el teu ajust d\'actualització automàtica. En activar-ho s\'instal·la el mòdul zygisk-detach (un hook de Zygisk sobre libbinder); tria a sota les apps que vols desvincular. En desactivar-ho es desactiva el mòdul però es conserva la teva llista. Cal root i Zygisk. Instal·lar, activar o desactivar el mòdul té efecte a l\'arrencada, mentre que els canvis a la llista s\'apliquen tan bon punt es reinicia Play Store.</string>
+    <string name="recents_slim_appearance_section">Aparença</string>
+    <string name="recents_slim_scrim_color">Color del fons</string>
+    <string-array name="recents_slim_scrim_color_modes">
+        <item>Fosc</item>
+        <item>Material You</item>
+    </string-array>
+    <string name="recents_slim_scrim_opacity">Opacitat del fons</string>
+    <string name="status_zygisk_detach_applied">Aplicat. %1$d desvinculades; s\'ha aturat Play Store perquè torni a llegir la llista.</string>
+    <string name="status_zygisk_detach_apply_failed">No s\'ha pogut actualitzar la llista de desvinculació: %1$s</string>
+    <string name="status_zygisk_detach_denylist_removed">Play Store s\'ha eliminat de la DenyList i s\'ha aturat. Carregarà el hook la propera vegada que s\'iniciï.</string>
+    <string name="status_zygisk_detach_disabled">Zygisk Detach desactivat. Reinicia per descarregar el hook. Es conserva la teva llista de desvinculació.</string>
+    <string name="status_zygisk_detach_enabled">Zygisk Detach activat.</string>
+    <string name="status_zygisk_detach_installing_module">Instal·lant el mòdul…</string>
+    <string name="status_zygisk_detach_module_failed">La instal·lació del mòdul ha fallat: %1$s</string>
+    <string name="subtitle_zygisk_detach">Evita que Play Store actualitzi a la força les apps triades</string>
+    <string name="telemetry_app_list_desc">Toca per bloquejar o desbloquejar la telemetria d\'una app concreta.</string>
+    <string name="telemetry_app_list_empty">No s\'ha detectat cap app amb telemetria.</string>
+    <string name="telemetry_app_list_title">Aplicacions detectades</string>
+    <string name="telemetry_app_status_blocked">Bloquejada</string>
+    <string name="telemetry_app_status_unblocked">No bloquejada</string>
+    <string name="telemetry_detect_apps">Detecta aplicacions</string>
+    <string name="title_zygisk_detach">Zygisk Detach</string>
+    <string name="toolbelt_bar_opacity">Opacitat del fons</string>
+    <string name="toolbelt_per_app_color_black">Fix (negre)</string>
+    <string name="toolbelt_per_app_color_default">Per defecte (ajust global)</string>
+    <string name="toolbelt_per_app_color_follow">Segueix l\'app</string>
+    <string name="toolbelt_per_app_color_material">Material You</string>
+    <string name="toolbelt_per_app_color_title">Color de la barra</string>
+    <string name="toolbelt_per_app_count">%1$d personalitzades de %2$d apps</string>
+    <string name="toolbelt_per_app_filter_all">Totes (%1$d)</string>
+    <string name="toolbelt_per_app_filter_custom">Personalitzades (%1$d)</string>
+    <string name="toolbelt_per_app_reset">Restableix el valor per defecte</string>
+    <string name="toolbelt_per_app_settings">Ajustos per aplicació</string>
+    <string name="toolbelt_per_app_settings_hint">Configura el color i la visibilitat de la barra per a cada app per separat.</string>
+    <string name="toolbelt_per_app_summary_format">Color: %1$s · %2$s</string>
+    <string name="toolbelt_per_app_title">Ajustos del Toolbelt per aplicació</string>
+    <string name="toolbelt_per_app_vis_default">Fes servir l\'ajust global</string>
+    <string name="toolbelt_per_app_vis_hide_fullscreen">Amaga la barra</string>
+    <string name="toolbelt_per_app_vis_keep_fullscreen">Mantén la barra</string>
+    <string name="toolbelt_per_app_visibility_title">Quan l\'app està a pantalla completa</string>
+    <string name="zygisk_detach_denylisted">Play Store és a la DenyList de Magisk (aplicada), de manera que no hi es carreguen mòduls de Zygisk i la desvinculació no fa res sense avisar.</string>
+    <string name="zygisk_detach_disabled_hint">Activa Zygisk Detach a dalt per gestionar la llista.</string>
+    <string name="zygisk_detach_enable">Activa Zygisk Detach</string>
+    <string name="zygisk_detach_filter_all">Totes les apps</string>
+    <string name="zygisk_detach_filter_user">Apps d\'usuari</string>
+    <string name="zygisk_detach_list_unreadable">No s\'ha pogut llegir la llista de desvinculació: potser està malmesa. En aplicar, es substitueix per la teva selecció actual.</string>
+    <string name="zygisk_detach_loading_apps">Carregant aplicacions…</string>
+    <string name="zygisk_detach_module_missing">Mòdul: no instal·lat</string>
+    <string name="zygisk_detach_module_version">Mòdul: %1$s</string>
+    <string name="zygisk_detach_no_match">Cap app coincideix amb \"%1$s\"</string>
+    <string name="zygisk_detach_no_zygisk">Sembla que Zygisk no està activat. Activa\'l als ajustos de Magisk i reinicia: el hook no pot carregar-se sense ell.</string>
+    <string name="zygisk_detach_not_installed">no instal·lat</string>
+    <string name="zygisk_detach_reboot_required">Cal reiniciar perquè el hook de Zygisk detecti aquest canvi. Pots editar la llista ara, però la desvinculació només tindrà efecte després de reiniciar.</string>
+    <string name="zygisk_detach_remove_from_denylist">Elimina de la DenyList</string>
+    <string name="zygisk_detach_section_apps">Apps desvinculades</string>
+    <string name="zygisk_detach_selected_count">%1$d seleccionades</string>
 </resources>

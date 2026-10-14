@@ -150,7 +150,20 @@ object SlimRecentsController {
      * (`0600 system:system`, `system_data_file`); confirmed on the Key2's LOS
      * build. `taskId` matches `dumpsys activity recents` 1:1.
      */
-    private fun snapshotDir(): String = "/data/system_ce/${Process.myUid() / 100000}/snapshots"
+    private fun snapshotRoot(): String = "/data/system_ce/${Process.myUid() / 100000}/snapshots"
+
+    /**
+     * Directory that actually holds the `<id>_reduced.jpg` files: the root itself on Lineage 22 (Android 15),
+     * or a UUID-named subdirectory on Lineage 23 (Android 16).
+     */
+    private fun snapshotDir(): String {
+        val root = snapshotRoot()
+        if (com.kgr.key2toolbox.core.Platform.isLineage23) {
+            val found = RootShell.run("ls -td '$root'/*/ 2>/dev/null | head -1").outString.trim().trimEnd('/')
+            if (found.isNotEmpty()) return found
+        }
+        return root
+    }
 
     /**
      * Session cache of decoded snapshots, keyed by "taskId:mtime" so a fresh

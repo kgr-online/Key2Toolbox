@@ -193,7 +193,7 @@ object ZygiskDetachController {
             val result = RootShell.run(
                 listOf(
                     "rm -rf '$MODULE_DIR'",
-                    "mkdir -p '$MODULE_DIR' '$PERSIST'",
+                    "mkdir -p /data/adb/modules '$MODULE_DIR' '$PERSIST'",
                     "cp -r '${stage.absolutePath}'/* '$MODULE_DIR/'",
                     "chown -R 0:0 '$MODULE_DIR'",
                     "find '$MODULE_DIR' -type d -exec chmod 755 {} \\;",

@@ -63,14 +63,10 @@ fun ToolbeltScreen(onBack: () -> Unit) {
         context.getSharedPreferences(ToolbeltController.PREFS, android.content.Context.MODE_PRIVATE)
     }
 
-    var showKeepPicker by remember { mutableStateOf(false) }
-    if (showKeepPicker) {
-        AppPickerScreen(
-            title = stringResource(R.string.toolbelt_keep_apps),
-            initial = ToolbeltController.beltKeepApps(prefs),
-            onChange = { prefs.edit().putStringSet(ToolbeltController.KEY_BELT_KEEP_APPS, it).apply() },
-            onBack = { showKeepPicker = false },
-            countLabel = { n, total -> stringResource(R.string.toolbelt_statusbar_apps_count, n, total) },
+    var showPerApp by remember { mutableStateOf(false) }
+    if (showPerApp) {
+        ToolbeltPerAppScreen(
+            onBack = { showPerApp = false }
         )
         return
     }
@@ -85,7 +81,7 @@ fun ToolbeltScreen(onBack: () -> Unit) {
     }
     var haptic by remember { mutableStateOf(ToolbeltController.hapticLevel(prefs)) }
     var collapsible by remember { mutableStateOf(ToolbeltController.isCollapsible(prefs)) }
-    var colorMode by remember { mutableStateOf(ToolbeltController.colorMode(prefs)) }
+    var colorMode by remember { mutableStateOf(ToolbeltController.colorMode(prefs).id) }
     var barOpacity by remember { mutableStateOf(ToolbeltController.barOpacityPercent(prefs)) }
     var privacyIndicatorOff by remember {
         mutableStateOf(ToolbeltController.isPrivacyIndicatorOff(prefs))
@@ -173,22 +169,6 @@ fun ToolbeltScreen(onBack: () -> Unit) {
             )
         }
 
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.toolbelt_keep_apps), modifier = Modifier.weight(1f))
-                TextButton(onClick = { showKeepPicker = true }) {
-                    Text(stringResource(R.string.toolbelt_statusbar_choose))
-                }
-            }
-            Text(
-                stringResource(
-                    R.string.toolbelt_keep_hint,
-                    ToolbeltController.beltKeepApps(prefs).size
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
 
         Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -280,6 +260,32 @@ fun ToolbeltScreen(onBack: () -> Unit) {
                 prefs.edit().putInt(ToolbeltController.KEY_BAR_OPACITY, barOpacity).apply()
             }
         )
+
+        DescriptionDivider()
+        Text(
+            stringResource(R.string.toolbelt_per_app_settings),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.toolbelt_per_app_settings), modifier = Modifier.weight(1f))
+                TextButton(onClick = { showPerApp = true }) {
+                    Text(stringResource(R.string.toolbelt_statusbar_choose))
+                }
+            }
+            Text(
+                stringResource(
+                    R.string.toolbelt_per_app_count,
+                    ToolbeltController.getPerAppConfigs(prefs).size,
+                    apps.size
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         DescriptionDivider()
         Text(

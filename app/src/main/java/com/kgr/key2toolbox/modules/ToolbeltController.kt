@@ -43,6 +43,7 @@ object ToolbeltController {
     const val KEY_HAPTIC = "toolbelt_haptic"               // 0 off / 1 light / 2 medium / 3 strong
     const val KEY_COLOR_MODE = "toolbelt_color_mode"       // 0 fixed / 1 material-you / 2 follow-app
     const val KEY_BAR_OPACITY = "toolbelt_bar_opacity"     // percent, 0-100; applies on top of any color mode
+        const val KEY_PER_APP_CONFIG = "toolbelt_per_app_config" // JSON map of per-app color/visibility overrides
     const val KEY_BELT_KEEP_APPS = "toolbelt_belt_keep_apps"       // packages where the belt ignores fullscreen auto-hide
     const val KEY_PRIVACY_INDICATOR_OFF = "toolbelt_privacy_indicator_off" // suppress the location privacy icon
 
@@ -59,7 +60,6 @@ object ToolbeltController {
     const val GLOBAL_ACTIVE = "key2_toolbelt_active"       // 1 = replace the nav bar
     const val GLOBAL_NAV_MODE = "key2_toolbelt_nav_mode"   // last seen navigation_mode (0/1/2)
     const val GLOBAL_INSET_PX = "key2_toolbelt_inset_px"   // bottom inset the hook reserves for the belt
-
     const val SLOT_COUNT = 5
 
     /** Belt height in dp = the bottom inset reserved from apps while it is shown. */
@@ -196,8 +196,10 @@ object ToolbeltController {
     fun hapticLevel(sp: SharedPreferences): Int =
         sp.getInt(KEY_HAPTIC, 2).coerceIn(0, 3)
 
-    /** 0 fixed black, 1 Material You, 2 transparent (app's window background shows through). */
-    fun colorMode(sp: SharedPreferences): Int = sp.getInt(KEY_COLOR_MODE, 0).coerceIn(0, 2)
+    /** Global colour source: fixed black, Material You, or follow the app (light/dark picked from its own pixels). */
+    fun colorMode(sp: SharedPreferences): ToolbeltPolicy.ColorMode =
+        ToolbeltPolicy.ColorMode.fromId(sp.getInt(KEY_COLOR_MODE, 0))
+
 
     /**
      * How opaque the belt's *background bar* is, 0-100. Layers on top of
@@ -209,52 +211,78 @@ object ToolbeltController {
     fun barOpacityPercent(sp: SharedPreferences): Int =
         sp.getInt(KEY_BAR_OPACITY, 100).coerceIn(15, 100)
 
-    /**
-     * [bar background, icon tint] for the current colour mode. Called from the
-     * accessibility service context. All modes reserve the belt height as a
-     * bottom inset - transparent mode just doesn't paint over it, so the app's
-     * own window background fills the strip.
-     */
-    fun beltColors(context: Context): IntArray {
-        val fixedBar = android.graphics.Color.rgb(10, 10, 10)
-        val fixedIcon = android.graphics.Color.WHITE
-        val sp = prefs(context)
-        val raw = when (colorMode(sp)) {
-            1 -> {
-                val night = (context.resources.configuration.uiMode and
-                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                    android.content.res.Configuration.UI_MODE_NIGHT_YES
-                try {
-                    if (night) intArrayOf(
-                        context.getColor(android.R.color.system_neutral1_800),
-                        context.getColor(android.R.color.system_neutral1_50),
-                    ) else intArrayOf(
-                        context.getColor(android.R.color.system_neutral2_100),
-                        context.getColor(android.R.color.system_neutral1_900),
-                    )
-                } catch (_: Throwable) {
-                    intArrayOf(fixedBar, fixedIcon)
-                }
+    /** Persisted per-app overrides (the old "keep belt" list is folded in once, see [migrateKeepApps]). */
+    fun getPerAppConfigs(sp: SharedPreferences): Map<String, ToolbeltPolicy.AppConfig> {
+        val raw = sp.getString(KEY_PER_APP_CONFIG, null) ?: return emptyMap()
+        val map = mutableMapOf<String, ToolbeltPolicy.AppConfig>()
+        try {
+            val json = JSONObject(raw)
+            for (pkg in json.keys()) {
+                val obj = json.optJSONObject(pkg) ?: continue
+                val config = ToolbeltPolicy.AppConfig(
+                    ToolbeltPolicy.PerAppColor.fromId(obj.optInt("color", -1)),
+                    ToolbeltPolicy.PerAppVisibility.fromId(obj.optInt("visibility", 0)),
+                )
+                if (!config.isDefault) map[pkg] = config
             }
-            // Transparent: a whisper of scrim so white icons stay readable on a
-            // light app background, otherwise the app's window bg shows through.
-            2 -> intArrayOf(android.graphics.Color.argb(0x1F, 0, 0, 0), android.graphics.Color.WHITE)
-            else -> intArrayOf(fixedBar, fixedIcon)
+        } catch (_: Exception) {}
+        return map
+    }
+
+    fun getAppConfig(sp: SharedPreferences, pkg: String?): ToolbeltPolicy.AppConfig =
+        if (pkg == null) ToolbeltPolicy.AppConfig() else getPerAppConfigs(sp)[pkg] ?: ToolbeltPolicy.AppConfig()
+
+    private fun savePerAppConfigs(sp: SharedPreferences, map: Map<String, ToolbeltPolicy.AppConfig>) {
+        val json = JSONObject()
+        for ((k, v) in map) {
+            json.put(k, JSONObject().put("color", v.color.id).put("visibility", v.visibility.id))
         }
-        val opacity = barOpacityPercent(sp)
-        if (opacity >= 100) return raw
-        return intArrayOf(withOpacity(raw[0], opacity), raw[1])
+        sp.edit().putString(KEY_PER_APP_CONFIG, json.toString()).apply()
+    }
+
+    fun setAppConfig(context: Context, pkg: String, config: ToolbeltPolicy.AppConfig) {
+        val sp = prefs(context)
+        val map = getPerAppConfigs(sp).toMutableMap()
+        if (config.isDefault) map.remove(pkg) else map[pkg] = config
+        savePerAppConfigs(sp, map)
+    }
+
+    /** One-off: turns the former "keep belt in fullscreen" package list into per-app "always show". */
+    fun migrateKeepApps(sp: SharedPreferences) {
+        val keep = beltKeepApps(sp)
+        if (keep.isEmpty()) return
+        savePerAppConfigs(sp, ToolbeltPolicy.mergeKeepApps(getPerAppConfigs(sp), keep))
+        sp.edit().remove(KEY_BELT_KEEP_APPS).apply()
+    }
+
+    fun putGlobalString(context: Context, key: String, value: String) {
+        try {
+            android.provider.Settings.Global.putString(context.contentResolver, key, value)
+        } catch (_: Exception) {
+            RootShell.run("settings put global $key '$value'")
+        }
+    }
+
+    /**
+     * Opaque base colour of the bar for the fixed modes. [FOLLOW_APP][ToolbeltPolicy.ColorMode.FOLLOW_APP] is
+     * resolved by the overlay from the screen's own pixels, so here it returns the dark neutral as a fallback.
+     */
+    fun baseBarColor(context: Context, mode: ToolbeltPolicy.ColorMode): Int {
+        if (mode != ToolbeltPolicy.ColorMode.MATERIAL) return ToolbeltPolicy.FOLLOW_DARK
+        val night = (context.resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        return try {
+            context.getColor(if (night) android.R.color.system_neutral1_800 else android.R.color.system_neutral2_100)
+        } catch (_: Throwable) {
+            ToolbeltPolicy.FOLLOW_DARK
+        }
     }
 
     /** Scales [color]'s existing alpha by [percent] (0-100); RGB channels untouched. */
-    private fun withOpacity(color: Int, percent: Int): Int {
+    fun withOpacity(color: Int, percent: Int): Int {
         val newAlpha = (android.graphics.Color.alpha(color) * percent / 100f).toInt().coerceIn(0, 255)
-        return android.graphics.Color.argb(
-            newAlpha,
-            android.graphics.Color.red(color),
-            android.graphics.Color.green(color),
-            android.graphics.Color.blue(color)
-        )
+        return (newAlpha shl 24) or (color and 0x00FFFFFF)
     }
 
     /**

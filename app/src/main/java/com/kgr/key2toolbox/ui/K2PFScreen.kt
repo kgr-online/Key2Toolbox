@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.kgr.key2toolbox.R
+import com.kgr.key2toolbox.core.Platform
 import com.kgr.key2toolbox.modules.K2PFController
 import com.kgr.key2toolbox.modules.ZramController
 import kotlinx.coroutines.Dispatchers
@@ -47,6 +48,7 @@ fun K2PFScreen(onBack: () -> Unit) {
             installed = K2PFController.isInstalled()
             if (installed == true) {
                 productProps = K2PFController.isProductPropsEnabled()
+                K2PFController.cleanupA2dpOnLineage23()
                 a2dp = K2PFController.isA2dpOffloadEnabled()
                 volumeSteps = K2PFController.isVolumeStepsEnabled()
                 tripleBuffer = K2PFController.isTripleBufferingEnabled()
@@ -94,7 +96,8 @@ fun K2PFScreen(onBack: () -> Unit) {
                     }
                 }
 
-                K2PFToggle(
+                // Lineage 23 manages A2DP offload itself (Developer options); the forced props break audio
+                if (!Platform.isLineage23) K2PFToggle(
                     title = stringResource(R.string.k2pf_a2dp_title),
                     description = stringResource(R.string.k2pf_a2dp_desc),
                     checked = a2dp,

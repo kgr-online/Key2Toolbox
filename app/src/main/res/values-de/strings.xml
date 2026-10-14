@@ -542,7 +542,7 @@
     <string name="recents_xposed_hint">Öffne deinen Xposed-Manager (LSPosed / Vector), aktiviere \"Key2 Toolbox\", hake den Launcher (com.android.launcher3) und diese App im Geltungsbereich an und erzwinge dann das Stoppen des Launchers. Erfordert ein Xposed-Framework auf APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Übersicht-Layout</string>
     <string name="recents_grid_desc">Raster erzwingt das zweizeilige Tablet-Layout für die Übersicht (Startbildschirm und Hotseat können sich leicht verschieben, da sie dasselbe Layoutprofil nutzen). Mosaik und Schmale Liste werden als eigenes Overlay gezeichnet und fassen den Launcher nie an.</string>
-    <string name="recents_mode_stock">Standard (eine Reihe)</string>
+    <string name="recents_mode_stock">Standard</string>
     <string name="recents_mode_grid">Raster (zwei Reihen)</string>
     <string name="recents_mode_masonry">Mosaik (Vorschau-Quilt)</string>
     <string name="recents_mode_slim">Schmale Liste (vertikal, ohne Vorschau)</string>
@@ -595,7 +595,6 @@
     <string-array name="toolbelt_color_modes">
         <item>Fest (schwarz)</item>
         <item>Material You</item>
-        <item>Durchscheinend</item>
     </string-array>    <string name="telemetry_show_details">Status pro App anzeigen (%1$d)</string>
     <string name="telemetry_hide_details">Status pro App ausblenden</string>
     <string name="telemetry_surface_blocked">blockiert</string>
@@ -680,4 +679,73 @@
     <string name="gestures_sys_back_off">Systemgeste „Zurück“ unter diesem Streifen ausschalten</string>
     <string name="gestures_sys_back_off_desc">Die systemeigene Zurück-Geste (Gestennavigation) beginnt am selben Rand und löst zusammen mit diesem Streifen aus. Solange der Streifen auf dem Bildschirm ist, wird ihre Empfindlichkeit auf dieser Seite auf 0 gesetzt, und Ihr Wert kommt zurück, sobald er verschwindet (Sperrbildschirm, ausgeschlossene Apps, Dienst aus). Behalten Sie eine Zurück-Aktion auf dem Streifen oder eine andere Möglichkeit zum Zurückgehen.</string>
     <string name="recents_slim_blur_hint">Der Hintergrund ist ein unscharfes Standbild des Bildschirms, aufgenommen beim Öffnen der letzten Apps.</string>
+    <string name="title_call_proximity_sleep">Anruf-Näherungsschlaf</string>
+    <string name="subtitle_call_proximity_sleep">Bildschirm bei Annäherung während Anrufen ausschalten</string>
+    <string name="desc_call_proximity_sleep">Die Näherungs-Bildschirmabschaltung von PowerManager funktioniert auf diesem Gerät nicht: Die Telefon-App erkennt nah und fern korrekt, aber der Bildschirm wird während eines Anrufs nie dunkel. Diese Funktion erzwingt den Ruhezustand direkt, sobald der Sensor für die gewählte Entprellzeit „nah“ meldet. So werden Bildschirm und Tastatur zuverlässig ausgeschaltet, wenn Sie das Telefon ans Ohr halten, statt beide aktiv zu lassen.</string>
+    <string name="call_proximity_sleep_debounce_label">Entprellzeit vor dem erzwungenen Ruhezustand</string>
+    <string name="status_call_proximity_sleep_enabled">Anruf-Näherungsschlaf aktiviert. Entprellzeit: %1$d ms.</string>
+    <string name="status_call_proximity_sleep_disabled">Anruf-Näherungsschlaf deaktiviert.</string>
+    <string name="title_pocket_kbd_lock">Tastatursperre im Sperrbildschirm</string>
+    <string name="subtitle_pocket_kbd_lock">Physische Tastatur im gesperrten Zustand deaktivieren</string>
+    <string name="desc_pocket_kbd_lock">Deaktiviert die physische Tastatur, solange der Sperrbildschirm angezeigt wird. Die Pfeiltasten dieser Tastatur können auf dem Sperrbildschirm den Fokus bewegen und das fokussierte Element auslösen, auch die Notruftaste, ganz ohne Touchscreen. Das kann in der Tasche einen versehentlichen Anruf auslösen. Erfordert Root.</string>
+    <string name="pocket_kbd_lock_pin_keyboard_note">Wird automatisch übersprungen, solange „Sperrbildschirm-PIN über Tastatur“ aktiviert ist, damit Sie sich nie aus Ihrer eigenen Entsperrmethode aussperren.</string>
+    <string name="status_pocket_kbd_lock_enabled">Tastatursperre im Sperrbildschirm aktiviert.</string>
+    <string name="status_pocket_kbd_lock_disabled">Tastatursperre im Sperrbildschirm deaktiviert.</string>
+    <string name="desc_zygisk_detach">Trennt ausgewählte Apps vom Play Store, sodass dieser sie trotz deiner Auto-Update-Einstellung nicht mehr aktualisiert. Beim Aktivieren wird das Modul zygisk-detach installiert (ein Zygisk-Hook auf libbinder); wähle unten die zu trennenden Apps aus. Beim Deaktivieren wird das Modul ausgeschaltet, deine Liste bleibt aber erhalten. Benötigt Root und Zygisk. Installation, Aktivierung und Deaktivierung des Moduls greifen beim nächsten Start, Änderungen an der Liste sobald der Play Store neu gestartet wird.</string>
+    <string name="recents_slim_appearance_section">Darstellung</string>
+    <string name="recents_slim_scrim_color">Hintergrundfarbe</string>
+    <string-array name="recents_slim_scrim_color_modes">
+        <item>Dunkel</item>
+        <item>Material You</item>
+    </string-array>
+    <string name="recents_slim_scrim_opacity">Hintergrund-Deckkraft</string>
+    <string name="status_zygisk_detach_applied">Angewendet. %1$d getrennt; der Play Store wurde gestoppt, damit er die Liste neu einliest.</string>
+    <string name="status_zygisk_detach_apply_failed">Die Trennliste konnte nicht aktualisiert werden: %1$s</string>
+    <string name="status_zygisk_detach_denylist_removed">Play Store aus der DenyList entfernt und gestoppt. Er lädt den Hook beim nächsten Start.</string>
+    <string name="status_zygisk_detach_disabled">Zygisk Detach deaktiviert. Starte neu, um den Hook zu entladen. Deine Trennliste bleibt erhalten.</string>
+    <string name="status_zygisk_detach_enabled">Zygisk Detach aktiviert.</string>
+    <string name="status_zygisk_detach_installing_module">Modul wird installiert…</string>
+    <string name="status_zygisk_detach_module_failed">Modulinstallation fehlgeschlagen: %1$s</string>
+    <string name="subtitle_zygisk_detach">Verhindert, dass der Play Store ausgewählte Apps zwangsweise aktualisiert</string>
+    <string name="telemetry_app_list_desc">Tippe, um die Telemetrie einzelner Apps zu blockieren oder freizugeben.</string>
+    <string name="telemetry_app_list_empty">Keine Apps mit Telemetrie erkannt.</string>
+    <string name="telemetry_app_list_title">Erkannte Apps</string>
+    <string name="telemetry_app_status_blocked">Blockiert</string>
+    <string name="telemetry_app_status_unblocked">Nicht blockiert</string>
+    <string name="telemetry_detect_apps">Apps erkennen</string>
+    <string name="title_zygisk_detach">Zygisk Detach</string>
+    <string name="toolbelt_bar_opacity">Hintergrund-Deckkraft</string>
+    <string name="toolbelt_per_app_color_black">Fest (schwarz)</string>
+    <string name="toolbelt_per_app_color_default">Standard (globale Einstellung)</string>
+    <string name="toolbelt_per_app_color_follow">Der App folgen</string>
+    <string name="toolbelt_per_app_color_material">Material You</string>
+    <string name="toolbelt_per_app_color_title">Leistenfarbe</string>
+    <string name="toolbelt_per_app_count">%1$d von %2$d Apps angepasst</string>
+    <string name="toolbelt_per_app_filter_all">Alle (%1$d)</string>
+    <string name="toolbelt_per_app_filter_custom">Angepasst (%1$d)</string>
+    <string name="toolbelt_per_app_reset">Auf Standard zurücksetzen</string>
+    <string name="toolbelt_per_app_settings">Einstellungen pro App</string>
+    <string name="toolbelt_per_app_settings_hint">Leistenfarbe und Sichtbarkeit für jede App einzeln festlegen.</string>
+    <string name="toolbelt_per_app_summary_format">Farbe: %1$s · %2$s</string>
+    <string name="toolbelt_per_app_title">Toolbelt-Einstellungen pro App</string>
+    <string name="toolbelt_per_app_vis_default">Globale Einstellung verwenden</string>
+    <string name="toolbelt_per_app_vis_hide_fullscreen">Leiste ausblenden</string>
+    <string name="toolbelt_per_app_vis_keep_fullscreen">Leiste beibehalten</string>
+    <string name="toolbelt_per_app_visibility_title">Wenn die App im Vollbild läuft</string>
+    <string name="zygisk_detach_denylisted">Der Play Store steht auf der DenyList von Magisk (aktiv durchgesetzt), daher werden Zygisk-Module nicht in ihn geladen und das Trennen bewirkt stillschweigend nichts.</string>
+    <string name="zygisk_detach_disabled_hint">Aktiviere oben Zygisk Detach, um die Liste zu verwalten.</string>
+    <string name="zygisk_detach_enable">Zygisk Detach aktivieren</string>
+    <string name="zygisk_detach_filter_all">Alle Apps</string>
+    <string name="zygisk_detach_filter_user">Nutzer-Apps</string>
+    <string name="zygisk_detach_list_unreadable">Die Trennliste konnte nicht gelesen werden, sie ist möglicherweise beschädigt. Beim Anwenden wird sie durch deine aktuelle Auswahl ersetzt.</string>
+    <string name="zygisk_detach_loading_apps">Apps werden geladen…</string>
+    <string name="zygisk_detach_module_missing">Modul: nicht installiert</string>
+    <string name="zygisk_detach_module_version">Modul: %1$s</string>
+    <string name="zygisk_detach_no_match">Keine Apps passen zu \"%1$s\"</string>
+    <string name="zygisk_detach_no_zygisk">Zygisk scheint nicht aktiviert zu sein. Aktiviere es in den Magisk-Einstellungen und starte neu, sonst kann der Hook nicht geladen werden.</string>
+    <string name="zygisk_detach_not_installed">nicht installiert</string>
+    <string name="zygisk_detach_reboot_required">Neustart erforderlich, damit der Zygisk-Hook diese Änderung übernimmt. Du kannst die Liste jetzt bearbeiten, das Trennen wirkt aber erst nach dem Neustart.</string>
+    <string name="zygisk_detach_remove_from_denylist">Aus DenyList entfernen</string>
+    <string name="zygisk_detach_section_apps">Getrennte Apps</string>
+    <string name="zygisk_detach_selected_count">%1$d ausgewählt</string>
 </resources>

@@ -542,7 +542,7 @@
     <string name="recents_xposed_hint">Open je Xposed-manager (LSPosed / Vector), schakel \"Key2 Toolbox\" in, vink de launcher (com.android.launcher3) en deze app aan in het bereik en forceer daarna het stoppen van de launcher. Vereist een Xposed-framework op APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Indeling van het Overzicht</string>
     <string name="recents_grid_desc">Raster forceert de tablet-indeling met twee rijen voor het Overzicht (het startscherm en de hotseat kunnen iets verschuiven, omdat ze het indelingsprofiel delen). Mozaïek en Slanke lijst worden als eigen overlay getekend en raken de launcher nooit aan.</string>
-    <string name="recents_mode_stock">Standaard (één rij)</string>
+    <string name="recents_mode_stock">Standaard</string>
     <string name="recents_mode_grid">Raster (twee rijen)</string>
     <string name="recents_mode_masonry">Mozaïek (momentopname-quilt)</string>
     <string name="recents_mode_slim">Slanke lijst (verticaal, geen momentopnames)</string>
@@ -595,7 +595,6 @@
     <string-array name="toolbelt_color_modes">
         <item>Vast (zwart)</item>
         <item>Material You</item>
-        <item>Doorschijnend</item>
     </string-array>    <string name="telemetry_show_details">Status per app tonen (%1$d)</string>
     <string name="telemetry_hide_details">Status per app verbergen</string>
     <string name="telemetry_surface_blocked">geblokkeerd</string>
@@ -680,4 +679,73 @@
     <string name="gestures_sys_back_off">Systeemgebaar Terug onder deze strook uitschakelen</string>
     <string name="gestures_sys_back_off_desc">Het eigen Terug-gebaar van het systeem (gebarennavigatie) begint vanaf dezelfde rand en gaat samen met deze strook af. Zolang de strook op het scherm staat, is de gevoeligheid aan deze kant 0, en je waarde wordt hersteld zodra hij verdwijnt (vergrendelscherm, uitgesloten apps, dienst uit). Houd een Terug-actie op de strook, of een andere manier om terug te gaan.</string>
     <string name="recents_slim_blur_hint">De achtergrond is een vervaagd stilstaand beeld van het scherm, gemaakt bij het openen van Recent.</string>
+    <string name="title_call_proximity_sleep">Nabijheidsslaap bij gesprekken</string>
+    <string name="subtitle_call_proximity_sleep">Scherm uitschakelen bij nabijheid tijdens gesprekken</string>
+    <string name="desc_call_proximity_sleep">De nabijheidsschermuitschakeling van PowerManager werkt niet op dit apparaat: de Telefoon-app herkent dichtbij en veraf correct, maar het scherm gaat tijdens een gesprek nooit uit. Deze functie forceert direct de slaapstand zodra de sensor gedurende de gekozen wachttijd \"dichtbij\" meldt, zodat scherm en toetsenbord betrouwbaar uitgaan wanneer u de telefoon tegen uw oor houdt in plaats van allebei actief te blijven.</string>
+    <string name="call_proximity_sleep_debounce_label">Wachttijd voor het forceren van de slaapstand</string>
+    <string name="status_call_proximity_sleep_enabled">Nabijheidsslaap bij gesprekken ingeschakeld. Wachttijd: %1$d ms.</string>
+    <string name="status_call_proximity_sleep_disabled">Nabijheidsslaap bij gesprekken uitgeschakeld.</string>
+    <string name="title_pocket_kbd_lock">Toetsenbordvergrendeling op vergrendelscherm</string>
+    <string name="subtitle_pocket_kbd_lock">Fysiek toetsenbord uitschakelen terwijl het apparaat is vergrendeld</string>
+    <string name="desc_pocket_kbd_lock">Schakelt het fysieke toetsenbord uit terwijl het vergrendelscherm wordt getoond. De pijltjestoetsen van dit toetsenbord kunnen op het vergrendelscherm de focus verplaatsen en activeren wat is geselecteerd, ook de noodoproepknop, zonder het aanraakscherm te gebruiken. Dat kan in een zak een onbedoelde oproep veroorzaken. Vereist root.</string>
+    <string name="pocket_kbd_lock_pin_keyboard_note">Wordt automatisch overgeslagen zolang \"Vergrendelscherm-PIN op toetsenbord\" is ingeschakeld, zodat u nooit buitengesloten wordt van uw eigen ontgrendelmethode.</string>
+    <string name="status_pocket_kbd_lock_enabled">Toetsenbordvergrendeling op vergrendelscherm ingeschakeld.</string>
+    <string name="status_pocket_kbd_lock_disabled">Toetsenbordvergrendeling op vergrendelscherm uitgeschakeld.</string>
+    <string name="desc_zygisk_detach">Koppelt gekozen apps los van de Play Store, zodat deze ze niet meer bijwerkt ondanks je instelling voor automatisch bijwerken. Inschakelen installeert de module zygisk-detach (een Zygisk-hook op libbinder); kies hieronder de apps die moeten worden losgekoppeld. Uitschakelen deactiveert de module, maar behoudt je lijst. Root en Zygisk vereist. Het installeren, in- of uitschakelen van de module werkt pas na een herstart, terwijl wijzigingen in de lijst direct gelden zodra de Play Store opnieuw start.</string>
+    <string name="recents_slim_appearance_section">Uiterlijk</string>
+    <string name="recents_slim_scrim_color">Achtergrondkleur</string>
+    <string-array name="recents_slim_scrim_color_modes">
+        <item>Donker</item>
+        <item>Material You</item>
+    </string-array>
+    <string name="recents_slim_scrim_opacity">Achtergronddekking</string>
+    <string name="status_zygisk_detach_applied">Toegepast. %1$d losgekoppeld; de Play Store is gestopt zodat deze de lijst opnieuw inleest.</string>
+    <string name="status_zygisk_detach_apply_failed">Bijwerken van de losgekoppelde lijst mislukt: %1$s</string>
+    <string name="status_zygisk_detach_denylist_removed">Play Store verwijderd uit de DenyList en gestopt. De hook wordt geladen bij de volgende start.</string>
+    <string name="status_zygisk_detach_disabled">Zygisk Detach uitgeschakeld. Herstart om de hook te ontladen. Je lijst blijft behouden.</string>
+    <string name="status_zygisk_detach_enabled">Zygisk Detach ingeschakeld.</string>
+    <string name="status_zygisk_detach_installing_module">Module installeren…</string>
+    <string name="status_zygisk_detach_module_failed">Module-installatie mislukt: %1$s</string>
+    <string name="subtitle_zygisk_detach">Voorkom dat de Play Store gekozen apps geforceerd bijwerkt</string>
+    <string name="telemetry_app_list_desc">Tik om telemetrie voor een afzonderlijke app te blokkeren of te deblokkeren.</string>
+    <string name="telemetry_app_list_empty">Geen apps met telemetrie gedetecteerd.</string>
+    <string name="telemetry_app_list_title">Gedetecteerde apps</string>
+    <string name="telemetry_app_status_blocked">Geblokkeerd</string>
+    <string name="telemetry_app_status_unblocked">Niet geblokkeerd</string>
+    <string name="telemetry_detect_apps">Apps detecteren</string>
+    <string name="title_zygisk_detach">Zygisk Detach</string>
+    <string name="toolbelt_bar_opacity">Achtergronddekking</string>
+    <string name="toolbelt_per_app_color_black">Vast (zwart)</string>
+    <string name="toolbelt_per_app_color_default">Standaard (globale instelling)</string>
+    <string name="toolbelt_per_app_color_follow">De app volgen</string>
+    <string name="toolbelt_per_app_color_material">Material You</string>
+    <string name="toolbelt_per_app_color_title">Balkkleur</string>
+    <string name="toolbelt_per_app_count">%1$d aangepast van %2$d apps</string>
+    <string name="toolbelt_per_app_filter_all">Alle (%1$d)</string>
+    <string name="toolbelt_per_app_filter_custom">Aangepast (%1$d)</string>
+    <string name="toolbelt_per_app_reset">Standaard herstellen</string>
+    <string name="toolbelt_per_app_settings">Instellingen per app</string>
+    <string name="toolbelt_per_app_settings_hint">Configureer de balkkleur en zichtbaarheid voor elke app afzonderlijk.</string>
+    <string name="toolbelt_per_app_summary_format">Kleur: %1$s · %2$s</string>
+    <string name="toolbelt_per_app_title">Toolbelt-instellingen per app</string>
+    <string name="toolbelt_per_app_vis_default">Globale instelling gebruiken</string>
+    <string name="toolbelt_per_app_vis_hide_fullscreen">De werkbalk verbergen</string>
+    <string name="toolbelt_per_app_vis_keep_fullscreen">De werkbalk behouden</string>
+    <string name="toolbelt_per_app_visibility_title">Wanneer de app op volledig scherm staat</string>
+    <string name="zygisk_detach_denylisted">De Play Store staat op de DenyList van Magisk (afgedwongen), dus Zygisk-modules worden er niet in geladen en loskoppelen doet stilzwijgend niets.</string>
+    <string name="zygisk_detach_disabled_hint">Schakel hierboven Zygisk Detach in om de lijst te beheren.</string>
+    <string name="zygisk_detach_enable">Zygisk Detach inschakelen</string>
+    <string name="zygisk_detach_filter_all">Alle apps</string>
+    <string name="zygisk_detach_filter_user">Gebruikersapps</string>
+    <string name="zygisk_detach_list_unreadable">De lijst met losgekoppelde apps kon niet worden gelezen - mogelijk is hij beschadigd. Toepassen vervangt hem door je huidige selectie.</string>
+    <string name="zygisk_detach_loading_apps">Apps laden…</string>
+    <string name="zygisk_detach_module_missing">Module: niet geïnstalleerd</string>
+    <string name="zygisk_detach_module_version">Module: %1$s</string>
+    <string name="zygisk_detach_no_match">Geen apps gevonden voor \"%1$s\"</string>
+    <string name="zygisk_detach_no_zygisk">Zygisk lijkt niet ingeschakeld. Schakel het in via de instellingen van Magisk en herstart - zonder Zygisk kan de hook niet laden.</string>
+    <string name="zygisk_detach_not_installed">niet geïnstalleerd</string>
+    <string name="zygisk_detach_reboot_required">Herstart nodig zodat de Zygisk-hook deze wijziging oppikt. Je kunt de lijst nu bewerken, maar losgekoppeld wordt pas na de herstart.</string>
+    <string name="zygisk_detach_remove_from_denylist">Van DenyList verwijderen</string>
+    <string name="zygisk_detach_section_apps">Losgekoppelde apps</string>
+    <string name="zygisk_detach_selected_count">%1$d geselecteerd</string>
 </resources>

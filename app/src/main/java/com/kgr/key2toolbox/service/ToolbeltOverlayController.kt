@@ -4,6 +4,8 @@ import android.accessibilityservice.AccessibilityService
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
+import android.animation.ArgbEvaluator
+import android.animation.ValueAnimator
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
@@ -25,6 +27,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import com.kgr.key2toolbox.modules.ToolbeltController
 import com.kgr.key2toolbox.modules.ToolbeltController.ToolbeltAction
+import com.kgr.key2toolbox.modules.ToolbeltPolicy
 
 /**
  * Renders the Q20-style toolbelt as a single TYPE_ACCESSIBILITY_OVERLAY window
@@ -57,20 +60,36 @@ object ToolbeltOverlayController {
 
     private var collapsible = false
     private var collapsed = false
-    private var fullscreenHidden = false
-    private var imeHidden = false
     private var lastFullIme = false
     private var lastAnyIme = false
-    private var lastStripBacked = false
-    private var autoHidePref = true
+    private var lastFullscreen = false
+
+    // Decision inputs (see ToolbeltPolicy.resolve) and its latest output.
+    private var global = ToolbeltPolicy.Global(ToolbeltPolicy.ColorMode.BLACK, 100, true)
+    private var appConfig = ToolbeltPolicy.AppConfig()
+    private var resolved = ToolbeltPolicy.Resolved(true, ToolbeltPolicy.ColorMode.BLACK, 100)
+    private fun hidden() = !resolved.visible
 
     // Live config, refreshed from prefs on every refresh().
     private var beltDp = ToolbeltController.BELT_TOTAL_DP
     private var iconScale = 0.78f
     private var hapticLevel = 2
-    private var colorMode = 0
     private var barColor = Color.rgb(10, 10, 10)
     private var iconColor = Color.WHITE
+
+    // Backdrop (see BeltBackdrop): mean colour of the app just above the belt, and the follow-app light/dark state.
+    private val lightDark = ToolbeltPolicy.LightDark()
+    private var backdropArgb = Color.BLACK
+    private var lastCaptureAt = 0L
+    private var captureBusy = false
+    private const val CAPTURE_MIN_GAP_MS = 700L
+    private const val CONTENT_DEBOUNCE_MS = 450L
+    private const val COLOR_FADE_MS = 220L
+    private var lastApplied: List<Any?>? = null
+
+    // Colours currently on screen [bar, icon]; a change fades from these to the new target.
+    private var shown: IntArray? = null
+    private var fade: ValueAnimator? = null
 
     private val handleDp get() = if (collapsible) ToolbeltController.HANDLE_DP else 0
 
@@ -82,20 +101,111 @@ object ToolbeltOverlayController {
     private var springCb: Choreographer.FrameCallback? = null
     private var springVel = 0f
 
-    /** Recompute + apply the bar / icon colours (cheap - no window rebuild). */
+    /** Recompute + apply the bar / icon colours (cheap - no window rebuild); colour changes fade. */
     private fun applyColors() {
         val svc = service ?: return
-        val c = ToolbeltController.beltColors(svc)
-        barColor = if (stripBacked()) Color.BLACK else c[0]; iconColor = c[1]
-        // Only the belt row carries the colour, so the layers don't stack (which
-        // would double a translucent scrim). The container stays transparent.
+        val visible = resolved.visible
+        val mode = resolved.colorMode
+        val base = if (mode == ToolbeltPolicy.ColorMode.FOLLOW_APP) {
+            if (lightDark.light) ToolbeltPolicy.FOLLOW_LIGHT else ToolbeltPolicy.FOLLOW_DARK
+        } else ToolbeltController.baseBarColor(svc, mode)
+        barColor = ToolbeltController.withOpacity(base, resolved.opacityPercent)
+        // The icon is derived from the bar the user actually sees (bar over its backdrop), never from a separate flag.
+        iconColor = ToolbeltPolicy.iconColorFor(barColor, backdropArgb)
+        // refresh() runs on every accessibility event: skip the view work when nothing visible changed.
+        val sig = listOf(root, visible, barColor, iconColor, collapsed)
+        if (sig == lastApplied) return
+        lastApplied = sig
+
         root?.setBackgroundColor(Color.TRANSPARENT)
-        val visible = !(fullscreenHidden || imeHidden)
-        beltRow?.setBackgroundColor(if (visible) barColor else Color.TRANSPARENT)
-        grabStrip?.setBackgroundColor(if (visible && collapsed) barColor else Color.TRANSPARENT)
+        handleView?.background = GradientDrawable().apply {
+            cornerRadius = 2 * density0
+            setColor(Color.argb(170, 235, 235, 235))
+        }
+
+        val target = intArrayOf(barColor, iconColor)
+        val from = shown
+        fade?.cancel()
+        if (!visible || from == null || from.contentEquals(target)) {
+            shown = target
+            paintBar(target, visible)
+            return
+        }
+        val start = from.copyOf()
+        val ev = ArgbEvaluator()
+        fade = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = COLOR_FADE_MS
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener { a ->
+                val f = a.animatedValue as Float
+                val cur = IntArray(2) { ev.evaluate(f, start[it], target[it]) as Int }
+                shown = cur
+                paintBar(cur, true)
+            }
+            start()
+        }
+    }
+
+    /** Paints the bar, the collapsed strip and the icons with [c] = [bar, icon]. */
+    private fun paintBar(c: IntArray, visible: Boolean) {
+        if (!visible) {
+            beltRow?.setBackgroundColor(Color.TRANSPARENT)
+            grabStrip?.setBackgroundColor(Color.TRANSPARENT)
+        } else {
+            beltRow?.setBackgroundColor(c[0])
+            grabStrip?.setBackgroundColor(if (collapsed) c[0] else Color.TRANSPARENT)
+        }
         beltRow?.let { row ->
-            for (i in 0 until row.childCount) {
-                (row.getChildAt(i) as? ImageView)?.setColorFilter(iconColor)
+            for (i in 0 until row.childCount) (row.getChildAt(i) as? ImageView)?.setColorFilter(c[1])
+        }
+    }
+
+    // ------------------------------------------------------------ backdrop
+
+    private fun needsSampling() =
+        resolved.visible && !collapsed &&
+            (resolved.colorMode == ToolbeltPolicy.ColorMode.FOLLOW_APP || resolved.opacityPercent < 100)
+
+    private var trailingPending = false
+    private val contentRunnable = Runnable {
+        sampleAbove()
+        // The service only hears window changes (not scrolling), so look once more after an app's opening animation.
+        if (!trailingPending) {
+            trailingPending = true
+            mainHandler.postDelayed({ trailingPending = false; sampleAbove() }, 1200L)
+        }
+    }
+
+    /** Called on window events: re-reads the backdrop once the screen has settled. */
+    fun onContentChanged() {
+        if (!needsSampling()) return
+        mainHandler.removeCallbacks(contentRunnable)
+        mainHandler.postDelayed(contentRunnable, CONTENT_DEBOUNCE_MS)
+    }
+
+    /** Reads the app's colour in the rows just above the belt (not covered by it, so no blink). */
+    private fun sampleAbove() {
+        val svc = service ?: return
+        if (!needsSampling() || captureBusy) return
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastCaptureAt < CAPTURE_MIN_GAP_MS) { onContentChanged(); return }
+        lastCaptureAt = now
+        captureBusy = true
+        val d = density0
+        val beltTop = ((beltDp + handleDp) * d).toInt()
+        val band = (12 * d).toInt()
+        BeltBackdrop.capture(svc) { bmp ->
+            val mean = bmp?.let {
+                try { BeltBackdrop.meanColor(it, it.height - beltTop - band, it.height - beltTop) } catch (_: Throwable) { null }
+            }
+            bmp?.recycle()
+            mainHandler.post {
+                captureBusy = false
+                if (mean != null) {
+                    backdropArgb = mean
+                    if (resolved.colorMode == ToolbeltPolicy.ColorMode.FOLLOW_APP) lightDark.update(ToolbeltPolicy.lightness(mean))
+                    applyColors()
+                }
             }
         }
     }
@@ -136,31 +246,48 @@ object ToolbeltOverlayController {
             hide()
             return
         }
-        autoHidePref = ToolbeltController.autoHideInFullscreen(sp)
         collapsed = ToolbeltController.isCollapsed(sp)
         val newDp = ToolbeltController.heightDp(sp)
         val newScale = ToolbeltController.iconScale(sp)
         val newCollapsible = ToolbeltController.isCollapsible(sp)
-        val newColorMode = ToolbeltController.colorMode(sp)
-        val geometryChanged = newDp != beltDp || newScale != iconScale ||
-            newCollapsible != collapsible || newColorMode != colorMode
+        val geometryChanged = newDp != beltDp || newScale != iconScale || newCollapsible != collapsible
         beltDp = newDp
         iconScale = newScale
         collapsible = newCollapsible
         hapticLevel = ToolbeltController.hapticLevel(sp)
-        colorMode = newColorMode
-        recomputeImeHidden() // translucent-vs-not changes whether the belt hides for an IME strip
+        global = ToolbeltPolicy.Global(
+            ToolbeltController.colorMode(sp),
+            ToolbeltController.barOpacityPercent(sp),
+            ToolbeltController.autoHideInFullscreen(sp),
+        )
+        if (rebuild) appConfig = ToolbeltController.getAppConfig(sp, foregroundPkg) // prefs changed; else setForegroundApp keeps it
         if (geometryChanged) hide() // a size / mode change needs a fresh window
         mainHandler.post {
+            recompute(animate = false)
             ensureAttached(svc, sp, rebuild)
             applyColors()
         }
     }
 
+    /** Re-run the decision; animates the slide only when the belt's visibility actually changed. */
+    private fun recompute(animate: Boolean) {
+        val before = resolved
+        resolved = ToolbeltPolicy.resolve(
+            global, appConfig, ToolbeltPolicy.Front(fullscreen = lastFullscreen, fullIme = lastFullIme, anyIme = lastAnyIme)
+        )
+        if (root == null) return
+        when {
+            before.visible != resolved.visible -> applyLayoutState(animate)
+            before != resolved -> { applyColors(); onContentChanged() }
+        }
+    }
+
+    private var foregroundPkg: String? = null
+
     fun hide() {
         mainHandler.post {
             val v = root ?: return@post
-            root = null; beltRow = null; grabStrip = null; handleView = null; params = null
+            fade?.cancel(); shown = null; lastApplied = null; root = null; beltRow = null; grabStrip = null; handleView = null; params = null
             try {
                 windowManager?.removeView(v)
             } catch (_: IllegalArgumentException) {
@@ -169,38 +296,35 @@ object ToolbeltOverlayController {
     }
 
     /**
-     * [fullIme] = a real soft keyboard (tall IME window). [anyIme] = any input
-     * method window, incl. the short physical-keyboard toolbar strip. The belt
-     * hides for [fullIme] only. While just the strip is up in transparent mode,
-     * the belt stays and is painted opaque black so the strip can't show through.
+     * [fullIme] = a real soft keyboard (tall IME window): the belt hides. [anyIme] = any input-method window, including
+     * the short physical-keyboard strip: the belt then turns opaque black.
      */
     fun setImeVisible(fullIme: Boolean, anyIme: Boolean) {
+        if (lastFullIme == fullIme && lastAnyIme == anyIme) return
         lastFullIme = fullIme
         lastAnyIme = anyIme
-        recomputeImeHidden()
-    }
-
-    /** Transparent mode with only the IME strip up: belt gets an opaque backing. */
-    private fun stripBacked() = colorMode == 2 && lastAnyIme && !lastFullIme
-
-    private fun recomputeImeHidden() {
-        val hide = lastFullIme
-        val backed = stripBacked()
-        val colorChanged = backed != lastStripBacked
-        lastStripBacked = backed
-        if (imeHidden != hide) {
-            imeHidden = hide
-            mainHandler.post { applyLayoutState(animate = true) }
-        } else if (colorChanged) {
-            mainHandler.post { applyColors() }
-        }
+        mainHandler.post { recompute(animate = true) }
     }
 
     fun setForegroundFullscreen(fullscreen: Boolean) {
-        val want = fullscreen && autoHidePref
-        if (fullscreenHidden == want) return
-        fullscreenHidden = want
-        mainHandler.post { applyLayoutState(animate = true) }
+        if (lastFullscreen == fullscreen) return
+        lastFullscreen = fullscreen
+        mainHandler.post { recompute(animate = true) }
+    }
+
+    /** The app in front changed: pick its per-app config and forget the previous app's backdrop. */
+    fun setForegroundApp(pkg: String?) {
+        if (pkg == foregroundPkg) return
+        foregroundPkg = pkg
+        val svc = service ?: return
+        val sp = svc.getSharedPreferences(ToolbeltController.PREFS, Context.MODE_PRIVATE)
+        appConfig = ToolbeltController.getAppConfig(sp, pkg)
+        mainHandler.post {
+            lastCaptureAt = 0L
+            recompute(animate = true)
+            applyColors()
+            onContentChanged()
+        }
     }
 
     // ------------------------------------------------------------- internals
@@ -449,7 +573,7 @@ object ToolbeltOverlayController {
     private fun tyRest(): Float {
         val d = density0
         return when {
-            fullscreenHidden || imeHidden -> (beltDp + handleDp) * d
+            hidden() -> (beltDp + handleDp) * d
             collapsed -> beltDp * d
             else -> 0f
         }
@@ -485,7 +609,7 @@ object ToolbeltOverlayController {
      * translation ([dragTy] already tracks it).
      */
     private fun beginDrag() {
-        if (fullscreenHidden || imeHidden) return
+        if (hidden()) return
         setWindowHeight(fullHPx())
         stripHeight((handleDp * density0).toInt().coerceAtLeast(1))
         applyBeltTy(dragTy)
@@ -493,7 +617,7 @@ object ToolbeltOverlayController {
 
     private fun applyLayoutState(animate: Boolean) {
         val strip = grabStrip ?: return
-        val hidden = fullscreenHidden || imeHidden
+        val hidden = hidden()
 
         strip.visibility = if (collapsible && !hidden) View.VISIBLE else View.GONE
         handleView?.visibility = if (collapsible && !hidden) View.VISIBLE else View.GONE
@@ -518,7 +642,7 @@ object ToolbeltOverlayController {
         val beltPx = beltDp * d
         val handlePx = handleDp * d
         when {
-            fullscreenHidden || imeHidden -> {
+            hidden() -> {
                 applyBeltTy(beltPx + handlePx)
                 setWindowHeight(1)
             }

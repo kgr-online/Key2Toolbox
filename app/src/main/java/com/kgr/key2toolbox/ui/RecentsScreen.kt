@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kgr.key2toolbox.R
+import com.kgr.key2toolbox.core.Platform
 import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.RecentsController.LayoutMode
 import com.kgr.key2toolbox.modules.SlimRecentsController
@@ -100,12 +101,14 @@ fun RecentsScreen(onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 6.dp)
                 )
+                // Lineage 23 ships a native two-row Overview, so the Grid layout (a launcher hook that fakes it on
+                // Lineage 22) is hidden there, unless it is the saved choice (so it can still be switched away from).
                 val options = listOf(
                     LayoutMode.STOCK to R.string.recents_mode_stock,
                     LayoutMode.GRID to R.string.recents_mode_grid,
                     LayoutMode.MASONRY to R.string.recents_mode_masonry,
                     LayoutMode.SLIM_LIST to R.string.recents_mode_slim
-                )
+                ).filter { (value, _) -> value != LayoutMode.GRID || !Platform.isLineage23 || mode == LayoutMode.GRID }
                 options.forEach { (value, labelRes) ->
                     Row(
                         modifier = Modifier

@@ -552,7 +552,7 @@
     <string name="recents_xposed_hint">Open your Xposed manager (LSPosed / Vector), enable \"Key2 Toolbox\", tick the launcher (com.android.launcher3) and this app in its scope, then force-stop the launcher. Requires an Xposed framework on APatch / KernelSU / Magisk.</string>
     <string name="recents_grid_title">Overview layout</string>
     <string name="recents_grid_desc">Grid forces the launcher\'s tablet two-row layout for Recents (the home screen and hotseat may shift slightly, since they share the layout profile). Masonry and Slim List are drawn as their own overlay and never touch the launcher.</string>
-    <string name="recents_mode_stock">Stock (single row)</string>
+    <string name="recents_mode_stock">Stock</string>
     <string name="recents_mode_grid">Grid (two rows)</string>
     <string name="recents_mode_masonry">Masonry (snapshot quilt)</string>
     <string name="recents_mode_slim">Slim List (vertical, no snapshots)</string>
@@ -596,7 +596,7 @@
     <string-array name="toolbelt_color_modes">
         <item>Fixed (black)</item>
         <item>Material You</item>
-        <item>Translucent</item>
+        <item>Follow the app</item>
     </string-array>
     <string-array name="recents_slim_scrim_color_modes">
         <item>Dark</item>
@@ -615,6 +615,23 @@
     <string name="toolbelt_privacy_indicator">Suppress the location privacy icon</string>
     <string name="toolbelt_privacy_indicator_hint">Every time an app reads your location, Android briefly forces the navigation bar back on top of the current fullscreen app to show the status-bar location icon. This turns that icon off system-wide (device_config privacy location_indicators_enabled = false) and freezes feature-flag sync so it survives a reboot. Trade-offs: you lose the visual cue that an app is using GPS, and no other device_config flag will update from the server. The microphone and camera indicators are not affected. Needs root.</string>
     <string name="toolbelt_debug_hint">Nav bar not hiding after enabling? Run: adb logcat | grep Key2Toolbox-Xposed and each hook logs whether it attached. Launcher class names can drift between LineageOS builds; a launcher restart is needed for the nav bar to relayout.</string>
+    <string name="toolbelt_per_app_visibility_title">When the app is fullscreen</string>
+    <string name="toolbelt_per_app_vis_default">Use the global setting</string>
+    <string name="toolbelt_per_app_vis_hide_fullscreen">Hide the toolbar</string>
+    <string name="toolbelt_per_app_vis_keep_fullscreen">Keep the toolbar</string>
+    <string name="toolbelt_per_app_settings">Per-app settings</string>
+    <string name="toolbelt_per_app_settings_hint">Configure bar color and visibility for each app individually.</string>
+    <string name="toolbelt_per_app_count">%1$d customized of %2$d apps</string>
+    <string name="toolbelt_per_app_title">Toolbelt per-app settings</string>
+    <string name="toolbelt_per_app_filter_all">All (%1$d)</string>
+    <string name="toolbelt_per_app_filter_custom">Customized (%1$d)</string>
+    <string name="toolbelt_per_app_color_title">Bar color</string>
+    <string name="toolbelt_per_app_color_default">Default (global setting)</string>
+    <string name="toolbelt_per_app_color_black">Fixed (black)</string>
+    <string name="toolbelt_per_app_color_material">Material You</string>
+    <string name="toolbelt_per_app_color_follow">Follow the app</string>
+    <string name="toolbelt_per_app_summary_format">Color: %1$s · %2$s</string>
+    <string name="toolbelt_per_app_reset">Reset to default</string>
 
     <!-- Zygisk Detach -->
     <string name="title_zygisk_detach">Zygisk Detach</string>
