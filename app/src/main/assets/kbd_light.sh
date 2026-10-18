@@ -48,7 +48,10 @@ fade_down() {
 }
 
 while true; do
-    LCD=$(cat /sys/class/leds/lcd-backlight/brightness)
+    # `read` is a builtin: no fork per tick (the old $(cat ...) forked every 0.3-0.5 s while awake)
+    LCD=""
+    read -r LCD < /sys/class/leds/lcd-backlight/brightness
+    if [ -z "$LCD" ]; then sleep 0.5; continue; fi
 
     if [ "$LCD" -eq 0 ]; then
         if [ "$LAST_VAL" -ne 0 ]; then

@@ -2,6 +2,25 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [5.5.9] - 2026-10-18
+
+### Added
+
+- **GMS Sensor Guard (System).** Stops the background sensor hammering by Google Play services (its location library keeps the accelerometer registered at 50 Hz plus the ambient-light sensor in short continuous bursts, draining battery under the "Google Play services" attribution). Found by IvanTheTolerable (Discord):
+  - Revokes GMS's `ACTIVITY_RECOGNITION` appop at the UID level - measured on-device, location requests (network/GPS fixes) keep being served normally while the sensor bursts stop. The package-level `cmd appops set` form is accepted but silently never applied on this ROM; only the UID form works, so the UID is resolved at runtime (it differs per device/flash).
+  - Play services is force-stopped on toggle to release already-running sensor listeners; the appop does not reliably survive reboots on LineageOS (observed on-device on a sibling device: after a reboot the UID mode is gone and the bursts resume), so a one-shot boot script (`/data/adb/service.d/gms_guard_boot.sh`) re-asserts it at every boot - it also covers "Reset app preferences" and GMS reinstalls.
+  - State is read back from the OS on every render, never from a local pref, so the switch reflects adb-side changes too.
+  - Secondary toggles for the `wifi_scan_always_enabled` / `ble_scan_always_enabled` background scans, plus an explanation of the trade-offs of the manual settings (Google Location Accuracy, Wi-Fi/BLE scanning, A-GPS).
+- **Lockscreen PIN digits via a root daemon; scope the accessibility key filter** (in-flight work from this branch, released with 5.5.9).
+
+### Changed
+
+- **kbd_light and pocket keyboard lock daemons:** per-tick loops stick to shell builtins (`read` instead of `$(cat ...)`, cached keypad node checked against its sysfs name) - the old grep pipelines cost ~9 forks per tick, about 16% of a core measured on-device.
+
+### Fixed
+
+- **Toolbelt colour mode picker showed a bare "2"** in Catalan, German, French, Italian, Dutch and Portuguese: the `toolbelt_color_modes` array was missing its third item ("Follow the app") in those locales (inherited from upstream 5.5.8, whose translation pass covered the keys but not the new array item), so the FOLLOW_APP option fell back to its numeric id.
+
 ## [5.5.8] - 2026-10-13
 
 ### Changed

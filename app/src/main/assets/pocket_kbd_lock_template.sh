@@ -28,33 +28,72 @@ POLL_INTERVAL="__POLL_INTERVAL_SEC__"
 PIN_PREFS_FILE="__PIN_PREFS_FILE__"
 PIN_INPUT_KEY="__PIN_INPUT_KEY__"
 
+# This loop runs every POLL_INTERVAL seconds whenever the CPU is awake, so it
+# sticks to shell builtins (read, case, test): the old grep|grep|grep|head
+# pipelines cost ~9 forks per tick, about 16% of a core measured on-device.
+# The one process left per tick is `dumpsys window policy`, the only source of
+# the keyguard state.
+
+NODE=""   # cached /dev/input/eventN of the keypad
 find_keypad_node() {
-    grep -A6 'Name="stmpe_keypad"' /proc/bus/input/devices 2>/dev/null \
-        | grep '^H: Handlers=' \
-        | grep -o 'event[0-9]*' \
-        | head -n1
+    # The cached node is trusted only while its sysfs name still says
+    # stmpe_keypad; otherwise it is resolved by name again (node numbers have
+    # moved across kernel updates on this device).
+    if [ -n "$NODE" ]; then
+        name=""   # a failed read leaves the old value in place
+        read -r name 2>/dev/null < "/sys/class/input/${NODE##*/}/device/name"
+        [ "$name" = "stmpe_keypad" ] && return 0
+        NODE=""
+    fi
+    for d in /sys/class/input/event*; do
+        read -r name 2>/dev/null < "$d/device/name" || continue
+        if [ "$name" = "stmpe_keypad" ]; then
+            NODE="/dev/input/${d##*/}"
+            return 0
+        fi
+    done
+    return 1
 }
 
 is_locked() {
     # Confirmed on-device: `dumpsys window policy` prints both "showing=true"
     # and "mIsShowing=true" while locked - neither matches "mShowing=true"
-    # (the original, wrong, guess), so this now matches case-insensitively
-    # on the "showing=true" substring both lines actually share.
+    # (the original, wrong, guess), so this matches the "howing=true" tail both
+    # lines share, which keeps the old case-insensitive behaviour.
     # mCurrentFocus was also checked and does NOT contain "Keyguard" on this
     # ROM (it showed "NotificationShade" instead) - dropped as unreliable.
-    dumpsys window policy 2>/dev/null | grep -qi 'showing=true'
+    out=$(dumpsys window policy 2>/dev/null)
+    case "$out" in
+        *howing=true*) return 0 ;;
+    esac
+    return 1
 }
 
+PIN_STAMP="/data/adb/.k2tb_pocket_stamp"   # mtime marks the last prefs read
+PIN_ACTIVE=0
+PIN_TICKS=0
 pin_kbd_active() {
     # Reads the app's own SharedPreferences XML directly (root has full
     # filesystem access) rather than duplicating this state - a line like
     # <boolean name="pin_input" value="true" /> means the pref is on.
-    grep "name=\"$PIN_INPUT_KEY\"" "$PIN_PREFS_FILE" 2>/dev/null | grep -q 'value="true"'
+    # The file is re-read only when it is newer than the stamp (`-nt` is a
+    # builtin), plus every 30 ticks as a guard against same-second writes.
+    PIN_TICKS=$((PIN_TICKS + 1))
+    if [ ! -e "$PIN_STAMP" ] || [ "$PIN_PREFS_FILE" -nt "$PIN_STAMP" ] || [ "$PIN_TICKS" -ge 30 ]; then
+        PIN_TICKS=0
+        : > "$PIN_STAMP"   # stamp first, so a write during the read is seen next tick
+        PIN_ACTIVE=0
+        while read -r line; do
+            case "$line" in
+                *"name=\"$PIN_INPUT_KEY\""*'value="true"'*) PIN_ACTIVE=1; break ;;
+            esac
+        done 2>/dev/null < "$PIN_PREFS_FILE"
+    fi
+    [ "$PIN_ACTIVE" = "1" ]
 }
 
 restore_and_exit() {
-    node_name=$(find_keypad_node)
-    [ -n "$node_name" ] && chmod 660 "/dev/input/$node_name" 2>/dev/null
+    find_keypad_node && chmod 660 "$NODE" 2>/dev/null
     exit 0
 }
 trap restore_and_exit TERM INT
@@ -62,10 +101,11 @@ trap restore_and_exit TERM INT
 current_state="unlocked"
 
 while true; do
-    node_name=$(find_keypad_node)
-    if [ -n "$node_name" ]; then
-        node="/dev/input/$node_name"
-        if is_locked && ! pin_kbd_active; then
+    if find_keypad_node; then
+        node="$NODE"
+        # Cheap check first: with the PIN keyboard on, the keypad is never
+        # disabled, so the `dumpsys` in is_locked is skipped entirely.
+        if ! pin_kbd_active && is_locked; then
             if [ "$current_state" != "locked" ]; then
                 chmod 000 "$node" 2>/dev/null
                 current_state="locked"

@@ -61,6 +61,11 @@ accessibility-service status
 **System**
 - **AdBlock** - systemless-hosts ad/tracker blocking, with search, add/remove,
   whitelist, and remote source list management. Prompts user to install a Magisk/Apatch module
+- **GMS Sensor Guard** - stop Google Play services hammering the accelerometer
+  (50 Hz bursts) and ambient-light sensor in the background: UID-level
+  activity-recognition block (the package-level appops form silently never
+  applies on this ROM), re-asserted at boot, plus background Wi-Fi/Bluetooth
+  scanning toggles and guidance for the manual Location Accuracy settings
 - **Denylist Manager** - optional, opt-in unified control for Magisk's
   DenyList and the Zygisk-Hide module's own per-app config, plus a shortcut
   into HMA-OSS's manager app

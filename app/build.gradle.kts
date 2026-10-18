@@ -22,8 +22,8 @@ android {
         applicationId = "com.kgr.key2toolbox"
         minSdk = 28
         targetSdk = 34
-        versionCode = 45
-        versionName = "5.5.8"
+        versionCode = 46
+        versionName = "5.5.9"
     }
 
     signingConfigs {

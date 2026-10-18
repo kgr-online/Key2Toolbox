@@ -138,6 +138,10 @@ sealed class Screen(
         R.string.title_location_idle, R.string.subtitle_location_idle,
         listOf(AccessType.ROOT)
     )
+    data object GmsSensorGuard : Screen(
+        R.string.title_gms_sensor_guard, R.string.subtitle_gms_sensor_guard,
+        listOf(AccessType.ROOT)
+    )
     data object CallProximitySleep : Screen(
         R.string.title_call_proximity_sleep, R.string.subtitle_call_proximity_sleep,
         listOf(AccessType.ROOT)
