@@ -2,7 +2,7 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
-## [Unreleased]
+## [5.6.0] - 2026-10-31
 
 ### Added
 
