@@ -104,5 +104,13 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 
+    // QR / Aztec decoding and re-encoding for the QR Enlarger
+    implementation("com.google.zxing:core:3.5.3")
+    // Native decoder used when ZXing misses small, dense codes (e.g. the ~240 px Renfe Aztec). Only the Bitmap
+    // read() API is used; camera-core would pull a version that needs compileSdk 35.
+    implementation("io.github.zxing-cpp:android:2.3.0") {
+        exclude(group = "androidx.camera")
+    }
+
     testImplementation("junit:junit:4.13.2")
 }

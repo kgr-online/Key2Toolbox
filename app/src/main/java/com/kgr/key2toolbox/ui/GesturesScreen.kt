@@ -217,6 +217,8 @@ private fun actionLabel(a: GestureSettings.Action): Int = when (a) {
     GestureSettings.Action.SPLIT_SCREEN -> R.string.gesture_action_split_screen
     GestureSettings.Action.FLASHLIGHT -> R.string.gesture_action_flashlight
     GestureSettings.Action.PREVIOUS_APP -> R.string.gesture_action_previous_app
+    GestureSettings.Action.QR_ENLARGER -> R.string.gesture_action_qr_enlarger
+    GestureSettings.Action.CIRCLE_TO_SEARCH -> R.string.gesture_action_circle_to_search
 }
 
 /** One gesture: the action when released (swipe) and the action when held. */

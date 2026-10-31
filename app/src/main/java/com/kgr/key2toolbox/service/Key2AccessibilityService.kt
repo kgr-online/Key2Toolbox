@@ -33,7 +33,10 @@ import com.kgr.key2toolbox.modules.PinKeysRoot
 import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
 import android.media.AudioManager
 import com.kgr.key2toolbox.modules.AutoFocusController
+import com.kgr.key2toolbox.modules.BatteryMeterController
 import com.kgr.key2toolbox.modules.BatteryUsageController
+import com.kgr.key2toolbox.modules.CircleToSearchController
+import com.kgr.key2toolbox.modules.QrEnlargerController
 import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.SlimRecentsController
 import com.kgr.key2toolbox.modules.GestureSettings
@@ -299,6 +302,8 @@ class Key2AccessibilityService : AccessibilityService() {
             GestureSettings.Action.POWER_MENU -> performGlobalAction(GLOBAL_ACTION_POWER_DIALOG)
             GestureSettings.Action.SPLIT_SCREEN -> performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
             GestureSettings.Action.FLASHLIGHT -> TorchToggle.toggle(this)
+            GestureSettings.Action.QR_ENLARGER -> QrEnlargerController.trigger(this)
+            GestureSettings.Action.CIRCLE_TO_SEARCH -> worker.execute { CircleToSearchController.trigger(this) }
             GestureSettings.Action.PREVIOUS_APP -> {
                 if (RecentsOverlays.isShowing()) RecentsOverlays.hide(animate = false)
                 val front = foregroundPkg
@@ -583,6 +588,7 @@ class Key2AccessibilityService : AccessibilityService() {
         // its 24/7 watchdog from forking `dumpsys` every second (measured at
         // 176 ms CPU/s) by handing it keyguard transitions instead.
         KeyguardStateWriter.register(this)
+        BatteryMeterController.sync(this)
 
         // Seed navDisabled from the real kernel state and reconcile.
         forceReconcile()
@@ -1262,6 +1268,7 @@ class Key2AccessibilityService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent?): Boolean {
         if (event == null) return false
         val kc = event.keyCode
+        if (QrEnlargerController.onKeyEvent(event)) return true
 
         // Slim List escape hatch: while the overlay is showing, Back/Home/
         // app-switch always close it, unconditionally, before any other
@@ -1639,6 +1646,7 @@ class Key2AccessibilityService : AccessibilityService() {
 
     override fun onUnbind(intent: Intent?): Boolean {
         isRunning = false
+        QrEnlargerController.hide() // restores brightness / Extra Dim it changed
         GestureStripsController.hide()
         SystemBackGesture.restoreAll(this) // never leave the system back gesture off with no strip to replace it
         writeNodeBlocking(true) // never leave nav buttons dead
@@ -1668,6 +1676,8 @@ class Key2AccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         isRunning = false
+        QrEnlargerController.hide()
+        BatteryMeterController.stop(this)
         instance = null
         GestureStripsController.hide()
         SystemBackGesture.restoreAll(this)

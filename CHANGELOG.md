@@ -4,8 +4,17 @@ All notable changes to Key2 Toolbox are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **QR / Aztec Enlarger (Display), ported from Q25 Toolbox.** Finds a QR or Aztec code on screen and redraws it full-screen on white at maximum brightness (Extra Dim off meanwhile, everything restored on dismiss). Capture is `takeScreenshot` with a root `screencap` retry for FLAG_SECURE apps; decoding is ZXing with a zxing-cpp fallback for small dense codes. Trigger: new Gestures action.
+- **Circle to Search (Display), ported from Q25 Toolbox.** Launcher `device_config` flags plus an LSPosed hook scoped to the Google app (Pixel 2023 feature + Pixel 8 Pro build spoof). Enable the module for the Google app in LSPosed, then force-stop it. Trigger: new Gestures action.
+- **Airplane Scheduler (Network).** Several schedules with days of the week, overnight windows, one-shot mode, skip-next and optional Wi-Fi off. Root instead of Shizuku (`cmd connectivity airplane-mode`), exact alarms, re-armed on boot, app update and clock change. State-based: a window end reverts only what the schedule changed. Idea from probecat/airplane-scheduler-app (GPL-3.0); no code copied.
+- **Battery Meter (System).** Live power, current, voltage, temperature, energy and time to full, with an optional ongoing notification and a mA/µA workaround. Idea from montafra/beam (MIT).
+- **Recents (Masonry, Slim List): per-task action buttons.** Wide Masonry tiles show app info, split screen and screenshot inline next to the close button; 1x1 tiles and Slim List rows reach the same actions through the icon menu. Split screen and screenshot bring the task to the front first, then use the system global actions.
+
 ### Fixed
 
+- **Recents (Masonry): swiping a tile away also removed its neighbour.** `removeView` sends ACTION_CANCEL to a view that is the current touch target before taking it out of its child array. The cancel re-entered the swipe listener, which dismissed again; the outer removal then dropped the next sibling by a stale index, so the neighbour left the grid though its task stayed open. Dismissal is now idempotent and the gesture state is cleared before any removal.
 - **Pocket keyboard lock daemon: event-driven keyguard state instead of a 1 s `dumpsys` poll.** The watchdog forked `dumpsys window policy` every second around the clock; measured on-device that cost 176 ms of CPU per second (10.6 s/min with its children, plus the matching system_server binder work) and cut the platform to one short suspend cycle every ~6 s - several %/h of continuous battery drain, day and night, with no wakelock visible anywhere. The new design (`KeyguardStateWriter`): on every SCREEN_OFF/SCREEN_ON/USER_PRESENT the app asks `KeyguardManager` directly and writes `<state> <elapsedRealtime-s>` to a state file via root; the daemon reads it with pure shell builtins (zero forks) while the stamp is fresh, and falls back to the old dumpsys check every 5 s only when the stamp goes stale (app dead, accessibility off, root write failed). Same blocking semantics, same PIN-input safety rule on both sides; the PIN-pref change also triggers an immediate re-write.
   - Transition application only: no chmod churn while idle; trap/restore semantics unchanged.
 

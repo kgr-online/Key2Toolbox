@@ -122,7 +122,8 @@ object GestureSettings {
 
     /** Things a gesture can do. NONE leaves the gesture unassigned. Names are stored in prefs: do not rename. */
     enum class Action {
-        NONE, BACK, HOME, RECENTS, NOTIFICATIONS, QUICK_SETTINGS, LOCK_SCREEN, SCREENSHOT, POWER_MENU, SPLIT_SCREEN, FLASHLIGHT, PREVIOUS_APP
+        NONE, BACK, HOME, RECENTS, NOTIFICATIONS, QUICK_SETTINGS, LOCK_SCREEN, SCREENSHOT, POWER_MENU, SPLIT_SCREEN, FLASHLIGHT, PREVIOUS_APP,
+        QR_ENLARGER, CIRCLE_TO_SEARCH
     }
 
     /** Gestures offered per zone: side edges tell straight from the two diagonals. */

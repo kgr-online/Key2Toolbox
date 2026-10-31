@@ -26,6 +26,14 @@
          after the ROM's own init.rc overwrites it late in boot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Airplane Scheduler: exact alarms for window boundaries. 33+ auto-grants USE_EXACT_ALARM; on 31-32 the
+         app grants SCHEDULE_EXACT_ALARM to itself with root. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Battery Meter: the live ongoing notification (granted with root, since the OS can revoke it silently). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -126,6 +134,19 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Re-evaluates the airplane schedules: alarm tick, reboot, app update, clock / timezone change. -->
+        <receiver
+            android:name=".receiver.AirplaneSchedulerReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.kgr.key2toolbox.AIRPLANE_TICK" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
         </receiver>
     </application>
