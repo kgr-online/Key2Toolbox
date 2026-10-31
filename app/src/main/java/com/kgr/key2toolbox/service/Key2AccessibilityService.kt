@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import com.kgr.key2toolbox.core.AssetInstaller
 import com.kgr.key2toolbox.core.RootShell
 import com.kgr.key2toolbox.inputfix.CalculatorInputFix
+import com.kgr.key2toolbox.modules.KeyguardStateWriter
 import com.kgr.key2toolbox.modules.PinKeysRoot
 import com.kgr.key2toolbox.inputfix.ComposerEnterKeyHandler
 import android.media.AudioManager
@@ -180,7 +181,12 @@ class Key2AccessibilityService : AccessibilityService() {
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
         if (key == null) return@OnSharedPreferenceChangeListener
         refreshKeyFilter()
-        if (key == KEY_PIN_INPUT) reconcilePinKeysRoot()
+        if (key == KEY_PIN_INPUT) {
+            reconcilePinKeysRoot()
+            // The pocket keyboard lock daemon trusts the app-written keyguard
+            // state; a PIN-pref change invalidates its last decision.
+            KeyguardStateWriter.writeNow(this)
+        }
         if (key == KEY_NAV_LOCK || key == KEY_NAV_GESTURE || key == KEY_NAV_ALWAYS_OFF) {
             reconcileNav()
         }
@@ -573,6 +579,10 @@ class Key2AccessibilityService : AccessibilityService() {
         }
         refreshKeyFilter(force = true)
         reconcilePinKeysRoot()
+        // Event-driven keyguard feed for the pocket keyboard lock daemon: keeps
+        // its 24/7 watchdog from forking `dumpsys` every second (measured at
+        // 176 ms CPU/s) by handing it keyguard transitions instead.
+        KeyguardStateWriter.register(this)
 
         // Seed navDisabled from the real kernel state and reconcile.
         forceReconcile()
@@ -1677,6 +1687,7 @@ class Key2AccessibilityService : AccessibilityService() {
         }
         worker.shutdown()
         autoFocusWorker.shutdown()
+        KeyguardStateWriter.unregister(this)
         super.onDestroy()
     }
 }

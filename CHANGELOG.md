@@ -2,6 +2,13 @@
 
 All notable changes to Key2 Toolbox are documented here.
 
+## [Unreleased]
+
+### Fixed
+
+- **Pocket keyboard lock daemon: event-driven keyguard state instead of a 1 s `dumpsys` poll.** The watchdog forked `dumpsys window policy` every second around the clock; measured on-device that cost 176 ms of CPU per second (10.6 s/min with its children, plus the matching system_server binder work) and cut the platform to one short suspend cycle every ~6 s - several %/h of continuous battery drain, day and night, with no wakelock visible anywhere. The new design (`KeyguardStateWriter`): on every SCREEN_OFF/SCREEN_ON/USER_PRESENT the app asks `KeyguardManager` directly and writes `<state> <elapsedRealtime-s>` to a state file via root; the daemon reads it with pure shell builtins (zero forks) while the stamp is fresh, and falls back to the old dumpsys check every 5 s only when the stamp goes stale (app dead, accessibility off, root write failed). Same blocking semantics, same PIN-input safety rule on both sides; the PIN-pref change also triggers an immediate re-write.
+  - Transition application only: no chmod churn while idle; trap/restore semantics unchanged.
+
 ## [5.5.9] - 2026-10-18
 
 ### Added
