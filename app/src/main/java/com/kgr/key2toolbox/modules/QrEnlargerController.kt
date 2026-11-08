@@ -287,6 +287,8 @@ object QrEnlargerController {
                 wm.removeView(v)
             } catch (_: Throwable) {}
         }
+        // The enlarged code is only wanted while the overlay is up: drop the reference so the pixels can go.
+        (v as? ViewGroup)?.let { g -> (g.getChildAt(0) as? ImageView)?.setImageDrawable(null) }
     }
 
     private fun showOverlay(service: AccessibilityService, barcodeBitmap: Bitmap) {

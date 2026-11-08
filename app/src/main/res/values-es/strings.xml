@@ -1,4 +1,6 @@
 <resources>
+    <string name="service_label_led_notify">Key2 Toolbox: LED de notificaciones</string>
+    <string name="service_label_ticker">Key2 Toolbox: Ticker</string>
     <string name="app_name">Key2 Toolbox</string>
     <string name="accessibility_description">Activa el Bloqueo de Navegación (evita pulsaciones accidentales de Atrás/Inicio/Recientes al escribir), la introducción del PIN de bloqueo en el teclado físico y el ecualizador de audio del sistema.</string>
 
@@ -771,7 +773,7 @@
     <string name="gms_guard_manual_title">Ajustes manuales</string>
     <string name="gms_guard_manual_text">Interruptores de Ajustes &gt; Ubicación &gt; Servicios de ubicación que no se pueden definir desde aquí:\n\n• Precisión de ubicación de Google: puede quedar activada. Su coste - el escaneo de sensores - ya está bloqueado en esta pantalla. Desactivarla solo empeora las fixes en interiores.\n• Escaneo de dispositivos Bluetooth: mejor apagado si no usas balizas BLE. Escaneo costoso y sin uso habitual.\n• Escaneo de redes Wi-Fi: depende del dispositivo. Apagado ahorra batería, pero la ubicación fused pierde su mejor fuente en interiores; con recepción GPS débil déjalo activado.\n• El GPS asistido (A-GPS) es otra cosa: solo descarga datos de satélites para acelerar la primera fijación. Déjalo activado.</string>
 
-    <!-- QR Enlarger / Circle to Search (ported from Q25 Toolbox) -->
+    <!-- QR Enlarger (ported from Q25 Toolbox) -->
     <string name="gesture_action_qr_enlarger">Agrandar código QR / Aztec</string>
     <string name="qr_enlarger_none_found">No se detectó ningún código QR o Aztec en pantalla</string>
     <string name="qr_enlarger_capture_failed">Error al capturar la pantalla</string>
@@ -782,20 +784,6 @@
     <string name="qr_enlarger_test_button">Probar ahora</string>
     <string name="qr_enlarger_trigger_title">Cómo activarlo</string>
     <string name="qr_enlarger_trigger_desc">Asígnalo a un deslizamiento o pulsación larga de borde en Gestos.</string>
-    <string name="gesture_action_circle_to_search">Circle to Search</string>
-    <string name="title_circle_to_search">Circle to Search</string>
-    <string name="subtitle_circle_to_search">Busca visualmente rodeando texto o imágenes en pantalla</string>
-    <string name="cts_master_switch_title">Activar Circle to Search</string>
-    <string name="cts_master_switch_desc">Configura las flags del launcher y el hook LSPosed que activa la búsqueda contextual</string>
-    <string name="cts_status_desc">Opera mediante un hook LSPosed (Vector) dirigido solo a la aplicación de Google: informa de la función Pixel 2023 Experience y suplanta los campos Build de Pixel 8 Pro ahí; las flags de gestos del launcher se ponen vía device_config.</string>
-    <string name="cts_xposed_ok">Módulo LSPosed activo.</string>
-    <string name="cts_xposed_missing">Módulo LSPosed no activo.</string>
-    <string name="cts_xposed_hint">Abre tu gestor de Xposed (Vector), activa \"Key2 Toolbox\" y marca la aplicación de Google (com.google.android.googlequicksearchbox) en su scope; luego fuerza la detención de la aplicación de Google. Requiere un framework Xposed sobre KernelSU / APatch / Magisk.</string>
-    <string name="cts_hook_status_ok">Hook LSPosed: funcionando en la aplicación de Google.</string>
-    <string name="cts_hook_status_broken">Hook LSPosed: no se pudo enganchar en esta versión de la aplicación de Google.</string>
-    <string name="cts_hook_status_unknown">Hook LSPosed: todavía no se ha visto en la aplicación de Google. Fuerza la detención de la aplicación de Google para que se cargue el hook.</string>
-    <string name="cts_test_trigger_button">Probar Circle to Search ahora</string>
-    <string name="cts_trigger_desc">Asígnalo a un deslizamiento o pulsación larga de borde en Gestos.</string>
 
     <!-- Airplane Scheduler -->
     <string name="title_airplane_scheduler">Programador de modo avión</string>

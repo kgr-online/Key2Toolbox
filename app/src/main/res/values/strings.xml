@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">Key2 Toolbox</string>
+    <!-- Names shown for the two notification listeners in Settings > Notification access -->
+    <string name="service_label_led_notify">Key2 Toolbox: LED Notify</string>
+    <string name="service_label_ticker">Key2 Toolbox: Ticker</string>
     <string name="accessibility_description">Enables Nav Lock (stops accidental Back/Home/Recents while typing), lockscreen PIN entry on the physical keyboard, and the system-wide audio EQ.</string>
 
     <!-- Ticker Notifications -->
@@ -779,7 +782,7 @@
     <string name="gms_guard_manual_title">Manual settings</string>
     <string name="gms_guard_manual_text">Switches under Settings &gt; Location &gt; Location services that can\'t be set from here:\n\n• Google Location Accuracy: can stay on. Its cost - the sensor scanning - is already blocked by this screen. Turning it off only degrades indoor fixes.\n• Bluetooth scanning: best off unless you use BLE beacons. Costly scanning with no everyday use.\n• Wi-Fi scanning: device-dependent. Off saves battery, but fused location loses its best indoor source; with weak GPS reception leave it on.\n• Assisted GPS (A-GPS) is a different thing: it only downloads satellite data to speed up the first fix. Leave it on.</string>
 
-    <!-- QR Enlarger / Circle to Search (ported from Q25 Toolbox) -->
+    <!-- QR Enlarger (ported from Q25 Toolbox) -->
     <string name="gesture_action_qr_enlarger">QR / Aztec Enlarger</string>
     <string name="qr_enlarger_none_found">No QR / Aztec code found on screen</string>
     <string name="qr_enlarger_capture_failed">Screen capture failed</string>
@@ -790,20 +793,6 @@
     <string name="qr_enlarger_test_button">Test now</string>
     <string name="qr_enlarger_trigger_title">How to trigger</string>
     <string name="qr_enlarger_trigger_desc">Assign it to an edge swipe or hold in Gestures.</string>
-    <string name="gesture_action_circle_to_search">Circle to Search</string>
-    <string name="title_circle_to_search">Circle to Search</string>
-    <string name="subtitle_circle_to_search">Visually search content by circling text or images on screen</string>
-    <string name="cts_master_switch_title">Enable Circle to Search</string>
-    <string name="cts_master_switch_desc">Configures launcher flags and the LSPosed hook that enables contextual search</string>
-    <string name="cts_status_desc">Operates via an LSPosed hook (Vector) scoped to the Google App: it reports the Pixel 2023 Experience feature and spoofs Pixel 8 Pro Build fields there; the launcher gesture flags are set via device_config.</string>
-    <string name="cts_xposed_ok">LSPosed module active.</string>
-    <string name="cts_xposed_missing">LSPosed module not active.</string>
-    <string name="cts_xposed_hint">Open your Xposed manager (Vector), enable \"Key2 Toolbox\" and tick the Google app (com.google.android.googlequicksearchbox) in its scope, then force-stop the Google app. Requires an Xposed framework on KernelSU / APatch / Magisk.</string>
-    <string name="cts_hook_status_ok">LSPosed hook: working in the Google app.</string>
-    <string name="cts_hook_status_broken">LSPosed hook: it could not hook this build of the Google app.</string>
-    <string name="cts_hook_status_unknown">LSPosed hook: not seen in the Google app yet. Force-stop the Google app so the hook loads.</string>
-    <string name="cts_test_trigger_button">Test Circle to Search now</string>
-    <string name="cts_trigger_desc">Assign it to an edge swipe or hold in Gestures.</string>
 
     <!-- Airplane Scheduler -->
     <string name="title_airplane_scheduler">Airplane Scheduler</string>

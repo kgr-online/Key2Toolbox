@@ -770,7 +770,7 @@
     <string name="gms_guard_manual_title">Manuelle Einstellungen</string>
     <string name="gms_guard_manual_text">Schalter unter Einstellungen &gt; Standort &gt; Standortdienste, die sich von hier aus nicht setzen lassen:\n\n• Google-Standortgenauigkeit: kann aktiviert bleiben. Ihre Kosten - die Sensor-Suche - blockiert dieser Bildschirm bereits. Deaktivieren verschlechtert nur Indoor-Fixes.\n• Bluetooth-Suche: am besten aus, sofern keine BLE-Beacons genutzt werden. Kostenintensive Suche ohne Alltagsnutzen.\n• WLAN-Suche: geräteabhängig. Aus spart Akku, aber die fused-Standortbestimmung verliert ihre beste Indoor-Quelle; bei schwachem GPS-Empfang aktiviert lassen.\n• Assisted GPS (A-GPS) ist etwas anderes: Es lädt nur Satellitendaten herunter, um den ersten Fix zu beschleunigen. Aktiviert lassen.</string>
 
-    <!-- QR Enlarger / Circle to Search / Airplane Scheduler / Battery Meter -->
+    <!-- QR Enlarger / Airplane Scheduler / Battery Meter -->
     <string name="gesture_action_qr_enlarger">QR-/Aztec-Vergrößerer</string>
     <string name="qr_enlarger_none_found">Kein QR-/Aztec-Code auf dem Bildschirm gefunden</string>
     <string name="qr_enlarger_capture_failed">Bildschirmaufnahme fehlgeschlagen</string>
@@ -781,20 +781,6 @@
     <string name="qr_enlarger_test_button">Jetzt testen</string>
     <string name="qr_enlarger_trigger_title">So wird es ausgelöst</string>
     <string name="qr_enlarger_trigger_desc">Weise es unter Gesten einer Randwischgeste oder einem langen Halten am Rand zu.</string>
-    <string name="gesture_action_circle_to_search">Circle to Search</string>
-    <string name="title_circle_to_search">Circle to Search</string>
-    <string name="subtitle_circle_to_search">Inhalte durch Einkreisen von Text oder Bildern auf dem Bildschirm visuell suchen</string>
-    <string name="cts_master_switch_title">Circle to Search aktivieren</string>
-    <string name="cts_master_switch_desc">Konfiguriert Launcher-Flags und den LSPosed-Hook, der die kontextbezogene Suche aktiviert</string>
-    <string name="cts_status_desc">Funktioniert über einen LSPosed-Hook (Vector), der auf die Google-App beschränkt ist: Dort meldet er das Pixel-2023-Experience-Feature und täuscht Build-Felder des Pixel 8 Pro vor; die Launcher-Gestenflags werden per device_config gesetzt.</string>
-    <string name="cts_xposed_ok">LSPosed-Modul aktiv.</string>
-    <string name="cts_xposed_missing">LSPosed-Modul nicht aktiv.</string>
-    <string name="cts_xposed_hint">Öffne deinen Xposed-Manager (Vector), aktiviere \"Key2 Toolbox\" und wähle die Google-App (com.google.android.googlequicksearchbox) im Geltungsbereich aus. Beende danach die Google-App erzwungen. Erfordert ein Xposed-Framework unter KernelSU / APatch / Magisk.</string>
-    <string name="cts_hook_status_ok">LSPosed-Hook: funktioniert in der Google-App.</string>
-    <string name="cts_hook_status_broken">LSPosed-Hook: Diese Version der Google-App konnte nicht gehookt werden.</string>
-    <string name="cts_hook_status_unknown">LSPosed-Hook: in der Google-App noch nicht gesehen. Beende die Google-App erzwungen, damit der Hook geladen wird.</string>
-    <string name="cts_test_trigger_button">Circle to Search jetzt testen</string>
-    <string name="cts_trigger_desc">Weise es unter Gesten einer Randwischgeste oder einem langen Halten am Rand zu.</string>
     <string name="title_airplane_scheduler">Flugmodus-Zeitplan</string>
     <string name="subtitle_airplane_scheduler">Flugmodus nach Zeitplan ein- und ausschalten (Root)</string>
     <string name="airplane_intro">Der Flugmodus wird eingeschaltet, wenn ein Zeitfenster beginnt, und ausgeschaltet, wenn es endet. Zurückgesetzt wird nur, was der Zeitplan geändert hat: War der Flugmodus schon an oder hast du ihn mitten im Fenster selbst ausgeschaltet, bleibt er unberührt. Zeitfenster dürfen über Mitternacht hinausgehen.</string>

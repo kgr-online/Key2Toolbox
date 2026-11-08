@@ -7,7 +7,6 @@ import com.kgr.key2toolbox.modules.AdBlockController
 import com.kgr.key2toolbox.modules.AirplaneScheduler
 import com.kgr.key2toolbox.modules.AutoFocusController
 import com.kgr.key2toolbox.modules.BatteryMeterController
-import com.kgr.key2toolbox.modules.CircleToSearchController
 import com.kgr.key2toolbox.modules.BatteryUsageController
 import com.kgr.key2toolbox.modules.BtIdleController
 import com.kgr.key2toolbox.modules.ExtraDimController
@@ -37,7 +36,7 @@ import java.util.Locale
  * which modules to include. "key2tweaks" is a single SharedPreferences file
  * shared by many modules (PinKeyboard, NavLock, ImeBlock, Calculator,
  * ImeSuggestions, ChatComposer, InCallShortcuts, AutoFocus, BatteryUsage,
- * Toolbelt, AirplaneScheduler, BatteryMeter, CircleToSearch), so individual KEYS within it are filtered by
+ * Toolbelt, AirplaneScheduler, BatteryMeter), so individual KEYS within it are filtered by
  * [KEY2TWEAKS_MODULE_MAP] rather than the whole file being an all-or-nothing
  * unit.
  *
@@ -103,8 +102,7 @@ object SettingsBackup {
         TOOLBELT(R.string.title_toolbelt),
         RECENTS_LAYOUT(R.string.title_recents),
         AIRPLANE_SCHEDULER(R.string.title_airplane_scheduler),
-        BATTERY_METER(R.string.title_battery_meter),
-        CIRCLE_TO_SEARCH(R.string.title_circle_to_search)
+        BATTERY_METER(R.string.title_battery_meter)
     }
 
     /** Which BackupModule owns each key in the shared "key2tweaks" prefs file. */
@@ -128,7 +126,6 @@ object SettingsBackup {
         AirplaneScheduler.KEY_SCHEDULES to BackupModule.AIRPLANE_SCHEDULER,
         BatteryMeterController.KEY_ENABLED to BackupModule.BATTERY_METER,
         BatteryMeterController.KEY_MA_UNITS to BackupModule.BATTERY_METER,
-        CircleToSearchController.KEY_CTS_ENABLED to BackupModule.CIRCLE_TO_SEARCH,
         // Toolbelt: all config keys except KEY_COLLAPSED (transient UI state).
         ToolbeltController.KEY_ENABLED to BackupModule.TOOLBELT,
         ToolbeltController.KEY_SLOTS to BackupModule.TOOLBELT,
@@ -376,12 +373,6 @@ object SettingsBackup {
             }
             if (BackupModule.BATTERY_METER in modules && key2tweaksJson.has(BatteryMeterController.KEY_ENABLED)) {
                 runCatching { BatteryMeterController.sync(context) }
-            }
-            if (BackupModule.CIRCLE_TO_SEARCH in modules && key2tweaksJson.has(CircleToSearchController.KEY_CTS_ENABLED)) {
-                // device_config flags + the hook's Settings.Global gate live outside the prefs.
-                runCatching {
-                    CircleToSearchController.setEnabled(context, restored.getBoolean(CircleToSearchController.KEY_CTS_ENABLED, false))
-                }
             }
         }
 

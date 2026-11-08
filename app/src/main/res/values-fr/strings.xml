@@ -770,7 +770,7 @@
     <string name="gms_guard_manual_title">Réglages manuels</string>
     <string name="gms_guard_manual_text">Interrupteurs sous Paramètres &gt; Localisation &gt; Services de localisation qui ne peuvent pas être définis depuis ici :\n\n• Précision de localisation Google : peut rester activée. Son coût - la recherche de capteurs - est déjà bloqué par cet écran. La désactiver ne fait que dégrader les fixes en intérieur.\n• Recherche Bluetooth : mieux vaut la désactiver sauf si vous utilisez des balises BLE. Recherche coûteuse et sans usage courant.\n• Recherche Wi-Fi : dépend de l\'appareil. Désactivée, elle économise la batterie, mais la localisation fusionnée perd sa meilleure source en intérieur ; avec une réception GPS faible, laissez-la activée.\n• Le GPS assisté (A-GPS) est autre chose : il ne télécharge que des données satellites pour accélérer le premier fix. Laissez-le activé.</string>
 
-    <!-- QR Enlarger / Circle to Search / Airplane Scheduler / Battery Meter -->
+    <!-- QR Enlarger / Airplane Scheduler / Battery Meter -->
     <string name="gesture_action_qr_enlarger">Agrandisseur QR / Aztec</string>
     <string name="qr_enlarger_none_found">Aucun code QR / Aztec trouvé à l\'écran</string>
     <string name="qr_enlarger_capture_failed">Échec de la capture d\'écran</string>
@@ -781,20 +781,6 @@
     <string name="qr_enlarger_test_button">Tester maintenant</string>
     <string name="qr_enlarger_trigger_title">Comment le déclencher</string>
     <string name="qr_enlarger_trigger_desc">Assignez-le à un balayage ou à un appui long de bord dans Gestes.</string>
-    <string name="gesture_action_circle_to_search">Circle to Search</string>
-    <string name="title_circle_to_search">Circle to Search</string>
-    <string name="subtitle_circle_to_search">Rechercher visuellement en entourant du texte ou des images à l\'écran</string>
-    <string name="cts_master_switch_title">Activer Circle to Search</string>
-    <string name="cts_master_switch_desc">Configure les indicateurs du lanceur et le hook LSPosed qui active la recherche contextuelle</string>
-    <string name="cts_status_desc">Fonctionne via un hook LSPosed (Vector) limité à l\'application Google : il y déclare la fonctionnalité Pixel 2023 Experience et usurpe les champs Build du Pixel 8 Pro ; les indicateurs de geste du lanceur sont définis via device_config.</string>
-    <string name="cts_xposed_ok">Module LSPosed actif.</string>
-    <string name="cts_xposed_missing">Module LSPosed inactif.</string>
-    <string name="cts_xposed_hint">Ouvrez votre gestionnaire Xposed (Vector), activez \"Key2 Toolbox\" et cochez l\'application Google (com.google.android.googlequicksearchbox) dans sa portée, puis forcez l\'arrêt de l\'application Google. Nécessite un framework Xposed sur KernelSU / APatch / Magisk.</string>
-    <string name="cts_hook_status_ok">Hook LSPosed : fonctionne dans l\'application Google.</string>
-    <string name="cts_hook_status_broken">Hook LSPosed : impossible de hooker cette version de l\'application Google.</string>
-    <string name="cts_hook_status_unknown">Hook LSPosed : pas encore vu dans l\'application Google. Forcez son arrêt pour que le hook se charge.</string>
-    <string name="cts_test_trigger_button">Tester Circle to Search maintenant</string>
-    <string name="cts_trigger_desc">Assignez-le à un balayage ou à un appui long de bord dans Gestes.</string>
     <string name="title_airplane_scheduler">Planificateur du mode avion</string>
     <string name="subtitle_airplane_scheduler">Activer et désactiver le mode avion selon un horaire (root)</string>
     <string name="airplane_intro">Le mode avion s\'active à l\'ouverture d\'une plage et se désactive à sa fermeture. Seul ce que l\'horaire a modifié est rétabli : si le mode avion était déjà actif, ou si vous l\'avez désactivé vous-même en cours de plage, il n\'est pas touché. Les plages peuvent dépasser minuit.</string>

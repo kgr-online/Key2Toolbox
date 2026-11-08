@@ -95,6 +95,7 @@
         <!-- LED Notify: watches posted/cleared notifications to drive per-app LED colors. -->
         <service
             android:name=".service.LedNotifyListenerService"
+            android:label="@string/service_label_led_notify"
             android:exported="true"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
@@ -104,6 +105,7 @@
 
         <service
             android:name=".service.TickerNotificationListenerService"
+            android:label="@string/service_label_ticker"
             android:exported="true"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>

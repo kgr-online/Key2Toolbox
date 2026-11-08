@@ -35,7 +35,6 @@ import android.media.AudioManager
 import com.kgr.key2toolbox.modules.AutoFocusController
 import com.kgr.key2toolbox.modules.BatteryMeterController
 import com.kgr.key2toolbox.modules.BatteryUsageController
-import com.kgr.key2toolbox.modules.CircleToSearchController
 import com.kgr.key2toolbox.modules.QrEnlargerController
 import com.kgr.key2toolbox.modules.RecentsController
 import com.kgr.key2toolbox.modules.SlimRecentsController
@@ -101,6 +100,9 @@ class Key2AccessibilityService : AccessibilityService() {
 
         /** Coalesce window-event bursts into one immersive-state `dumpsys` probe. */
         private const val FULLSCREEN_PROBE_DEBOUNCE_MS = 200L
+
+        /** Delayed nav-state passes after a wake (the driver can reset it shortly after the screen comes on). */
+        private val WAKE_RECONCILE_DELAYS_MS = longArrayOf(600L, 1200L, 2500L)
 
         const val PREFS = "key2tweaks"
         const val KEY_NAV_LOCK = "nav_lock_enabled"
@@ -303,7 +305,6 @@ class Key2AccessibilityService : AccessibilityService() {
             GestureSettings.Action.SPLIT_SCREEN -> performGlobalAction(GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
             GestureSettings.Action.FLASHLIGHT -> TorchToggle.toggle(this)
             GestureSettings.Action.QR_ENLARGER -> QrEnlargerController.trigger(this)
-            GestureSettings.Action.CIRCLE_TO_SEARCH -> worker.execute { CircleToSearchController.trigger(this) }
             GestureSettings.Action.PREVIOUS_APP -> {
                 if (RecentsOverlays.isShowing()) RecentsOverlays.hide(animate = false)
                 val front = foregroundPkg
@@ -569,6 +570,21 @@ class Key2AccessibilityService : AccessibilityService() {
         }
     }
 
+    private val refreshKeyFilterLater = Runnable { refreshKeyFilter() }
+    private val wakeReconcileRunnable = Runnable { forceReconcile() }
+
+    /**
+     * Re-applies the nav-button state after a wake, since the driver can reset it a moment later. SCREEN_ON and
+     * USER_PRESENT both land here within about a second of each other, and each used to queue its own five root
+     * shells right while system_server is busy unlocking; removing the pending runs first folds them into one
+     * burst (now, then three delayed passes) of the same shape.
+     */
+    private fun scheduleWakeReconcile() {
+        mainHandler.removeCallbacks(wakeReconcileRunnable)
+        forceReconcile()
+        for (d in WAKE_RECONCILE_DELAYS_MS) mainHandler.postDelayed(wakeReconcileRunnable, d)
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         isRunning = true
@@ -598,6 +614,18 @@ class Key2AccessibilityService : AccessibilityService() {
             // install/removal previously failed silently.
             persistAlwaysOff(alwaysOff())
 
+            // Circle to Search was removed: once, undo what it left on the device (launcher device_config flags,
+            // the hook's Settings.Global gate), keyed on its old preference still being present.
+            if (p.contains("cts_master_enabled")) {
+                val flags = listOf("long_press_home_button_to_search", "long_press_home_button_to_search_mpr",
+                    "press_hold_nav_handle_to_search", "press_hold_nav_handle_to_search_mpr",
+                    "ENABLE_SETTINGS_OSE_CUSTOMIZATIONS", "ENABLE_LONG_PRESS_NAV_HANDLE", "ENABLE_LONG_PRESS_NAV_HANDLE_MPR",
+                    "INVOKE_OMNI_LPH", "INVOKE_OMNI_LPH_MPR")
+                RootShell.run(flags.joinToString("; ") { "cmd device_config delete launcher $it" } +
+                    "; cmd device_config set_sync_disabled_for_tests none; settings delete global key2_cts_hook_enabled")
+                p.edit().remove("cts_master_enabled").apply()
+            }
+
             // Seed imeBlockApplied from the live default IME, so a mid-session
             // restart while the passthrough IME is active still gets reconciled
             // (and restored) once the foreground app is known.
@@ -622,8 +650,9 @@ class Key2AccessibilityService : AccessibilityService() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 Log.d("Key2Toolbox", "Screen state changed: ${intent?.action}")
                 // The keyguard can lag the screen change by a moment, so look again shortly after.
+                mainHandler.removeCallbacks(refreshKeyFilterLater)
                 mainHandler.post { refreshKeyFilter() }
-                mainHandler.postDelayed({ refreshKeyFilter() }, 1000)
+                mainHandler.postDelayed(refreshKeyFilterLater, 1000)
                 if (intent?.action == Intent.ACTION_SCREEN_OFF) {
                     // A TYPE_ACCESSIBILITY_OVERLAY window can render above the
                     // keyguard and doesn't tear itself down just because the
@@ -635,11 +664,7 @@ class Key2AccessibilityService : AccessibilityService() {
                 }
                 // Edge strips: rebuilt once the screen is on and the keyguard is gone (a no-op while locked).
                 GestureStripsController.reconcile(this@Key2AccessibilityService)
-                forceReconcile()
-                mainHandler.postDelayed({ forceReconcile() }, 300)
-                mainHandler.postDelayed({ forceReconcile() }, 600)
-                mainHandler.postDelayed({ forceReconcile() }, 1200)
-                mainHandler.postDelayed({ forceReconcile() }, 2500)
+                scheduleWakeReconcile()
             }
         }
         val filter = IntentFilter().apply {
@@ -976,16 +1001,20 @@ class Key2AccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         GestureStripsController.ensure(this)
-        imeActive = isImeVisible()
-        reconcileNav()
 
         // Only re-derive the foreground app when a window actually changed: each call is a windows() query plus a
         // root-node fetch per window (several synchronous binder round trips on the main looper, the thread
         // onKeyEvent is delivered on), and the continuous typeViewFocused events cannot change it. A window event
-        // from the package already tracked cannot either.
+        // from the package already tracked cannot either. The same goes for the keyboard: it appears and goes as a
+        // window, so its state is only re-read on window events (it used to be re-read, with a windows() query, on
+        // every event including focus changes).
         val windowEvent = event == null ||
             event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        if (windowEvent) {
+            imeActive = isImeVisible()
+            reconcileNav()
+        }
         val eventPkg = event?.packageName?.toString()
         val pkg = if (windowEvent && (eventPkg == null || eventPkg != foregroundPkg)) foregroundAppPackage() else null
         val pkgChanged = pkg != null && pkg != foregroundPkg
@@ -1187,8 +1216,10 @@ class Key2AccessibilityService : AccessibilityService() {
     /** Compute and apply the desired capacitive-button state from current settings. */
     private fun reconcileNav() {
         val desired = desiredNavDisabled()
-        Log.d("Key2Toolbox", "reconcileNav: desired=$desired, currentCache=$navDisabled, alwaysOff=${alwaysOff()}, imeActive=$imeActive")
-        if (desired != navDisabled) applyNavDisabled(desired)
+        if (desired != navDisabled) {
+            Log.d("Key2Toolbox", "reconcileNav: desired=$desired, currentCache=$navDisabled, alwaysOff=${alwaysOff()}, imeActive=$imeActive")
+            applyNavDisabled(desired)
+        }
     }
 
     private fun forceReconcile() {
@@ -1221,7 +1252,6 @@ class Key2AccessibilityService : AccessibilityService() {
         val tallest = imeWindows.maxOf { w ->
             Rect().also { w.getBoundsInScreen(it) }.height()
         }
-        Log.d("Key2Toolbox", "isImeVisible: tallest IME window height=${tallest}px, threshold=${minPx}px")
         return tallest >= minPx
     }
 
@@ -1641,6 +1671,12 @@ class Key2AccessibilityService : AccessibilityService() {
     }
 
     // ------------------------------------------------------------- Lifecycle
+
+    /** The system wants memory back: drop the Recents snapshot cache (it rebuilds on demand). */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        SlimRecentsController.trimSnapshots()
+    }
 
     override fun onInterrupt() {}
 

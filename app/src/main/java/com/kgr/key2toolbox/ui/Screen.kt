@@ -130,10 +130,6 @@ sealed class Screen(
         R.string.title_qr_enlarger, R.string.subtitle_qr_enlarger,
         listOf(AccessType.ACCESSIBILITY, AccessType.ROOT)
     )
-    data object CircleToSearch : Screen(
-        R.string.title_circle_to_search, R.string.subtitle_circle_to_search,
-        listOf(AccessType.ROOT)
-    )
     data object AirplaneScheduler : Screen(
         R.string.title_airplane_scheduler, R.string.subtitle_airplane_scheduler,
         listOf(AccessType.ROOT)

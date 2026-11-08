@@ -171,7 +171,33 @@ object SlimRecentsController {
      * this makes the second+ open of an unchanged task instant.
      */
     private val snapshotCache = object : LinkedHashMap<String, Bitmap>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Bitmap>?) = size > 40
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Bitmap>?) = size > SNAPSHOT_CACHE_MAX
+    }
+
+    /**
+     * The bitmaps' pixels live in the native heap, and this cache used to keep up to 40 of them for the whole life of the
+     * process (measured: native heap 9 MB fresh, 44 MB after a day). They are only worth keeping while Recents is likely
+     * to open again, so the cache is dropped [SNAPSHOT_KEEP_MS] after the overlay closes (and on a system trim request,
+     * see [trimSnapshots]); a reopen inside that window is still instant.
+     */
+    private const val SNAPSHOT_CACHE_MAX = 16
+    private const val SNAPSHOT_KEEP_MS = 45_000L
+    private val trimHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val trimRunnable = Runnable { trimSnapshots() }
+
+    /** Called when an overlay closes: start the countdown to dropping the cache. */
+    fun scheduleSnapshotTrim() {
+        trimHandler.removeCallbacks(trimRunnable)
+        trimHandler.postDelayed(trimRunnable, SNAPSHOT_KEEP_MS)
+    }
+
+    /**
+     * Drops every cached snapshot. Bitmaps still shown by an open overlay stay alive through the overlay's own
+     * references; nothing is recycled here, so there is no use-after-recycle.
+     */
+    fun trimSnapshots() {
+        trimHandler.removeCallbacks(trimRunnable)
+        synchronized(snapshotCache) { snapshotCache.clear() }
     }
 
     /**
@@ -186,6 +212,7 @@ object SlimRecentsController {
      */
     fun loadSnapshots(taskIds: List<Int>): Map<Int, Bitmap> {
         if (taskIds.isEmpty()) return emptyMap()
+        trimHandler.removeCallbacks(trimRunnable) // in use again: restart the countdown at the next close
         val dir = snapshotDir()
         val paths = taskIds.joinToString(" ") { "'$dir/${it}_reduced.jpg'" }
 
@@ -201,7 +228,7 @@ object SlimRecentsController {
         val misses = ArrayList<Int>()
         for (id in taskIds) {
             val mt = mtimes[id] ?: continue
-            val cached = snapshotCache["$id:$mt"]
+            val cached = synchronized(snapshotCache) { snapshotCache["$id:$mt"] }
             if (cached != null) result[id] = cached else misses.add(id)
         }
         android.util.Log.d("Key2Toolbox", "loadSnapshots: ${taskIds.size} ids, ${mtimes.size} have files, ${result.size} cached, ${misses.size} to fetch")
@@ -227,7 +254,7 @@ object SlimRecentsController {
                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
             }.getOrNull()?.let {
                 result[id] = it
-                mtimes[id]?.let { mt -> snapshotCache["$id:$mt"] = it }
+                mtimes[id]?.let { mt -> synchronized(snapshotCache) { snapshotCache["$id:$mt"] = it } }
             }
         }
         return result

@@ -289,6 +289,7 @@ object SlimRecentsOverlayController {
         pendingLaunchPkg = null
         pendingLaunchTaskId = null
         closeIconMenu()
+        SlimRecentsController.scheduleSnapshotTrim()
         val shots = currentSnapshots // before it is cleared: decides whether a tile may expand (see below)
         currentSnapshots = emptyMap()
         val cards = HashMap(cardViews)

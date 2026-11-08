@@ -770,7 +770,7 @@
     <string name="gms_guard_manual_title">Handmatige instellingen</string>
     <string name="gms_guard_manual_text">Schakelaars onder Instellingen &gt; Locatie &gt; Locatiediensten die hier niet ingesteld kunnen worden:\n\n• Google-locatienauwkeurigheid: mag aan blijven. De kosten ervan - het scannen van sensoren - blokkeert dit scherm al. Uitzetten verslechtert alleen fixes binnenshuis.\n• Bluetooth-scan: beter uit tenzij je BLE-beacons gebruikt. Kostenrijk scannen zonder dagelijks gebruik.\n• Wi-Fi-scan: apparaatafhankelijk. Uit bespaart batterij, maar fused-locatie verliest zijn beste bron binnenshuis; bij zwak GPS-ontvang aan laten.\n• Assisted GPS (A-GPS) is iets anders: het downloadt alleen satellietgegevens om de eerste fix te versnellen. Aan laten.</string>
 
-    <!-- QR Enlarger / Circle to Search / Airplane Scheduler / Battery Meter -->
+    <!-- QR Enlarger / Airplane Scheduler / Battery Meter -->
     <string name="gesture_action_qr_enlarger">QR-/Aztec-vergroter</string>
     <string name="qr_enlarger_none_found">Geen QR-/Aztec-code gevonden op het scherm</string>
     <string name="qr_enlarger_capture_failed">Schermopname mislukt</string>
@@ -781,20 +781,6 @@
     <string name="qr_enlarger_test_button">Nu testen</string>
     <string name="qr_enlarger_trigger_title">Hoe te activeren</string>
     <string name="qr_enlarger_trigger_desc">Wijs het toe aan een veegbeweging of lang indrukken aan de rand in Gebaren.</string>
-    <string name="gesture_action_circle_to_search">Circle to Search</string>
-    <string name="title_circle_to_search">Circle to Search</string>
-    <string name="subtitle_circle_to_search">Zoek visueel door tekst of afbeeldingen op het scherm te omcirkelen</string>
-    <string name="cts_master_switch_title">Circle to Search inschakelen</string>
-    <string name="cts_master_switch_desc">Configureert launcher-vlaggen en de LSPosed-hook die contextueel zoeken mogelijk maakt</string>
-    <string name="cts_status_desc">Werkt via een LSPosed-hook (Vector) die beperkt is tot de Google-app: daar meldt hij de functie Pixel 2023 Experience en doet hij zich voor als Build-velden van de Pixel 8 Pro; de gebaarvlaggen van de launcher worden via device_config gezet.</string>
-    <string name="cts_xposed_ok">LSPosed-module actief.</string>
-    <string name="cts_xposed_missing">LSPosed-module niet actief.</string>
-    <string name="cts_xposed_hint">Open je Xposed-manager (Vector), schakel \"Key2 Toolbox\" in en vink de Google-app (com.google.android.googlequicksearchbox) aan in het bereik. Forceer daarna het stoppen van de Google-app. Vereist een Xposed-framework op KernelSU / APatch / Magisk.</string>
-    <string name="cts_hook_status_ok">LSPosed-hook: werkt in de Google-app.</string>
-    <string name="cts_hook_status_broken">LSPosed-hook: kon deze versie van de Google-app niet hooken.</string>
-    <string name="cts_hook_status_unknown">LSPosed-hook: nog niet gezien in de Google-app. Forceer het stoppen van de Google-app zodat de hook laadt.</string>
-    <string name="cts_test_trigger_button">Circle to Search nu testen</string>
-    <string name="cts_trigger_desc">Wijs het toe aan een veegbeweging of lang indrukken aan de rand in Gebaren.</string>
     <string name="title_airplane_scheduler">Vliegtuigmodus-planner</string>
     <string name="subtitle_airplane_scheduler">Zet de vliegtuigmodus volgens een schema aan en uit (root)</string>
     <string name="airplane_intro">De vliegtuigmodus gaat aan zodra een tijdvenster opent en uit zodra het sluit. Alleen wat het schema heeft gewijzigd wordt teruggedraaid: stond de vliegtuigmodus al aan, of heb je hem zelf halverwege uitgezet, dan blijft hij ongemoeid. Vensters mogen over middernacht heen lopen.</string>

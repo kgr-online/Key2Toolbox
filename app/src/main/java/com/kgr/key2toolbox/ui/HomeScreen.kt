@@ -71,8 +71,7 @@ val displayScreens = listOf(
     Screen.Recents,
     Screen.Toolbelt,
     Screen.Gestures,
-    Screen.QrEnlarger,
-    Screen.CircleToSearch
+    Screen.QrEnlarger
 )
 
 val networkScreens = listOf(
@@ -172,7 +171,6 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
         Screen.BatteryMeter -> BatteryMeterScreen(onBack)
         Screen.AirplaneScheduler -> AirplaneSchedulerScreen(onBack)
         Screen.QrEnlarger -> QrEnlargerScreen(onBack, onOpenGestures = { onNavigate(Screen.Gestures) })
-        Screen.CircleToSearch -> CircleToSearchScreen(onBack, onOpenGestures = { onNavigate(Screen.Gestures) })
         Screen.Home -> Unit
     }
 }
