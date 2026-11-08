@@ -219,6 +219,7 @@ object GridRecentsOverlayController {
         val headers = HashMap(headerViews)
         val closeAll = closeAllView
         val params = windowParams
+        SlimRecentsController.scheduleSnapshotTrim()
         val shots = snapshots // before clearState(): only a tile with a real snapshot may expand (see below)
         clearState()
         if (v == null) return@safeUi

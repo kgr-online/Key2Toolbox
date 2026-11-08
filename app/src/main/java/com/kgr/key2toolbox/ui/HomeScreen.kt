@@ -70,7 +70,8 @@ val displayScreens = listOf(
     Screen.ExtraDim,
     Screen.Recents,
     Screen.Toolbelt,
-    Screen.Gestures
+    Screen.Gestures,
+    Screen.QrEnlarger
 )
 
 val networkScreens = listOf(
@@ -78,11 +79,13 @@ val networkScreens = listOf(
     Screen.WirelessAdb,
     Screen.BtIdle,
     Screen.LocationIdle,
+    Screen.AirplaneScheduler,
     Screen.Telemetry
 )
 
 val systemScreens = listOf(
     Screen.AdBlock,
+    Screen.BatteryMeter,
     Screen.DenylistManager,
     Screen.GmsSensorGuard,
     Screen.K2PF,
@@ -165,6 +168,9 @@ private fun DetailHost(screen: Screen, onNavigate: (Screen) -> Unit, onBack: () 
         Screen.Zram -> ZramScreen(onBack)
         Screen.ZygiskDetach -> ZygiskDetachScreen(onBack)
         Screen.BatteryUsage -> BatteryUsageScreen(onBack)
+        Screen.BatteryMeter -> BatteryMeterScreen(onBack)
+        Screen.AirplaneScheduler -> AirplaneSchedulerScreen(onBack)
+        Screen.QrEnlarger -> QrEnlargerScreen(onBack, onOpenGestures = { onNavigate(Screen.Gestures) })
         Screen.Home -> Unit
     }
 }

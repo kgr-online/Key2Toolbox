@@ -4,7 +4,9 @@ import android.content.Context
 import android.net.Uri
 import com.kgr.key2toolbox.R
 import com.kgr.key2toolbox.modules.AdBlockController
+import com.kgr.key2toolbox.modules.AirplaneScheduler
 import com.kgr.key2toolbox.modules.AutoFocusController
+import com.kgr.key2toolbox.modules.BatteryMeterController
 import com.kgr.key2toolbox.modules.BatteryUsageController
 import com.kgr.key2toolbox.modules.BtIdleController
 import com.kgr.key2toolbox.modules.ExtraDimController
@@ -34,7 +36,7 @@ import java.util.Locale
  * which modules to include. "key2tweaks" is a single SharedPreferences file
  * shared by many modules (PinKeyboard, NavLock, ImeBlock, Calculator,
  * ImeSuggestions, ChatComposer, InCallShortcuts, AutoFocus, BatteryUsage,
- * Toolbelt), so individual KEYS within it are filtered by
+ * Toolbelt, AirplaneScheduler, BatteryMeter), so individual KEYS within it are filtered by
  * [KEY2TWEAKS_MODULE_MAP] rather than the whole file being an all-or-nothing
  * unit.
  *
@@ -98,7 +100,9 @@ object SettingsBackup {
         GESTURES(R.string.title_gestures),
         TICKER_NOTIFICATIONS(R.string.title_ticker_notifications),
         TOOLBELT(R.string.title_toolbelt),
-        RECENTS_LAYOUT(R.string.title_recents)
+        RECENTS_LAYOUT(R.string.title_recents),
+        AIRPLANE_SCHEDULER(R.string.title_airplane_scheduler),
+        BATTERY_METER(R.string.title_battery_meter)
     }
 
     /** Which BackupModule owns each key in the shared "key2tweaks" prefs file. */
@@ -117,6 +121,11 @@ object SettingsBackup {
         AutoFocusController.KEY_AUTO_FOCUS to BackupModule.AUTO_FOCUS,
         AutoFocusController.KEY_AUTO_FOCUS_APPS to BackupModule.AUTO_FOCUS,
         BatteryUsageController.KEY_RESET_THRESHOLD to BackupModule.BATTERY_USAGE,
+        // Airplane Scheduler: the schedules only. The "owned" radio flags and Battery Meter's charging-since
+        // stamp describe the live device state, which a restore must not overwrite.
+        AirplaneScheduler.KEY_SCHEDULES to BackupModule.AIRPLANE_SCHEDULER,
+        BatteryMeterController.KEY_ENABLED to BackupModule.BATTERY_METER,
+        BatteryMeterController.KEY_MA_UNITS to BackupModule.BATTERY_METER,
         // Toolbelt: all config keys except KEY_COLLAPSED (transient UI state).
         ToolbeltController.KEY_ENABLED to BackupModule.TOOLBELT,
         ToolbeltController.KEY_SLOTS to BackupModule.TOOLBELT,
@@ -353,6 +362,17 @@ object SettingsBackup {
                 } catch (e: Exception) {
                     // best-effort; don't fail the import over it
                 }
+            }
+        }
+
+        // The three modules below act on the system, not just on prefs: re-apply them from the restored values.
+        if (key2tweaksJson != null) {
+            val restored = context.getSharedPreferences(KEY2TWEAKS_PREFS, Context.MODE_PRIVATE)
+            if (BackupModule.AIRPLANE_SCHEDULER in modules && key2tweaksJson.has(AirplaneScheduler.KEY_SCHEDULES)) {
+                runCatching { AirplaneScheduler.refresh(context) } // re-arms the alarm, settles the radios
+            }
+            if (BackupModule.BATTERY_METER in modules && key2tweaksJson.has(BatteryMeterController.KEY_ENABLED)) {
+                runCatching { BatteryMeterController.sync(context) }
             }
         }
 

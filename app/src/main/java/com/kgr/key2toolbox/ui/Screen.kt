@@ -126,6 +126,17 @@ sealed class Screen(
         R.string.title_battery_usage, R.string.subtitle_battery_usage,
         listOf(AccessType.ROOT)
     )
+    data object QrEnlarger : Screen(
+        R.string.title_qr_enlarger, R.string.subtitle_qr_enlarger,
+        listOf(AccessType.ACCESSIBILITY, AccessType.ROOT)
+    )
+    data object AirplaneScheduler : Screen(
+        R.string.title_airplane_scheduler, R.string.subtitle_airplane_scheduler,
+        listOf(AccessType.ROOT)
+    )
+    data object BatteryMeter : Screen(
+        R.string.title_battery_meter, R.string.subtitle_battery_meter
+    )
     data object Telemetry : Screen(
         R.string.title_telemetry, R.string.subtitle_telemetry,
         listOf(AccessType.ROOT)
